@@ -65,7 +65,7 @@ export default function GameRoom({
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col p-4 gap-3 max-w-screen-2xl mx-auto w-full">
+      <div className="flex-1 flex flex-col p-4 gap-3 w-full">
         {isFinished && gameWinner !== undefined && (
           <div className={`rounded-xl border p-4 text-center animate-fade-in-up ${
             gameWinner

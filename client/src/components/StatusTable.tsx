@@ -1,11 +1,41 @@
+import React from 'react';
 import { Eye } from 'lucide-react';
 import type { Player, ClientMessage, AttributeKey } from '../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
+import { getProfessionIcon } from '../config/professions';
+import { getGenderIcons } from '../config/genders';
 
 interface Props {
   players: Player[];
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
+}
+
+const INLINE_ICON_STYLE: React.CSSProperties = { display: 'inline', verticalAlign: '-3px', marginRight: '4px', opacity: 0.75 };
+
+function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: string; className: string }) {
+  if (attrKey === 'profession') {
+    const Icon = getProfessionIcon(value);
+    return (
+      <span className={className}>
+        {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
+        {value}
+      </span>
+    );
+  }
+
+  if (attrKey === 'gender') {
+    const { genderIcon: GIcon, affixIcon: AIcon } = getGenderIcons(value);
+    return (
+      <span className={className}>
+        {GIcon && <GIcon size={15} style={INLINE_ICON_STYLE} />}
+        {AIcon && <AIcon size={15} style={{ ...INLINE_ICON_STYLE, marginRight: '4px' }} />}
+        {value}
+      </span>
+    );
+  }
+
+  return <span className={className}>{value}</span>;
 }
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
@@ -79,14 +109,14 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                     return (
                       <td key={key} className="px-3 py-3 align-top">
                         {revealed ? (
-                          <span className="text-emerald-400 text-sm leading-relaxed break-words">{val}</span>
+                          <AttrValue attrKey={key} value={val} className="text-emerald-400 text-sm leading-relaxed break-words" />
                         ) : (
                           <span
                             className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer hover:text-amber-300 transition-colors underline decoration-dotted underline-offset-2"
                             title="Нажми, чтобы открыть"
                             onClick={() => send({ type: 'reveal_attribute', attribute: key as AttributeKey })}
                           >
-                            {val}
+                            <AttrValue attrKey={key} value={val} className="" />
                           </span>
                         )}
                       </td>
@@ -96,7 +126,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   return (
                     <td key={key} className="px-3 py-3 align-top">
                       {val
-                        ? <span className="text-zinc-300 text-sm leading-relaxed break-words">{val}</span>
+                        ? <AttrValue attrKey={key} value={val} className="text-zinc-300 text-sm leading-relaxed break-words" />
                         : <span className="text-zinc-700">—</span>
                       }
                     </td>

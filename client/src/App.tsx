@@ -155,7 +155,14 @@ export default function App() {
   }
 
   if (showBunkerIntro && roomState.bunker) {
-    return <BunkerIntroScreen bunker={roomState.bunker} onContinue={handleIntroContinue} />;
+    return (
+      <BunkerIntroScreen
+        bunker={roomState.bunker}
+        players={roomState.players}
+        onContinue={handleIntroContinue}
+        onLeave={handleLeave}
+      />
+    );
   }
 
   return (

@@ -42,6 +42,10 @@ if (process.env.NODE_ENV === 'production') {
 
 // ── REST ──────────────────────────────────────────────────────────────────────
 
+app.get('/api/config', (req, res) => {
+  res.json(require('./game/gameConfig.json'));
+});
+
 app.get('/api/rooms', (req, res) => {
   const list = [];
   for (const [code, room] of rooms) {

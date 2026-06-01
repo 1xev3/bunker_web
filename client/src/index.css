@@ -40,6 +40,16 @@ td, th {
   word-break: break-word;
 }
 
+@keyframes emergency-flash {
+  0%, 100% { opacity: 1; text-shadow: 0 0 16px rgba(251,191,36,0.6), 0 0 32px rgba(251,191,36,0.25); }
+  50% { opacity: 0.35; text-shadow: none; }
+}
+
+.animate-emergency-flash {
+  animation: emergency-flash 0.9s ease-in-out infinite;
+  color: #fbbf24;
+}
+
 @keyframes radiation-pulse {
   0%, 100% { opacity: 0.6; text-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
   50% { opacity: 1; text-shadow: 0 0 16px rgba(251, 191, 36, 0.7), 0 0 32px rgba(251, 191, 36, 0.3); }
