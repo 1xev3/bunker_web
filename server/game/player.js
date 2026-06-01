@@ -69,7 +69,8 @@ class Player {
 
     this.trait = GameConfig.TRAITS[Math.floor(Math.random() * GameConfig.TRAITS.length)];
 
-    const profession = GameConfig.PROFESSIONS[Math.floor(Math.random() * GameConfig.PROFESSIONS.length)];
+    const professions = Object.keys(GameConfig.PROFESSION_ABILITIES);
+    const profession = professions[Math.floor(Math.random() * professions.length)];
     const level = weightedRandom(GameConfig.SKILL_LEVELS);
     this.profession = `${profession} (${level})`;
 

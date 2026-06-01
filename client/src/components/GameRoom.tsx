@@ -4,7 +4,6 @@ import BunkerInfo from './BunkerInfo';
 import StatusTable from './StatusTable';
 import VotingModal from './VotingModal';
 import AdminPanel from './AdminPanel';
-import ProfessionAbilityPanel from './ProfessionAbilityPanel';
 
 interface Props {
   roomState: RoomState;
@@ -27,7 +26,6 @@ export default function GameRoom({
   flashMessage,
   onLeave,
 }: Props) {
-  const isAdmin = roomState.admin_id === myPlayerId;
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
@@ -123,17 +121,13 @@ export default function GameRoom({
 
         {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
 
-        <ProfessionAbilityPanel roomState={roomState} myPlayerId={myPlayerId} send={send} />
-
         <StatusTable
           players={roomState.players}
           myPlayerId={myPlayerId}
           send={send}
         />
 
-        {isAdmin && !isFinished && (
-          <AdminPanel roomState={roomState} send={send} />
-        )}
+        <AdminPanel roomState={roomState} myPlayerId={myPlayerId} send={send} />
       </div>
 
       {roomState.is_voting && myPlayer?.is_active && (

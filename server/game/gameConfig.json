@@ -40,13 +40,6 @@
     "Любопытный","Равнодушный","Ответственный","Безответственный","Дружелюбный",
     "Агрессивный","Эгоистичный","Озабоченный"
   ],
-  "PROFESSIONS": [
-    "Врач","Инженер","Учитель","Военный","Фермер","Программист",
-    "Повар","Строитель","Ученый","Пилот","Электрик","Сантехник",
-    "Психолог","Биолог","Химик","Механик","Сварщик","Охотник",
-    "Киллер","Шпион","Торговец","Банкир","Юрист","Архитектор",
-    "Следователь","Судья","Бандит","Бармен","Секс-работник","Клоун","Трюкач"
-  ],
   "HEALTH_STATES": [
     ["Здоров", 0.3],
     ["Диабет", 0.05],
@@ -199,5 +192,278 @@
     "Чемодан с париками","Коллекция резиновых уточек",
     "Стопка журналов 1980-х годов","Чучело единорога","Машина для производства мыльных пузырей",
     "Зловеще выглядящие гномы","Чучело дрюнчика","Чучело шольца","Диски с WarThunder"
-  ]
+  ],
+  "PROFESSION_ABILITIES": {
+    "Врач": {
+      "key": "doctor_heal",
+      "title": "Лечение",
+      "description": "Устанавливает здоровье выбранного игрока в «Здоров».",
+      "targetType": "other",
+      "effect": { "type": "set_attribute", "attribute": "health", "value": "healthy" },
+      "publicMessage": "{actor} вылечил игрока {target}."
+    },
+    "Инженер": {
+      "key": "engineer_sabotage",
+      "title": "Саботаж",
+      "description": "Заменяет инвентарь выбранного игрока на «Сломан».",
+      "targetType": "other",
+      "effect": { "type": "strip_attribute", "attribute": "inventory", "value": "Сломан" },
+      "publicMessage": "{actor} саботировал снаряжение игрока {target}."
+    },
+    "Учитель": {
+      "key": "teacher_retrain",
+      "title": "Переобучение",
+      "description": "Случайно заменяет хобби выбранного игрока на другое.",
+      "targetType": "other",
+      "effect": { "type": "randomize_attribute", "attribute": "hobby" },
+      "publicMessage": "{actor} переобучил игрока {target}."
+    },
+    "Военный": {
+      "key": "soldier_cache",
+      "title": "Заначка",
+      "description": "Добавляет «AK-47» в свой рюкзак.",
+      "targetType": "self",
+      "effect": { "type": "add_to_backpack", "item": "AK-47" },
+      "publicMessage": "{actor} использовал личную способность."
+    },
+    "Фермер": {
+      "key": "farmer_food",
+      "title": "Прибавка еды",
+      "description": "Повышает запас еды в бункере на одну ступень.",
+      "targetType": "none",
+      "effect": { "type": "adjust_food", "delta": 1 },
+      "publicMessage": "{actor} увеличил запас еды в бункере."
+    },
+    "Программист": {
+      "key": "programmer_scan",
+      "title": "Проверка",
+      "description": "Приватно узнаёт один случайный скрытый атрибут выбранного игрока.",
+      "targetType": "other",
+      "effect": { "type": "inspect_attribute" },
+      "publicMessage": "{actor} использовал способность на игроке {target}."
+    },
+    "Повар": {
+      "key": "cook_food",
+      "title": "Прибавка еды",
+      "description": "Повышает запас еды в бункере на одну ступень.",
+      "targetType": "none",
+      "effect": { "type": "adjust_food", "delta": 1 },
+      "publicMessage": "{actor} увеличил запас еды в бункере."
+    },
+    "Строитель": {
+      "key": "builder_supplies",
+      "title": "Стройматериалы",
+      "description": "Добавляет «Верстак с инструментами» в свой рюкзак.",
+      "targetType": "self",
+      "effect": { "type": "add_to_backpack", "item": "Верстак с инструментами" },
+      "publicMessage": "{actor} использовал личную способность."
+    },
+    "Учёный": {
+      "key": "scientist_experiment",
+      "title": "Эксперимент",
+      "description": "Случайно меняет здоровье или фобию выбранного игрока на другое значение.",
+      "targetType": "other",
+"variants": [
+        { "key": "health", "label": "Менять здоровье", "effect": { "type": "randomize_attribute", "attribute": "health" } },
+        { "key": "phobia", "label": "Менять фобию", "effect": { "type": "randomize_attribute", "attribute": "phobia" } }
+      ],
+      "publicMessage": "{actor} поставил эксперимент над игроком {target}."
+    },
+    "Пилот": {
+      "key": "pilot_reveal",
+      "title": "Разведка",
+      "description": "Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.",
+      "targetType": "other",
+      "effect": { "type": "reveal_attribute" },
+      "publicMessage": "{actor} раскрыл у игрока {target} атрибут \"{revealed_label}\": {revealed_value}."
+    },
+    "Электрик": {
+      "key": "electrician_shock",
+      "title": "Удар током",
+      "description": "Ухудшает здоровье выбранного игрока.",
+      "targetType": "other",
+      "effect": { "type": "set_attribute", "attribute": "health", "value": "worse" },
+      "publicMessage": "{actor} ударил током игрока {target}."
+    },
+    "Сантехник": {
+      "key": "plumber_flood",
+      "title": "Засор",
+      "description": "Ухудшает здоровье выбранного игрока.",
+      "targetType": "other",
+      "effect": { "type": "set_attribute", "attribute": "health", "value": "worse" },
+      "publicMessage": "{actor} «починил» трубы у игрока {target}."
+    },
+    "Психолог": {
+      "key": "psychologist_therapy",
+      "title": "Терапия",
+      "description": "Случайно заменяет фобию выбранного игрока на другую.",
+      "targetType": "other",
+      "effect": { "type": "randomize_attribute", "attribute": "phobia" },
+      "publicMessage": "{actor} изменил фобию игрока {target}."
+    },
+    "Биолог": {
+      "key": "biologist_mutation",
+      "title": "Мутация",
+      "description": "Случайно меняет пол, телосложение или здоровье выбранного игрока.",
+      "targetType": "other",
+"variants": [
+        { "key": "gender", "label": "Менять пол", "effect": { "type": "randomize_attribute", "attribute": "gender" } },
+        { "key": "body", "label": "Менять телосложение", "effect": { "type": "randomize_attribute", "attribute": "body" } },
+        { "key": "health", "label": "Менять здоровье", "effect": { "type": "randomize_attribute", "attribute": "health" } }
+      ],
+      "publicMessage": "{actor} вызвал мутацию у игрока {target}."
+    },
+    "Химик": {
+      "key": "chemist_mix",
+      "title": "Отравление или лечение",
+      "description": "Устанавливает здоровье выбранного игрока в «Здоров» или ухудшает его.",
+      "targetType": "other",
+"variants": [
+        { "key": "heal", "label": "Лечить", "effect": { "type": "set_attribute", "attribute": "health", "value": "healthy" } },
+        { "key": "harm", "label": "Отравить", "effect": { "type": "set_attribute", "attribute": "health", "value": "worse" } }
+      ],
+      "publicMessage": "{actor} применил химический состав на игроке {target}."
+    },
+    "Механик": {
+      "key": "mechanic_steal",
+      "title": "Разборка",
+      "description": "Забирает инвентарь выбранного игрока себе, тому ставит «Разобран».",
+      "targetType": "other",
+      "effect": { "type": "steal_attribute", "attribute": "inventory", "stolenValue": "Разобран" },
+      "publicMessage": "{actor} разобрал снаряжение игрока {target}."
+    },
+    "Сварщик": {
+      "key": "welder_weld",
+      "title": "Сварка",
+      "description": "Случайно меняет инвентарь выбранного игрока на другой предмет.",
+      "targetType": "other",
+      "effect": { "type": "randomize_attribute", "attribute": "inventory" },
+      "publicMessage": "{actor} переделал снаряжение игрока {target}."
+    },
+    "Охотник": {
+      "key": "hunter_food",
+      "title": "Прибавка еды",
+      "description": "Повышает запас еды в бункере на одну ступень.",
+      "targetType": "none",
+      "effect": { "type": "adjust_food", "delta": 1 },
+      "publicMessage": "{actor} увеличил запас еды в бункере."
+    },
+    "Киллер": {
+      "key": "killer_strip_inventory",
+      "title": "Устранение признака",
+      "description": "Заменяет инвентарь выбранного игрока на «Потерян».",
+      "targetType": "other",
+      "effect": { "type": "strip_attribute", "attribute": "inventory", "value": "Потерян" },
+      "publicMessage": "{actor} лишил игрока {target} его инвентаря."
+    },
+    "Шпион": {
+      "key": "spy_scan",
+      "title": "Сбор данных",
+      "description": "Приватно узнаёт один случайный скрытый атрибут выбранного игрока.",
+      "targetType": "other",
+      "effect": { "type": "inspect_attribute" },
+      "publicMessage": "{actor} использовал способность на игроке {target}."
+    },
+    "Торговец": {
+      "key": "trader_swap_inventory",
+      "title": "Обмен",
+      "description": "Меняет местами инвентарь двух выбранных игроков.",
+      "targetType": "pair",
+      "effect": { "type": "swap_attribute", "attribute": "inventory" },
+      "publicMessage": "{actor} обменял инвентарь игроков {target1} и {target2}."
+    },
+    "Банкир": {
+      "key": "banker_bribe",
+      "title": "Подкуп",
+      "description": "Случайно заменяет доп. факт выбранного игрока на другой.",
+      "targetType": "other",
+      "effect": { "type": "randomize_attribute", "attribute": "additional" },
+      "publicMessage": "{actor} подкупил игрока {target}."
+    },
+    "Юрист": {
+      "key": "lawyer_rewrite",
+      "title": "Переписывание",
+      "description": "Случайно заменяет доп. факт выбранного игрока на другой.",
+      "targetType": "other",
+      "effect": { "type": "randomize_attribute", "attribute": "additional" },
+      "publicMessage": "{actor} переписал биографию игрока {target}."
+    },
+    "Архитектор": {
+      "key": "architect_inspect",
+      "title": "Планировка",
+      "description": "Приватно узнаёт один случайный скрытый атрибут выбранного игрока.",
+      "targetType": "other",
+      "effect": { "type": "inspect_attribute" },
+      "publicMessage": "{actor} использовал способность на игроке {target}."
+    },
+    "Следователь": {
+      "key": "detective_reveal",
+      "title": "Допрос",
+      "description": "Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.",
+      "targetType": "other",
+      "effect": { "type": "reveal_attribute" },
+      "publicMessage": "{actor} раскрыл у игрока {target} атрибут \"{revealed_label}\": {revealed_value}."
+    },
+    "Судья": {
+      "key": "judge_verdict",
+      "title": "Вердикт",
+      "description": "Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.",
+      "targetType": "other",
+      "effect": { "type": "reveal_attribute" },
+      "publicMessage": "{actor} вынес вердикт по игроку {target}: атрибут \"{revealed_label}\" — {revealed_value}."
+    },
+    "Бандит": {
+      "key": "bandit_rob",
+      "title": "Грабёж",
+      "description": "Забирает инвентарь выбранного игрока себе, тому ставит «Украден».",
+      "targetType": "other",
+      "effect": { "type": "steal_attribute", "attribute": "inventory", "stolenValue": "Украден" },
+      "publicMessage": "{actor} ограбил игрока {target}."
+    },
+    "Бармен": {
+      "key": "bartender_mix",
+      "title": "Спаивание",
+      "description": "Случайно заменяет доп. факт или инвентарь выбранного игрока на другой.",
+      "targetType": "other",
+"variants": [
+        { "key": "additional", "label": "Менять доп. факт", "effect": { "type": "randomize_attribute", "attribute": "additional" } },
+        { "key": "inventory", "label": "Менять инвентарь", "effect": { "type": "randomize_attribute", "attribute": "inventory" } }
+      ],
+      "publicMessage": "{actor} споил игрока {target}."
+    },
+    "Секс-работник": {
+      "key": "seduce_shift",
+      "title": "Соблазнение",
+      "description": "Случайно заменяет пол или доп. факт выбранного игрока на другой.",
+      "targetType": "other",
+"variants": [
+        { "key": "gender", "label": "Менять пол", "effect": { "type": "randomize_attribute", "attribute": "gender" } },
+        { "key": "additional", "label": "Менять доп. факт", "effect": { "type": "randomize_attribute", "attribute": "additional" } }
+      ],
+      "publicMessage": "{actor} повлиял на игрока {target}."
+    },
+    "Клоун": {
+      "key": "clown_break",
+      "title": "Срыв",
+      "description": "Случайно заменяет фобию или доп. факт выбранного игрока на другой.",
+      "targetType": "other",
+"variants": [
+        { "key": "phobia", "label": "Менять фобию", "effect": { "type": "randomize_attribute", "attribute": "phobia" } },
+        { "key": "additional", "label": "Менять доп. факт", "effect": { "type": "randomize_attribute", "attribute": "additional" } }
+      ],
+      "publicMessage": "{actor} устроил срыв игроку {target}."
+    },
+    "Трюкач": {
+      "key": "trickster_swap",
+      "title": "Подмена",
+      "description": "Меняет местами хобби, фобии или инвентарь двух выбранных игроков.",
+      "targetType": "pair",
+      "variants": [
+        { "key": "hobby", "label": "Менять хобби", "effect": { "type": "swap_attribute", "attribute": "hobby" } },
+        { "key": "phobia", "label": "Менять фобии", "effect": { "type": "swap_attribute", "attribute": "phobia" } },
+        { "key": "inventory", "label": "Менять инвентарь", "effect": { "type": "swap_attribute", "attribute": "inventory" } }
+      ],
+      "publicMessage": "{actor} подменил {attribute_label_lower} игроков {target1} и {target2}."
+    }
+  }
 }

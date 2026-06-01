@@ -52,6 +52,7 @@ export interface ProfessionAbilityInfo {
   title: string;
   description: string;
   targetType: ProfessionAbilityTargetType;
+  allowSelf: boolean;
   hasAbility: boolean;
   used: boolean;
   variants?: { key: string; label: string }[];
