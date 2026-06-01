@@ -52,6 +52,65 @@ const BUNKER_DESCRIPTIONS = {
     'Укреплённый комплекс с множеством зон и переходов. Автономная энергосистема, воздухоочиститель и дублирующие системы безопасности обеспечивают максимальную автономность.',
 };
 
+const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+function generateGrid(size, itemPool) {
+  const sizeIndex = GameConfig.BUNKER_SIZES.indexOf(size);
+  const roomCount = sizeIndex >= 0 ? GameConfig.ROOM_COUNTS[sizeIndex] : 5;
+  const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
+  const rooms = [[2, 2]];
+  grid[2][2] = true;
+
+  const frontier = [];
+  const addFrontier = (r, c) => {
+    DIRS.forEach(([dr, dc]) => {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5 && !grid[nr][nc]
+          && !frontier.some(([fr, fc]) => fr === nr && fc === nc)) {
+        frontier.push([nr, nc]);
+      }
+    });
+  };
+
+  addFrontier(2, 2);
+
+  while (rooms.length < roomCount && frontier.length > 0) {
+    const idx = Math.floor(Math.random() * frontier.length);
+    const [r, c] = frontier.splice(idx, 1)[0];
+    grid[r][c] = true;
+    rooms.push([r, c]);
+    addFrontier(r, c);
+  }
+
+  const shuffled = [...itemPool].sort(() => Math.random() - 0.5);
+  const result = Array.from({ length: 5 }, () => Array(5).fill(null));
+
+  result[2][2] = { items: [], isEntrance: true };
+
+  const nonCenter = rooms.filter(([r, c]) => !(r === 2 && c === 2));
+
+  // randomly leave ~0-33% of rooms empty, minimum 1 filled room
+  const emptyCount = Math.floor(Math.random() * Math.ceil(nonCenter.length / 3));
+  const filledCount = Math.max(1, nonCenter.length - emptyCount);
+
+  const base = shuffled.slice(0, filledCount);
+  const extraCount = Math.min(Math.floor(Math.random() * 3), shuffled.length - filledCount);
+  const extras = shuffled.slice(filledCount, filledCount + extraCount);
+
+  const roomItems = base.map(item => [item]);
+  extras.forEach(item => {
+    roomItems[Math.floor(Math.random() * roomItems.length)].push(item);
+  });
+
+  // shuffle which rooms get items
+  const shuffledRooms = [...nonCenter].sort(() => Math.random() - 0.5);
+  shuffledRooms.forEach(([r, c], i) => {
+    result[r][c] = { items: roomItems[i] ?? [] };
+  });
+
+  return result;
+}
+
 class Bunker {
   constructor() {
     this.theme = '';
@@ -61,6 +120,7 @@ class Bunker {
     this.items = [];
     this.disaster_info = '';
     this.bunker_info = '';
+    this.grid = [];
   }
 
   generate(theme = null) {
@@ -69,16 +129,13 @@ class Bunker {
     this.duration = GameConfig.BUNKER_DURATIONS[Math.floor(Math.random() * GameConfig.BUNKER_DURATIONS.length)];
     this.food = GameConfig.FOOD_SUPPLIES[Math.floor(Math.random() * GameConfig.FOOD_SUPPLIES.length)];
 
-    const count = 1 + Math.floor(Math.random() * GameConfig.BUNKER_ITEMS_COUNT_MAX);
-    const pool = [...GameConfig.BUNKER_ITEMS];
-    this.items = [];
-    for (let i = 0; i < count && pool.length > 0; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      this.items.push(pool.splice(idx, 1)[0]);
-    }
-
     this.disaster_info = DISASTER_DESCRIPTIONS[this.theme] ?? '';
     this.bunker_info   = BUNKER_DESCRIPTIONS[this.size]   ?? '';
+
+    this.grid = generateGrid(this.size, GameConfig.BUNKER_ITEMS);
+    this.items = this.grid.flat()
+      .filter(cell => cell && !cell.isEntrance)
+      .flatMap(cell => cell.items);
   }
 
   toDict() {
@@ -90,6 +147,7 @@ class Bunker {
       items: this.items,
       disaster_info: this.disaster_info,
       bunker_info: this.bunker_info,
+      grid: this.grid,
     };
   }
 }

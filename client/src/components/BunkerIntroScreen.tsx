@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ChevronRight, Map } from 'lucide-react';
 import type { BunkerInfo } from '../types/game';
+import BunkerMap from './BunkerMap';
 
 interface Props {
   bunker: BunkerInfo;
@@ -29,7 +30,7 @@ function useTypewriter(text: string, speedMs: number, active: boolean) {
   return { displayed, done };
 }
 
-const S = { TITLE: 0, DISASTER: 1, BUNKER: 2, STATS: 3, BUTTON: 4 };
+const S = { TITLE: 0, DISASTER: 1, BUNKER: 2, STATS: 3, MAP: 4, BUTTON: 5 };
 
 export default function BunkerIntroScreen({ bunker, onContinue }: Props) {
   const [stage, setStage] = useState(S.TITLE);
@@ -52,7 +53,14 @@ export default function BunkerIntroScreen({ bunker, onContinue }: Props) {
 
   useEffect(() => {
     if (stage === S.STATS) {
-      const t = setTimeout(() => setStage(S.BUTTON), 700);
+      const t = setTimeout(() => setStage(S.MAP), 700);
+      return () => clearTimeout(t);
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage === S.MAP) {
+      const t = setTimeout(() => setStage(S.BUTTON), 600);
       return () => clearTimeout(t);
     }
   }, [stage]);
@@ -132,6 +140,16 @@ export default function BunkerIntroScreen({ bunker, onContinue }: Props) {
               </p>
               <p className="text-zinc-300 text-sm leading-relaxed">{bunker.items.join(', ')}</p>
             </div>
+          </div>
+        )}
+
+        {/* Bunker map */}
+        {stage >= S.MAP && bunker.grid?.length > 0 && (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 animate-fade-in-up">
+            <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
+              <Map size={13} /> Карта бункера
+            </p>
+            <BunkerMap grid={bunker.grid} />
           </div>
         )}
 

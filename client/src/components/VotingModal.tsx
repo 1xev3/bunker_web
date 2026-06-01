@@ -12,6 +12,7 @@ interface Props {
 
 export default function VotingModal({ players, myPlayerId, hasVoted, votedPlayers, votes, send }: Props) {
   const active = players.filter(p => p.is_active);
+  const votableOptions = active.filter(p => p.id !== myPlayerId);
   const myVoteTarget = votes[myPlayerId];
   const totalVoted = votedPlayers.length;
   const totalActive = active.length;
@@ -54,30 +55,20 @@ export default function VotingModal({ players, myPlayerId, hasVoted, votedPlayer
           <>
             <p className="text-zinc-500 text-sm mb-3">Кто должен покинуть бункер?</p>
             <div className="space-y-1.5">
-              {active.map(player => {
-                const isMe = player.id === myPlayerId;
-                return (
-                  <button
-                    key={player.id}
-                    className={`w-full border rounded-xl py-2.5 px-4 transition-all text-left text-sm flex items-center justify-between group ${
-                      isMe
-                        ? 'bg-zinc-800/50 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-500 hover:text-zinc-100'
-                        : 'bg-zinc-800/30 border-zinc-700/60 hover:bg-red-900/30 hover:border-red-700/60 hover:text-red-200'
-                    }`}
-                    onClick={() => send({ type: 'submit_vote', target_id: player.id })}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        isMe ? 'bg-amber-900/50 text-amber-300' : 'bg-zinc-700 text-zinc-400 group-hover:bg-red-900/50 group-hover:text-red-300'
-                      }`}>
-                        {player.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className={`font-medium ${isMe ? 'text-amber-300' : 'text-zinc-200'}`}>{player.name}</span>
+              {votableOptions.map(player => (
+                <button
+                  key={player.id}
+                  className="w-full border rounded-xl py-2.5 px-4 transition-all text-left text-sm flex items-center justify-between group bg-zinc-800/30 border-zinc-700/60 hover:bg-red-900/30 hover:border-red-700/60 hover:text-red-200"
+                  onClick={() => send({ type: 'submit_vote', target_id: player.id })}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-zinc-700 text-zinc-400 group-hover:bg-red-900/50 group-hover:text-red-300">
+                      {player.name.charAt(0).toUpperCase()}
                     </div>
-                    {isMe && <span className="text-zinc-600 text-xs">вы</span>}
-                  </button>
-                );
-              })}
+                    <span className="font-medium text-zinc-200">{player.name}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           </>
         )}

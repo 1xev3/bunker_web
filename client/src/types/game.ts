@@ -57,6 +57,8 @@ export interface ProfessionAbilityInfo {
   variants?: { key: string; label: string }[];
 }
 
+export type BunkerCell = { items: string[]; isEntrance?: boolean } | null;
+
 export interface BunkerInfo {
   theme: string;
   size: string;
@@ -65,6 +67,7 @@ export interface BunkerInfo {
   items: string[];
   disaster_info: string;
   bunker_info: string;
+  grid: BunkerCell[][];
 }
 
 export interface RoomState {

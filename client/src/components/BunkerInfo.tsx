@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, AlertTriangle, Building2, Ruler, Timer, Wheat, Package } from 'lucide-react';
+import { ChevronDown, AlertTriangle, Building2, Ruler, Timer, Wheat, Package, Map } from 'lucide-react';
 import type { BunkerInfo as BunkerInfoType } from '../types/game';
+import BunkerMap from './BunkerMap';
 
 interface Props {
   bunker: BunkerInfoType;
@@ -49,6 +50,16 @@ export default function BunkerInfo({ bunker }: Props) {
               </p>
               <p className="text-zinc-300 text-xs leading-relaxed">{bunker.items.join(', ')}</p>
             </div>
+            {bunker.grid?.length > 0 && (
+              <div>
+                <p className="text-zinc-600 text-xs mb-2 flex items-center gap-1">
+                  <Map size={11} className="text-zinc-600" /> Карта бункера
+                </p>
+                <div className="max-w-[420px]">
+                  <BunkerMap grid={bunker.grid} compact />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -292,6 +292,8 @@ function handleVote(roomCode, playerId, msg) {
     const active = room.getActivePlayers();
     if (room.votedPlayers.size >= active.length) {
       finalizeVoting(roomCode);
+    } else {
+      wsManager.broadcastState(roomCode, room);
     }
   }
 }
