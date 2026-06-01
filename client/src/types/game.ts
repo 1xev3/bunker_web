@@ -102,7 +102,7 @@ export type ServerMessage =
   | { type: 'profession_ability_used'; message: string };
 
 export type ClientMessage =
-  | { type: 'join'; nickname: string; room_code?: string }
+  | { type: 'join'; nickname: string; room_code?: string; pack?: string }
   | { type: 'rejoin'; token: string }
   | { type: 'start_game' }
   | { type: 'reveal_attribute'; attribute: AttributeKey }

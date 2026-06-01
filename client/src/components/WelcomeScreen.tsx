@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2 } from 'lucide-react';
+import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package } from 'lucide-react';
 import type { ClientMessage, RoomListing } from '../types/game';
 
 interface Props {
@@ -10,6 +10,8 @@ export default function WelcomeScreen({ onConnect }: Props) {
   const [nickname, setNickname] = useState(() => localStorage.getItem('bunker_nickname') ?? '');
   const [roomCode, setRoomCode] = useState('');
   const [rooms, setRooms] = useState<RoomListing[]>([]);
+  const [packs, setPacks] = useState<string[]>([]);
+  const [selectedPack, setSelectedPack] = useState('DefaultPack');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
 
@@ -20,6 +22,11 @@ export default function WelcomeScreen({ onConnect }: Props) {
       setRoomCode(codeFromUrl.toUpperCase());
       setTab('join');
     }
+
+    fetch('/api/packs').then(r => r.json()).then((list: string[]) => {
+      setPacks(list);
+      if (list.length > 0 && !list.includes(selectedPack)) setSelectedPack(list[0]);
+    }).catch(() => {});
 
     const fetchRooms = () =>
       fetch('/api/rooms').then(r => r.json()).then(setRooms).catch(() => {});
@@ -40,7 +47,7 @@ export default function WelcomeScreen({ onConnect }: Props) {
 
   const handleCreate = () => {
     if (!validate()) return;
-    onConnect({ type: 'join', nickname: nickname.trim() });
+    onConnect({ type: 'join', nickname: nickname.trim(), pack: selectedPack });
   };
 
   const handleJoin = (code: string) => {
@@ -97,12 +104,30 @@ export default function WelcomeScreen({ onConnect }: Props) {
           </div>
 
           {tab === 'create' ? (
-            <button
-              className="btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"
-              onClick={handleCreate}
-            >
-              <Plus size={15} /> Создать комнату
-            </button>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-zinc-500 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                  <Package size={12} className="text-zinc-500" /> Пак
+                </label>
+                <select
+                  className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 text-sm focus:outline-none focus:border-amber-600/50 focus:ring-1 focus:ring-amber-600/20 transition-all"
+                  value={selectedPack}
+                  onChange={e => setSelectedPack(e.target.value)}
+                >
+                  {(packs.length > 0 ? packs : ['DefaultPack']).map(pack => (
+                    <option key={pack} value={pack}>
+                      {pack}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"
+                onClick={handleCreate}
+              >
+                <Plus size={15} /> Создать комнату
+              </button>
+            </div>
           ) : (
             <div className="space-y-2">
               <input

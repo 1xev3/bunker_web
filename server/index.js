@@ -43,7 +43,17 @@ if (process.env.NODE_ENV === 'production') {
 // ── REST ──────────────────────────────────────────────────────────────────────
 
 app.get('/api/config', (req, res) => {
-  res.json(require('./game/gameConfig.json'));
+  const { loadPack, listPacks } = require('./game/gameConfig');
+  try {
+    res.json(loadPack(req.query.pack || 'DefaultPack'));
+  } catch {
+    res.status(404).json({ error: 'Pack not found' });
+  }
+});
+
+app.get('/api/packs', (req, res) => {
+  const { listPacks } = require('./game/gameConfig');
+  res.json(listPacks());
 });
 
 app.get('/api/rooms', (req, res) => {
@@ -154,7 +164,8 @@ function handleJoin(ws, msg) {
   } else {
     // Create new room
     const player = new Player(trimmed);
-    room = new GameRoom(player.id);
+    const packName = typeof msg.pack === 'string' ? msg.pack : 'DefaultPack';
+    room = new GameRoom(player.id, packName);
     rooms.set(room.roomCode, room);
     room.addPlayer(player);
     const token = sessions.create(player.id, room.roomCode);
@@ -212,10 +223,10 @@ function handleStartGame(roomCode, playerId) {
   if (room.players.length < 2) return;
 
   room.status = 'running';
-  room.bunker.generate();
+  room.bunker.generate(null, room.config);
 
   for (const player of room.players) {
-    player.generateCharacter();
+    player.generateCharacter(room.config);
   }
 
   wsManager.broadcastState(roomCode, room);

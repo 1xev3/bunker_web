@@ -1,5 +1,4 @@
 const { randomUUID } = require('crypto');
-const GameConfig = require('./gameConfig');
 const { getProfessionAbilityInfo } = require('./professionAbilities');
 
 const ATTRIBUTE_KEYS = ['gender', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
@@ -45,19 +44,22 @@ class Player {
     this.backpack = '';
     this.additional = '';
     this.description = '';
+    this.config = null;
     this.profession_ability_used = false;
 
     this.revealed_attributes = Object.fromEntries(ATTRIBUTE_KEYS.map(k => [k, false]));
   }
 
-  generateCharacter() {
-    const gender = weightedRandom(GameConfig.GENDERS);
-    const affix = weightedRandom(GameConfig.GENDER_AFFIXES);
-    const ageRange = weightedRandom(GameConfig.AGES);
+  generateCharacter(config) {
+    this.config = config;
+
+    const gender = weightedRandom(config.GENDERS);
+    const affix = weightedRandom(config.GENDER_AFFIXES);
+    const ageRange = weightedRandom(config.AGES);
     const age = randInt(ageRange[0], ageRange[1]);
     this.gender = `${gender} ${affix} (${age} лет)`;
 
-    const bodyType = weightedRandom(GameConfig.BODY_TYPES);
+    const bodyType = weightedRandom(config.BODY_TYPES);
     let height;
     if (age < 18) height = Math.round(gaussRandom(160, 20));
     else if (age < 30) height = Math.round(gaussRandom(180, 15));
@@ -67,32 +69,32 @@ class Player {
     height = Math.max(150, Math.min(210, height));
     this.body = `${bodyType} (${height} см)`;
 
-    this.trait = GameConfig.TRAITS[Math.floor(Math.random() * GameConfig.TRAITS.length)];
+    this.trait = config.TRAITS[Math.floor(Math.random() * config.TRAITS.length)];
 
-    const professions = Object.keys(GameConfig.PROFESSION_ABILITIES);
+    const professions = Object.keys(config.PROFESSION_ABILITIES);
     const profession = professions[Math.floor(Math.random() * professions.length)];
-    const level = weightedRandom(GameConfig.SKILL_LEVELS);
+    const level = weightedRandom(config.SKILL_LEVELS);
     this.profession = `${profession} (${level})`;
 
-    const healthState = weightedRandom(GameConfig.HEALTH_STATES);
+    const healthState = weightedRandom(config.HEALTH_STATES);
     if (healthState === 'Здоров') {
       this.health = 'Здоров';
     } else {
-      const stage = weightedRandom(GameConfig.HEALTH_STAGES);
+      const stage = weightedRandom(config.HEALTH_STAGES);
       this.health = `${healthState} (${stage})`;
     }
 
-    const hobby = GameConfig.HOBBIES[Math.floor(Math.random() * GameConfig.HOBBIES.length)];
-    const hobbyLevel = weightedRandom(GameConfig.SKILL_LEVELS);
+    const hobby = config.HOBBIES[Math.floor(Math.random() * config.HOBBIES.length)];
+    const hobbyLevel = weightedRandom(config.SKILL_LEVELS);
     this.hobby = `${hobby} (${hobbyLevel})`;
 
-    const phobia = GameConfig.PHOBIAS[Math.floor(Math.random() * GameConfig.PHOBIAS.length)];
+    const phobia = config.PHOBIAS[Math.floor(Math.random() * config.PHOBIAS.length)];
     this.phobia = `Страх ${phobia}`;
 
-    this.inventory = GameConfig.INVENTORY[Math.floor(Math.random() * GameConfig.INVENTORY.length)];
+    this.inventory = config.INVENTORY[Math.floor(Math.random() * config.INVENTORY.length)];
 
-    const count = randInt(1, GameConfig.BACKPACK_ITEMS_COUNT_MAX);
-    const items = sample(GameConfig.BACKPACK_ITEMS, count);
+    const count = randInt(1, config.BACKPACK_ITEMS_COUNT_MAX);
+    const items = sample(config.BACKPACK_ITEMS, count);
     this.backpack = items.map(item => {
       if (Array.isArray(item)) {
         const [name, min, max] = item;
@@ -101,7 +103,7 @@ class Player {
       return item;
     }).join(', ');
 
-    this.additional = GameConfig.ADDITIONAL_INFO[Math.floor(Math.random() * GameConfig.ADDITIONAL_INFO.length)];
+    this.additional = config.ADDITIONAL_INFO[Math.floor(Math.random() * config.ADDITIONAL_INFO.length)];
   }
 
   revealAttribute(attr) {

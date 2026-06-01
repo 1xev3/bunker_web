@@ -1,5 +1,3 @@
-const GameConfig = require('./gameConfig');
-
 const ATTRIBUTE_LABELS = {
   gender: 'Пол',
   body: 'Телосложение',
@@ -46,42 +44,42 @@ function addItemToBackpack(backpackValue, item) {
   return `${backpackValue}, ${item}`;
 }
 
-function generateGender() {
-  const gender = randomWeightedValue(GameConfig.GENDERS);
-  const affix = randomWeightedValue(GameConfig.GENDER_AFFIXES);
-  const [min, max] = randomWeightedValue(GameConfig.AGES);
+function generateGender(config) {
+  const gender = randomWeightedValue(config.GENDERS);
+  const affix = randomWeightedValue(config.GENDER_AFFIXES);
+  const [min, max] = randomWeightedValue(config.AGES);
   return `${gender} ${affix} (${randomInt(min, max)} лет)`;
 }
 
-function generateBody() {
-  return `${randomWeightedValue(GameConfig.BODY_TYPES)} (${randomInt(150, 210)} см)`;
+function generateBody(config) {
+  return `${randomWeightedValue(config.BODY_TYPES)} (${randomInt(150, 210)} см)`;
 }
 
-function generateHealth(forceHealthy = false) {
+function generateHealth(config, forceHealthy = false) {
   if (forceHealthy) return 'Здоров';
-  const state = randomWeightedValue(GameConfig.HEALTH_STATES);
+  const state = randomWeightedValue(config.HEALTH_STATES);
   if (state === 'Здоров') return 'Здоров';
-  return `${state} (${randomWeightedValue(GameConfig.HEALTH_STAGES)})`;
+  return `${state} (${randomWeightedValue(config.HEALTH_STAGES)})`;
 }
 
-function generateWorseHealth(current) {
+function generateWorseHealth(current, config) {
   const candidates = [];
-  for (const [state] of GameConfig.HEALTH_STATES) {
+  for (const [state] of config.HEALTH_STATES) {
     if (state === 'Здоров') continue;
-    for (const [stage] of GameConfig.HEALTH_STAGES) candidates.push(`${state} (${stage})`);
+    for (const [stage] of config.HEALTH_STAGES) candidates.push(`${state} (${stage})`);
   }
   return pickDifferent(current, candidates);
 }
 
-function randomizeAttribute(attribute, target) {
+function randomizeAttribute(attribute, target, config) {
   switch (attribute) {
-    case 'gender':     return generateGender();
-    case 'body':       return generateBody();
-    case 'health':     return pickDifferent(target.health, [generateHealth(), generateWorseHealth(target.health)]);
-    case 'hobby':      return pickDifferent(target.hobby, GameConfig.HOBBIES.map(h => `${h} (${randomWeightedValue(GameConfig.SKILL_LEVELS)})`));
-    case 'phobia':     return pickDifferent(target.phobia, GameConfig.PHOBIAS.map(p => `Страх ${p}`));
-    case 'inventory':  return pickDifferent(target.inventory, GameConfig.INVENTORY);
-    case 'additional': return pickDifferent(target.additional, GameConfig.ADDITIONAL_INFO);
+    case 'gender':     return generateGender(config);
+    case 'body':       return generateBody(config);
+    case 'health':     return pickDifferent(target.health, [generateHealth(config), generateWorseHealth(target.health, config)]);
+    case 'hobby':      return pickDifferent(target.hobby, config.HOBBIES.map(h => `${h} (${randomWeightedValue(config.SKILL_LEVELS)})`));
+    case 'phobia':     return pickDifferent(target.phobia, config.PHOBIAS.map(p => `Страх ${p}`));
+    case 'inventory':  return pickDifferent(target.inventory, config.INVENTORY);
+    case 'additional': return pickDifferent(target.additional, config.ADDITIONAL_INFO);
     default:           return null;
   }
 }
@@ -89,7 +87,7 @@ function randomizeAttribute(attribute, target) {
 // ─── Targeting helpers ────────────────────────────────────────────────────────
 
 function adjustFoodSupply(room, delta) {
-  const supplies = GameConfig.FOOD_SUPPLIES;
+  const supplies = room.config.FOOD_SUPPLIES;
   const idx = Math.max(0, supplies.indexOf(room.bunker.food));
   room.bunker.food = supplies[Math.max(0, Math.min(supplies.length - 1, idx + delta))];
 }
@@ -118,19 +116,19 @@ function chooseInspectableAttribute(target) {
 
 // ─── Effect executor ──────────────────────────────────────────────────────────
 
-function executeEffect(effect, { room, actor, target, target2 }) {
+function executeEffect(effect, { room, actor, target, target2, config }) {
   switch (effect.type) {
     case 'add_to_backpack':
       actor.backpack = addItemToBackpack(actor.backpack, effect.item);
       return {};
 
     case 'set_attribute':
-      if (effect.value === 'healthy') target[effect.attribute] = generateHealth(true);
-      else if (effect.value === 'worse') target[effect.attribute] = generateWorseHealth(target[effect.attribute]);
+      if (effect.value === 'healthy') target[effect.attribute] = generateHealth(config, true);
+      else if (effect.value === 'worse') target[effect.attribute] = generateWorseHealth(target[effect.attribute], config);
       return {};
 
     case 'randomize_attribute':
-      target[effect.attribute] = randomizeAttribute(effect.attribute, target);
+      target[effect.attribute] = randomizeAttribute(effect.attribute, target, config);
       return {};
 
     case 'swap_attribute': {
@@ -191,8 +189,8 @@ function getProfessionBaseName(professionValue) {
   return i === -1 ? professionValue : professionValue.slice(0, i);
 }
 
-function getDefinition(professionValue) {
-  return GameConfig.PROFESSION_ABILITIES[getProfessionBaseName(professionValue)] ?? null;
+function getDefinition(professionValue, config) {
+  return config.PROFESSION_ABILITIES[getProfessionBaseName(professionValue)] ?? null;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -201,7 +199,20 @@ function getProfessionAbilityInfo(player, viewerId) {
   const canSeeProfession = viewerId === player.id || player.revealed_attributes.profession;
   if (!canSeeProfession) return null;
 
-  const def = getDefinition(player.profession);
+  const config = player.config;
+  if (!config) {
+    return {
+      key: 'unknown_ability',
+      title: 'Неизвестная способность',
+      description: 'Для этой профессии не настроена способность.',
+      targetType: 'none',
+      allowSelf: false,
+      hasAbility: false,
+      used: false,
+    };
+  }
+
+  const def = getDefinition(player.profession, config);
   if (def) {
     return {
       key: def.key,
@@ -227,7 +238,8 @@ function getProfessionAbilityInfo(player, viewerId) {
 }
 
 function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) {
-  const def = getDefinition(actor.profession);
+  const config = room.config;
+  const def = getDefinition(actor.profession, config);
   if (!def) return { ok: false, error: 'У этой профессии нет активной способности.' };
   if (actor.profession_ability_used) return { ok: false, error: 'Способность этой профессии уже использована.' };
 
@@ -253,7 +265,7 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
     [target, target2] = pair;
   }
 
-  const effectResult = executeEffect(effect, { room, actor, target, target2 });
+  const effectResult = executeEffect(effect, { room, actor, target, target2, config });
 
   const variantDef = def.variants?.find(v => v.key === variant);
   const publicMessage = formatMessage(def.publicMessage, {
