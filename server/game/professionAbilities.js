@@ -102,10 +102,10 @@ function getTargetPlayer(room, actor, targetId, allowSelf = false) {
   return target;
 }
 
-function getTwoTargets(room, actor, targetId, secondTargetId) {
+function getTwoTargets(room, actor, targetId, secondTargetId, allowSelf = false) {
   if (!targetId || !secondTargetId || targetId === secondTargetId) return null;
-  const t1 = getTargetPlayer(room, actor, targetId);
-  const t2 = getTargetPlayer(room, actor, secondTargetId);
+  const t1 = getTargetPlayer(room, actor, targetId, allowSelf);
+  const t2 = getTargetPlayer(room, actor, secondTargetId, allowSelf);
   return t1 && t2 ? [t1, t2] : null;
 }
 
@@ -248,7 +248,7 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
     target = getTargetPlayer(room, actor, targetId, allowSelf);
     if (!target) return { ok: false, error: 'Нужно выбрать другого активного игрока.' };
   } else if (def.targetType === 'pair') {
-    const pair = getTwoTargets(room, actor, targetId, secondTargetId);
+    const pair = getTwoTargets(room, actor, targetId, secondTargetId, allowSelf);
     if (!pair) return { ok: false, error: 'Нужно выбрать двух разных активных игроков.' };
     [target, target2] = pair;
   }
