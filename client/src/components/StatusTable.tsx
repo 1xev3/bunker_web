@@ -15,7 +15,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
     : false;
 
   return (
-    <div className="rounded-xl border border-zinc-800 overflow-x-auto bg-zinc-900/20">
+    <div className="rounded-xl border border-zinc-800 overflow-x-auto bg-zinc-950/46 shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
       <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1100px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />

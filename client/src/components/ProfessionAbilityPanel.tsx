@@ -42,7 +42,7 @@ export default function ProfessionAbilityPanel({ roomState, myPlayerId, send }: 
   };
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950/48 shadow-[0_10px_30px_rgba(0,0,0,0.16)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Способность профессии</p>
