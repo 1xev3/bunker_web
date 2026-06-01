@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const { Player, ATTRIBUTE_KEYS } = require('./player');
 const Bunker = require('./bunker');
-const { loadPack } = require('./gameConfig');
+const { loadPack, getDefaultPackName } = require('./gameConfig');
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -11,7 +11,7 @@ function generateRoomCode() {
 }
 
 class GameRoom {
-  constructor(adminId, packName = 'DefaultPack') {
+  constructor(adminId, packName = getDefaultPackName()) {
     this.roomCode = generateRoomCode();
     this.adminId = adminId;
     this.packName = packName;

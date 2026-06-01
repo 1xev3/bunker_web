@@ -11,7 +11,7 @@ export default function WelcomeScreen({ onConnect }: Props) {
   const [roomCode, setRoomCode] = useState('');
   const [rooms, setRooms] = useState<RoomListing[]>([]);
   const [packs, setPacks] = useState<string[]>([]);
-  const [selectedPack, setSelectedPack] = useState('DefaultPack');
+  const [selectedPack, setSelectedPack] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
 
@@ -25,7 +25,9 @@ export default function WelcomeScreen({ onConnect }: Props) {
 
     fetch('/api/packs').then(r => r.json()).then((list: string[]) => {
       setPacks(list);
-      if (list.length > 0 && !list.includes(selectedPack)) setSelectedPack(list[0]);
+      if (list.length > 0) {
+        setSelectedPack(currentPack => (currentPack && list.includes(currentPack) ? currentPack : list[0]));
+      }
     }).catch(() => {});
 
     const fetchRooms = () =>
@@ -47,6 +49,10 @@ export default function WelcomeScreen({ onConnect }: Props) {
 
   const handleCreate = () => {
     if (!validate()) return;
+    if (!selectedPack) {
+      setError('Нет доступных паков конфигурации');
+      return;
+    }
     onConnect({ type: 'join', nickname: nickname.trim(), pack: selectedPack });
   };
 
@@ -114,7 +120,7 @@ export default function WelcomeScreen({ onConnect }: Props) {
                   value={selectedPack}
                   onChange={e => setSelectedPack(e.target.value)}
                 >
-                  {(packs.length > 0 ? packs : ['DefaultPack']).map(pack => (
+                  {packs.map(pack => (
                     <option key={pack} value={pack}>
                       {pack}
                     </option>

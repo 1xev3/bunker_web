@@ -43,9 +43,9 @@ if (process.env.NODE_ENV === 'production') {
 // ── REST ──────────────────────────────────────────────────────────────────────
 
 app.get('/api/config', (req, res) => {
-  const { loadPack, listPacks } = require('./game/gameConfig');
+  const { loadPack, getDefaultPackName } = require('./game/gameConfig');
   try {
-    res.json(loadPack(req.query.pack || 'DefaultPack'));
+    res.json(loadPack(req.query.pack || getDefaultPackName()));
   } catch {
     res.status(404).json({ error: 'Pack not found' });
   }
@@ -164,7 +164,10 @@ function handleJoin(ws, msg) {
   } else {
     // Create new room
     const player = new Player(trimmed);
-    const packName = typeof msg.pack === 'string' ? msg.pack : 'DefaultPack';
+    const { getDefaultPackName } = require('./game/gameConfig');
+    const packName = typeof msg.pack === 'string' && msg.pack.trim()
+      ? msg.pack.trim()
+      : getDefaultPackName();
     room = new GameRoom(player.id, packName);
     rooms.set(room.roomCode, room);
     room.addPlayer(player);
