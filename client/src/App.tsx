@@ -140,7 +140,12 @@ export default function App() {
   const myPlayerId = myPlayerIdRef.current;
 
   if (!roomState || !myPlayerId) {
-    return <WelcomeScreen onConnect={connect} />;
+    return (
+      <WelcomeScreen
+        onConnect={connect}
+        serverError={flashMessage?.kind === 'error' ? flashMessage.text : undefined}
+      />
+    );
   }
 
   if (roomState.status === 'waiting') {

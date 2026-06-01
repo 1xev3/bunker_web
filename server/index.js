@@ -46,8 +46,8 @@ app.get('/api/config', (req, res) => {
   const { loadPack, getDefaultPackName } = require('./game/gameConfig');
   try {
     res.json(loadPack(req.query.pack || getDefaultPackName()));
-  } catch {
-    res.status(404).json({ error: 'Pack not found' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
@@ -89,7 +89,13 @@ wss.on('connection', (ws) => {
     if (!playerId) {
       // Auth phase
       if (msg.type === 'join') {
-        const result = handleJoin(ws, msg);
+        let result = null;
+        try {
+          result = handleJoin(ws, msg);
+        } catch (error) {
+          ws.send(JSON.stringify({ type: 'error', message: error.message || 'Failed to join room' }));
+          return;
+        }
         if (!result) return ws.send(JSON.stringify({ type: 'error', message: 'Room not found or game already started' }));
         ({ roomCode, playerId } = result);
       } else if (msg.type === 'rejoin') {

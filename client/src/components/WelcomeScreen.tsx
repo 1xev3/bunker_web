@@ -4,9 +4,10 @@ import type { ClientMessage, RoomListing } from '../types/game';
 
 interface Props {
   onConnect: (msg: ClientMessage) => void;
+  serverError?: string;
 }
 
-export default function WelcomeScreen({ onConnect }: Props) {
+export default function WelcomeScreen({ onConnect, serverError }: Props) {
   const [nickname, setNickname] = useState(() => localStorage.getItem('bunker_nickname') ?? '');
   const [roomCode, setRoomCode] = useState('');
   const [rooms, setRooms] = useState<RoomListing[]>([]);
@@ -153,9 +154,9 @@ export default function WelcomeScreen({ onConnect }: Props) {
             </div>
           )}
 
-          {error && (
+          {(error || serverError) && (
             <p className="text-red-400 text-xs flex items-center gap-1.5">
-              <span className="text-red-400">⚠</span> {error}
+              <span className="text-red-400">⚠</span> {error || serverError}
             </p>
           )}
         </div>
