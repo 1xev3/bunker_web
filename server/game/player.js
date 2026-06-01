@@ -1,5 +1,6 @@
 const { randomUUID } = require('crypto');
 const GameConfig = require('./gameConfig');
+const { getProfessionAbilityInfo } = require('./professionAbilities');
 
 const ATTRIBUTE_KEYS = ['gender', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
 
@@ -44,6 +45,7 @@ class Player {
     this.backpack = '';
     this.additional = '';
     this.description = '';
+    this.profession_ability_used = false;
 
     this.revealed_attributes = Object.fromEntries(ATTRIBUTE_KEYS.map(k => [k, false]));
   }
@@ -132,6 +134,7 @@ class Player {
       revealed_attributes: { ...this.revealed_attributes },
       attributes: attrs,
       description: viewerId === this.id ? this.description : '',
+      profession_ability: getProfessionAbilityInfo(this, viewerId),
     };
   }
 }

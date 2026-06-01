@@ -42,6 +42,19 @@ export interface Player {
   revealed_attributes: Record<AttributeKey, boolean>;
   attributes: PlayerAttributes;
   description: string;
+  profession_ability: ProfessionAbilityInfo | null;
+}
+
+export type ProfessionAbilityTargetType = 'none' | 'self' | 'other' | 'pair';
+
+export interface ProfessionAbilityInfo {
+  key: string;
+  title: string;
+  description: string;
+  targetType: ProfessionAbilityTargetType;
+  hasAbility: boolean;
+  used: boolean;
+  variants?: { key: string; label: string }[];
 }
 
 export interface BunkerInfo {
@@ -81,7 +94,8 @@ export type ServerMessage =
   | { type: 'game_ended'; winner: Player | null }
   | { type: 'player_disconnected'; player_id: string }
   | { type: 'player_reconnected'; player_id: string }
-  | { type: 'admin_changed'; new_admin_id: string };
+  | { type: 'admin_changed'; new_admin_id: string }
+  | { type: 'profession_ability_used'; message: string };
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string }
@@ -92,4 +106,5 @@ export type ClientMessage =
   | { type: 'start_voting' }
   | { type: 'submit_vote'; target_id: string }
   | { type: 'end_game' }
-  | { type: 'kick_player'; player_id: string };
+  | { type: 'kick_player'; player_id: string }
+  | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string; variant?: string };

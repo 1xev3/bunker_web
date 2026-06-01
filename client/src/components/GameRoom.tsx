@@ -4,6 +4,7 @@ import BunkerInfo from './BunkerInfo';
 import StatusTable from './StatusTable';
 import VotingModal from './VotingModal';
 import AdminPanel from './AdminPanel';
+import ProfessionAbilityPanel from './ProfessionAbilityPanel';
 
 interface Props {
   roomState: RoomState;
@@ -12,18 +13,27 @@ interface Props {
   votingResult: { eliminated: Player | null; isTie: boolean } | null;
   gameWinner: Player | null | undefined;
   hasVoted: boolean;
+  flashMessage: { kind: 'info' | 'error'; text: string } | null;
   onLeave: () => void;
 }
 
-export default function GameRoom({ roomState, myPlayerId, send, votingResult, gameWinner, hasVoted, onLeave }: Props) {
+export default function GameRoom({
+  roomState,
+  myPlayerId,
+  send,
+  votingResult,
+  gameWinner,
+  hasVoted,
+  flashMessage,
+  onLeave,
+}: Props) {
   const isAdmin = roomState.admin_id === myPlayerId;
-  const myPlayer = roomState.players.find(p => p.id === myPlayerId);
+  const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      {/* Header */}
       <header className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <span className="text-amber-500 text-sm">☢</span>
@@ -45,7 +55,6 @@ export default function GameRoom({ roomState, myPlayerId, send, votingResult, ga
       </header>
 
       <div className="flex-1 flex flex-col p-4 gap-3 max-w-screen-2xl mx-auto w-full">
-        {/* Winner banner */}
         {isFinished && gameWinner !== undefined && (
           <div className={`rounded-xl border p-4 text-center animate-fade-in-up ${
             gameWinner
@@ -64,51 +73,58 @@ export default function GameRoom({ roomState, myPlayerId, send, votingResult, ga
           </div>
         )}
 
-        {/* Voting result */}
         {votingResult && (
           <div className={`rounded-xl border py-3 px-4 text-center animate-fade-in-up flex items-center justify-center gap-2 ${
             votingResult.isTie
               ? 'border-zinc-700 bg-zinc-900/60'
               : 'border-red-900/40 bg-red-950/20'
           }`}>
-            {votingResult.isTie
-              ? <>
-                  <Shuffle size={14} className="text-zinc-400 shrink-0" />
-                  <span className="text-zinc-400 text-sm">Ничья — никто не исключён, голосование повторяется</span>
-                </>
-              : <>
-                  <span className="text-sm text-zinc-400">Исключён:</span>
-                  <span className="text-red-300 font-semibold text-sm">{votingResult.eliminated?.name}</span>
-                </>
-            }
+            {votingResult.isTie ? (
+              <>
+                <Shuffle size={14} className="text-zinc-400 shrink-0" />
+                <span className="text-zinc-400 text-sm">Ничья, никто не исключён. Голосование повторяется.</span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-zinc-400">Исключён:</span>
+                <span className="text-red-300 font-semibold text-sm">{votingResult.eliminated?.name}</span>
+              </>
+            )}
           </div>
         )}
 
-        {/* Eliminated notice */}
         {amEliminated && (
           <div className="rounded-xl border border-zinc-800/60 py-2.5 px-4 text-center bg-zinc-900/30 flex items-center justify-center gap-2">
             <EyeOff size={13} className="text-zinc-500" />
-            <span className="text-zinc-500 text-sm">Вы выбыли — можно наблюдать за игрой</span>
+            <span className="text-zinc-500 text-sm">Вы выбыли. Можно наблюдать за игрой.</span>
           </div>
         )}
 
-        {/* Bunker info */}
+        {flashMessage && (
+          <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up ${
+            flashMessage.kind === 'error'
+              ? 'border-red-900/40 bg-red-950/20 text-red-300'
+              : 'border-amber-900/40 bg-amber-950/20 text-amber-200'
+          }`}>
+            {flashMessage.text}
+          </div>
+        )}
+
         {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
 
-        {/* Status table */}
+        <ProfessionAbilityPanel roomState={roomState} myPlayerId={myPlayerId} send={send} />
+
         <StatusTable
           players={roomState.players}
           myPlayerId={myPlayerId}
           send={send}
         />
 
-        {/* Admin panel */}
         {isAdmin && !isFinished && (
           <AdminPanel roomState={roomState} send={send} />
         )}
       </div>
 
-      {/* Voting modal */}
       {roomState.is_voting && myPlayer?.is_active && (
         <VotingModal
           players={roomState.players}

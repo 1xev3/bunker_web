@@ -5,6 +5,7 @@ const path = require('path');
 
 const GameRoom = require('./game/gameRoom');
 const { Player } = require('./game/player');
+const { applyProfessionAbility } = require('./game/professionAbilities');
 const SessionManager = require('./sessionManager');
 const WsManager = require('./wsManager');
 
@@ -104,6 +105,7 @@ wss.on('connection', (ws) => {
       case 'submit_vote':   handleVote(roomCode, playerId, msg); break;
       case 'end_game':      handleEndGame(roomCode, playerId); break;
       case 'kick_player':   handleKick(roomCode, playerId, msg); break;
+      case 'use_profession_ability': handleUseProfessionAbility(roomCode, playerId, msg); break;
     }
   });
 
@@ -360,6 +362,34 @@ function handleKick(roomCode, playerId, msg) {
     });
     wsManager.broadcastState(roomCode, room);
   }
+}
+
+function handleUseProfessionAbility(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'running' || room.isVoting) return;
+
+  const actor = room.getPlayer(playerId);
+  if (!actor || !actor.is_active) return;
+
+  const result = applyProfessionAbility(room, actor, msg.target_id, msg.second_target_id, msg.variant);
+  if (!result.ok) {
+    wsManager.send(roomCode, playerId, { type: 'error', message: result.error });
+    return;
+  }
+
+  wsManager.broadcastState(roomCode, room);
+
+  if (result.publicMessage) {
+    wsManager.broadcastExcept(roomCode, playerId, {
+      type: 'profession_ability_used',
+      message: result.publicMessage,
+    });
+  }
+
+  wsManager.send(roomCode, playerId, {
+    type: 'profession_ability_used',
+    message: result.privateMessage || result.publicMessage,
+  });
 }
 
 function transferAdmin(roomCode) {

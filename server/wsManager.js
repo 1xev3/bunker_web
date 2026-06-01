@@ -38,6 +38,16 @@ class WsManager {
     }
   }
 
+  broadcastExcept(roomCode, excludedPlayerId, msg) {
+    const room = this._rooms.get(roomCode);
+    if (!room) return;
+    const raw = JSON.stringify(msg);
+    for (const [playerId, ws] of room) {
+      if (playerId === excludedPlayerId) continue;
+      if (ws.readyState === 1) ws.send(raw);
+    }
+  }
+
   broadcastState(roomCode, gameRoom) {
     const room = this._rooms.get(roomCode);
     if (!room) return;

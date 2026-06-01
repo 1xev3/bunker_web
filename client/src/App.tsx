@@ -9,13 +9,18 @@ import './index.css';
 export default function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Prevents onclose from scheduling a reconnect when we close intentionally
   const intentionalCloseRef = useRef(false);
 
   const { roomState, handleMessage, myPlayerIdRef } = useGameState();
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
+  const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
+
+  const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
+    setFlashMessage({ kind, text });
+    setTimeout(() => setFlashMessage(null), 5000);
+  }, []);
 
   const send = useCallback((msg: ClientMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -24,7 +29,6 @@ export default function App() {
   }, []);
 
   const connect = useCallback((authMsg: ClientMessage) => {
-    // Mark as intentional so the onclose of the old WS doesn't schedule a reconnect
     intentionalCloseRef.current = true;
     wsRef.current?.close();
     wsRef.current = null;
@@ -35,7 +39,6 @@ export default function App() {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Allow reconnects for this new connection
       intentionalCloseRef.current = false;
       ws.send(JSON.stringify(authMsg));
     };
@@ -44,11 +47,14 @@ export default function App() {
       const msg: ServerMessage = JSON.parse(e.data);
 
       if (msg.type === 'error') {
-        // Stale token — clear everything so WelcomeScreen shows cleanly
-        localStorage.removeItem('bunker_token');
-        localStorage.removeItem('bunker_room');
-        localStorage.removeItem('bunker_player_id');
-        myPlayerIdRef.current = null;
+        if (msg.message === 'Invalid or expired token') {
+          localStorage.removeItem('bunker_token');
+          localStorage.removeItem('bunker_room');
+          localStorage.removeItem('bunker_player_id');
+          myPlayerIdRef.current = null;
+        } else {
+          showFlashMessage('error', msg.message);
+        }
         return;
       }
 
@@ -70,21 +76,20 @@ export default function App() {
       }
       if (msg.type === 'game_ended') setGameWinner(msg.winner);
       if (msg.type === 'vote_confirmed') setHasVoted(true);
+      if (msg.type === 'profession_ability_used') showFlashMessage('info', msg.message);
 
       handleMessage(msg);
     };
 
     ws.onclose = () => {
       if (intentionalCloseRef.current) return;
-      // Unexpected disconnect — try to rejoin
       const token = localStorage.getItem('bunker_token');
       if (token) {
         reconnectRef.current = setTimeout(() => connect({ type: 'rejoin', token }), 2000);
       }
     };
-  }, [handleMessage, myPlayerIdRef]);
+  }, [handleMessage, myPlayerIdRef, showFlashMessage]);
 
-  // Auto-rejoin on page load if session exists
   useEffect(() => {
     const token = localStorage.getItem('bunker_token');
     if (token) {
@@ -139,6 +144,7 @@ export default function App() {
       votingResult={votingResult}
       gameWinner={gameWinner}
       hasVoted={hasVoted}
+      flashMessage={flashMessage}
       onLeave={handleLeave}
     />
   );
