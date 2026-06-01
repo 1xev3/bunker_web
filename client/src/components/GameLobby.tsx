@@ -12,7 +12,7 @@ interface Props {
 export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Props) {
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const isAdmin = roomState.admin_id === myPlayerId;
-  const canStart = isAdmin && roomState.players.length >= 2;
+  const canStart = isAdmin && (roomState.players.length >= 2 || import.meta.env.DEV);
 
   const copyCode = () => {
     navigator.clipboard.writeText(roomState.room_code);

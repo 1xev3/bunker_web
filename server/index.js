@@ -14,6 +14,19 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+const IS_DEV = process.env.NODE_ENV !== 'production';
+const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '2', 10);
+const DEV_BOT_NAMES = [
+  'Сокол',
+  'Механик',
+  'Радар',
+  'Титан',
+  'Искра',
+  'Шторм',
+  'Кедр',
+  'Вектор',
+];
+
 const rooms = new Map();   // roomCode -> GameRoom
 const sessions = new SessionManager();
 const wsManager = new WsManager();
@@ -189,6 +202,7 @@ function handleRejoin(ws, msg) {
 function handleStartGame(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
+  if (IS_DEV) fillRoomWithDevBots(room);
   if (room.players.length < 2) return;
 
   room.status = 'running';
@@ -199,6 +213,27 @@ function handleStartGame(roomCode, playerId) {
   }
 
   wsManager.broadcastState(roomCode, room);
+}
+
+function fillRoomWithDevBots(room) {
+  const targetPlayerCount = Math.max(2, Math.min(15, DEV_MIN_PLAYERS));
+  const missingPlayers = targetPlayerCount - room.players.length;
+  if (missingPlayers <= 0) return;
+
+  const takenNames = new Set(room.players.map(player => player.name));
+  let botIndex = 1;
+
+  for (let i = 0; i < missingPlayers; i += 1) {
+    let botName;
+    do {
+      const baseName = DEV_BOT_NAMES[(botIndex - 1) % DEV_BOT_NAMES.length];
+      botName = `${baseName}-${botIndex}`;
+      botIndex += 1;
+    } while (takenNames.has(botName));
+
+    takenNames.add(botName);
+    room.addPlayer(new Player(botName));
+  }
 }
 
 function handleRevealAttr(roomCode, playerId, msg) {

@@ -8,7 +8,7 @@ import './index.css';
 
 export default function App() {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Prevents onclose from scheduling a reconnect when we close intentionally
   const intentionalCloseRef = useRef(false);
 
