@@ -37,13 +37,15 @@ export default function BunkerInfo({ bunker }: Props) {
           {bunker.bunker_info && (
             <Section icon={<Building2 size={11} />} title="Бункер" text={bunker.bunker_info} />
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-zinc-800/60">
-            <Stat icon={<Ruler size={11} />} label="Размер" value={bunker.size} />
-            <Stat icon={<Timer size={11} />} label="Срок" value={bunker.duration} />
-            <Stat icon={<Wheat size={11} />} label="Еда" value={bunker.food} />
+          <div className="space-y-3 pt-3 border-t border-zinc-800/60">
+            <div className="grid grid-cols-3 gap-3">
+              <Stat icon={<Ruler size={11} />} label="Размер"           value={bunker.size} />
+              <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration} />
+              <Stat icon={<Wheat size={11} />} label="Еда"              value={bunker.food} />
+            </div>
             <div>
               <p className="text-zinc-600 text-xs mb-1 flex items-center gap-1">
-                <Package size={11} className="text-zinc-600" /> В бункере
+                <Package size={11} className="text-zinc-600" /> Инвентарь бункера
               </p>
               <p className="text-zinc-300 text-xs leading-relaxed">{bunker.items.join(', ')}</p>
             </div>

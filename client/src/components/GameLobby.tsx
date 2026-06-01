@@ -27,7 +27,18 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col" style={{ backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.04) 0%, transparent 50%)' }}>
+    <div
+      className="min-h-screen bg-zinc-950 flex flex-col"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(9, 9, 11, 0.86), rgba(9, 9, 11, 0.9)),
+          radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.06) 0%, transparent 50%),
+          url('/images/nuclear-apocalypse-poster.png')
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <header className="border-b border-zinc-900 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-amber-500 text-sm">☢</span>

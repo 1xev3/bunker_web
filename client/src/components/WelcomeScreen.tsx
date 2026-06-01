@@ -50,7 +50,18 @@ export default function WelcomeScreen({ onConnect }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.06) 0%, transparent 60%)' }}>
+    <div
+      className="min-h-screen bg-zinc-950 flex items-center justify-center p-4"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(9, 9, 11, 0.82), rgba(9, 9, 11, 0.88)),
+          radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.08) 0%, transparent 60%),
+          url('/images/bunker-hero.png')
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <div className="w-full max-w-sm space-y-5 animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-8">

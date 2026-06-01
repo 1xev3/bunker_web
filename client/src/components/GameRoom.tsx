@@ -33,7 +33,18 @@ export default function GameRoom({
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
+    <div
+      className="min-h-screen bg-zinc-950 flex flex-col"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(9, 9, 11, 0.88), rgba(9, 9, 11, 0.92)),
+          radial-gradient(circle at top, rgba(245, 158, 11, 0.04), transparent 35%),
+          url('/images/bunker-control-room.png')
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <header className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <span className="text-amber-500 text-sm">☢</span>

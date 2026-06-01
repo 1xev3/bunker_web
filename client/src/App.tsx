@@ -4,6 +4,7 @@ import { useGameState } from './hooks/useGameState';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameLobby from './components/GameLobby';
 import GameRoom from './components/GameRoom';
+import BunkerIntroScreen from './components/BunkerIntroScreen';
 import './index.css';
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
   const intentionalCloseRef = useRef(false);
 
   const { roomState, handleMessage, myPlayerIdRef } = useGameState();
+  const [showBunkerIntro, setShowBunkerIntro] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
@@ -91,6 +93,15 @@ export default function App() {
   }, [handleMessage, myPlayerIdRef, showFlashMessage]);
 
   useEffect(() => {
+    if (roomState?.status === 'running' && roomState.bunker) {
+      const key = `bunker_intro_seen_${roomState.room_code}`;
+      if (!sessionStorage.getItem(key)) {
+        setShowBunkerIntro(true);
+      }
+    }
+  }, [roomState?.status, roomState?.room_code]);
+
+  useEffect(() => {
     const token = localStorage.getItem('bunker_token');
     if (token) {
       const savedId = localStorage.getItem('bunker_player_id');
@@ -119,6 +130,13 @@ export default function App() {
     window.location.reload();
   }, [myPlayerIdRef]);
 
+  const handleIntroContinue = useCallback(() => {
+    setShowBunkerIntro(false);
+    if (roomState?.room_code) {
+      sessionStorage.setItem(`bunker_intro_seen_${roomState.room_code}`, '1');
+    }
+  }, [roomState?.room_code]);
+
   const myPlayerId = myPlayerIdRef.current;
 
   if (!roomState || !myPlayerId) {
@@ -134,6 +152,10 @@ export default function App() {
         onLeave={handleLeave}
       />
     );
+  }
+
+  if (showBunkerIntro && roomState.bunker) {
+    return <BunkerIntroScreen bunker={roomState.bunker} onContinue={handleIntroContinue} />;
   }
 
   return (
