@@ -16,12 +16,18 @@ class GameRoom {
     this.adminId = adminId;
     this.packName = packName;
     this.config = loadPack(packName);
-    this.status = 'waiting'; // waiting | running | finished
+    this.status = 'waiting'; // waiting | running | bunker_life | finished
     this.players = [];
     this.bunker = new Bunker();
     this.votes = {};        // { voterId: targetId }
     this.votedPlayers = new Set();
     this.isVoting = false;
+    this.round = 0;
+    this.bunkerCapacity = null;
+    this.survivalChance = 100;
+    this.currentMonth = 0;
+    this.activeEvent = null;
+    this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
   }
@@ -82,6 +88,12 @@ class GameRoom {
       pack: this.packName,
       status: this.status,
       is_voting: this.isVoting,
+      round: this.round,
+      bunker_capacity: this.bunkerCapacity,
+      survival_chance: this.survivalChance,
+      current_month: this.currentMonth,
+      active_event: this.activeEvent,
+      confirmed_bunker_life: [...this.confirmedBunkerLife],
       players: this.players.map(p => p.toDict(viewerId)),
       bunker: this.status !== 'waiting' ? this.bunker.toDict() : null,
       votes: this.isVoting ? { ...this.votes } : {},

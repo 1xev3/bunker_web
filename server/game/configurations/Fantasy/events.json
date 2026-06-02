@@ -1,0 +1,204 @@
+{
+  "EVENTS": [
+    {
+      "id": "water_leak",
+      "title": "Протечка воды",
+      "description": "В одной из комнат начала капать вода сквозь трещины в стене. Если не принять меры — вода постепенно затопит нижние отсеки бункера.",
+      "helpful_professions": ["Мастер водоводов", "Каменщик", "Зодчий"],
+      "helpful_items": ["Набор инструментов", "Мультитул", "Скотч", "Гидроизоляционный спрей", "Пластиковые хомуты"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -15 }
+    },
+    {
+      "id": "food_spoilage",
+      "title": "Порча запасов еды",
+      "description": "Часть продовольственных запасов покрылась плесенью — видимо, нарушилась система хранения. Если не спасти съестное, голод станет реальной угрозой.",
+      "helpful_professions": ["Алхимик", "Земледелец", "Трактирщик", "Целитель"],
+      "helpful_items": ["Ледяной ларь", "Герметичные пакеты", "Активированный уголь", "Фильтр для воды"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -25 },
+      "nothing_effect": { "type": "survival_change", "value": -20 }
+    },
+    {
+      "id": "illness_outbreak",
+      "title": "Вспышка болезни",
+      "description": "Несколько обитателей бункера слегли с жаром и кашлем. Болезнь быстро распространяется в замкнутом пространстве. Нужно срочно взяться за лечение.",
+      "helpful_professions": ["Целитель", "Алхимик", "Исповедник"],
+      "helpful_items": ["Аптечка", "Антибиотики", "Антисептик", "Бинты", "Витамины", "Обезболивающее"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -30 },
+      "nothing_effect": { "type": "survival_change", "value": -25 }
+    },
+    {
+      "id": "generator_failure",
+      "title": "Отказ рунного генератора",
+      "description": "Рунный генератор, питающий освещение и вентиляцию, начал давать сбои. Без света и свежего воздуха жизнь в бункере превратится в кошмар.",
+      "helpful_professions": ["Рунный кузнец", "Арканист", "Артефактор", "Зодчий"],
+      "helpful_items": ["Рунный генератор", "Рунические схемы", "Запас маны в кристаллах", "Запасной манакристалл", "Набор для подпитки кристаллов"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -25 },
+      "nothing_effect": { "type": "survival_change", "value": -20 }
+    },
+    {
+      "id": "rodent_infestation",
+      "title": "Нашествие крыс",
+      "description": "В бункер проникли крысы. Они грызут провода, портят еду и разносят заразу. Нужно срочно избавиться от вредителей.",
+      "helpful_professions": ["Следопыт", "Друид", "Алхимик", "Ассасин"],
+      "helpful_items": ["Флакон инсектицида", "Канистра гербицида", "Топор", "Нож", "Кошка", "Змея"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -15 },
+      "nothing_effect": { "type": "survival_change", "value": -10 }
+    },
+    {
+      "id": "conflict_erupts",
+      "title": "Внутренний конфликт",
+      "description": "Среди обитателей бункера вспыхнула серьёзная ссора. Напряжение нарастает — дело может дойти до драки. Нужно срочно разрядить обстановку.",
+      "helpful_professions": ["Исповедник", "Арбитр", "Наставник", "Инквизитор", "Шут", "Соблазнитель"],
+      "helpful_items": ["Бутылка виски", "Медовар", "Пиратский диск с фильмами", "Шоколад"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -15 }
+    },
+    {
+      "id": "air_filter_clog",
+      "title": "Засорение воздушного фильтра",
+      "description": "Система вентиляции начала давать сбои — воздух в бункере становится спёртым и тяжёлым. Фильтры забились и требуют замены или чистки.",
+      "helpful_professions": ["Мастер водоводов", "Зодчий", "Каменщик", "Рунный кузнец"],
+      "helpful_items": ["Набор инструментов", "Мультитул", "Фильтр для воды", "Скотч", "Пластиковые хомуты"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -15 }
+    },
+    {
+      "id": "magic_anomaly",
+      "title": "Магическая аномалия",
+      "description": "В одном из отсеков бункера возникла нестабильная магическая аномалия. Она искажает пространство и вызывает галлюцинации у обитателей. Срочно нужна нейтрализация.",
+      "helpful_professions": ["Арканист", "Рунный кузнец", "Провидец", "Артефактор", "Иллюзионист"],
+      "helpful_items": ["Рунические схемы", "Запас маны в кристаллах", "Солнечный кристалл", "Амулет ночного зрения", "Запасной манакристалл"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -25 },
+      "nothing_effect": { "type": "survival_change", "value": -20 }
+    },
+    {
+      "id": "water_shortage",
+      "title": "Нехватка питьевой воды",
+      "description": "Запасы питьевой воды подходят к концу быстрее, чем ожидалось. Нужно наладить систему добычи или очистки воды, иначе жажда станет смертельной угрозой.",
+      "helpful_professions": ["Мастер водоводов", "Алхимик", "Земледелец", "Друид"],
+      "helpful_items": ["Дистиллятор воды", "Фильтр для воды", "Фляга с фильтром", "Система гидропоники", "Таблетки для очистки воды (упаковка)", "Солнечный опреснитель", "Солнечный дистиллятор"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -30 },
+      "nothing_effect": { "type": "survival_change", "value": -25 }
+    },
+    {
+      "id": "structural_damage",
+      "title": "Трещины в стенах",
+      "description": "После серии подземных толчков в нескольких стенах бункера появились глубокие трещины. Если их не укрепить — свод может обрушиться.",
+      "helpful_professions": ["Каменщик", "Зодчий", "Рунный кузнец", "Мастер водоводов"],
+      "helpful_items": ["Набор инструментов", "Мультитул", "Скотч", "Гидроизоляционный спрей", "Топор", "Лопата"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -30 },
+      "nothing_effect": { "type": "survival_change", "value": -25 }
+    },
+    {
+      "id": "crop_failure",
+      "title": "Гибель урожая",
+      "description": "Растения в гидропонном отсеке начали чахнуть — что-то нарушило баланс питательных веществ. Без урожая запасы еды иссякнут гораздо быстрее.",
+      "helpful_professions": ["Земледелец", "Друид", "Алхимик"],
+      "helpful_items": ["Система гидропоники", "Пакет семян томатов", "Саженец яблони", "Горшок с комнатным растением", "Флакон инсектицида"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -15 }
+    },
+    {
+      "id": "fire_hazard",
+      "title": "Возгорание в бункере",
+      "description": "В складском отсеке вспыхнул небольшой пожар. В замкнутом пространстве огонь и дым крайне опасны. Нужно немедленно потушить огонь.",
+      "helpful_professions": ["Рунный кузнец", "Каменщик", "Зодчий", "Мастер водоводов"],
+      "helpful_items": ["Противопожарное полотно", "Фляга с водой", "Противомоскитная сетка", "Маска от миазмов", "Баллон с морозным эфиром"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -35 },
+      "nothing_effect": { "type": "survival_change", "value": -30 }
+    },
+    {
+      "id": "morale_crisis",
+      "title": "Кризис боевого духа",
+      "description": "Долгое заключение в бункере сломило дух обитателей. Депрессия и апатия охватили всех — люди теряют волю к выживанию. Нужно поднять моральный дух.",
+      "helpful_professions": ["Шут", "Трактирщик", "Медовар", "Соблазнитель", "Исповедник", "Наставник"],
+      "helpful_items": ["Бутылка виски", "Пиратский диск с фильмами", "Шоколад", "Кофе", "Чай", "Коктейль из наркотиков"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -15 }
+    },
+    {
+      "id": "theft_incident",
+      "title": "Кража запасов",
+      "description": "Кто-то тайно похищает еду и ресурсы из общих запасов. Доверие в группе подорвано. Вора нужно найти и восстановить порядок.",
+      "helpful_professions": ["Инквизитор", "Следопыт", "Теневой лазутчик", "Арбитр", "Хранитель хартий"],
+      "helpful_items": ["Брелок с подслушивающим устройством", "Ручка со скрытой камерой", "Говорящий камень", "Фамильяр-разведчик"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -20 },
+      "nothing_effect": { "type": "survival_change", "value": -10 }
+    },
+    {
+      "id": "medical_emergency",
+      "title": "Тяжёлое ранение",
+      "description": "Один из обитателей бункера получил серьёзную травму во время работ — сломаны рёбра и сильное кровотечение. Без немедленной медицинской помощи он может погибнуть.",
+      "helpful_professions": ["Целитель", "Алхимик"],
+      "helpful_items": ["Аптечка", "Бинты", "Антисептик", "Гипсовая повязка", "Обезболивающее", "Антибиотики", "Медицинское оборудование", "Сосуд с донорской кровью"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -25 },
+      "nothing_effect": { "type": "survival_change", "value": -20 }
+    },
+    {
+      "id": "tunnel_collapse",
+      "title": "Обвал запасного тоннеля",
+      "description": "Запасной выход из бункера завален в результате обвала. Без расчистки тоннеля у вас не будет пути к отступлению в случае опасности.",
+      "helpful_professions": ["Каменщик", "Зодчий", "Рыцарь", "Наездник грифона"],
+      "helpful_items": ["Лопата", "Топор", "Мультитул", "Набор инструментов", "Верёвка", "Складная пила"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -15 },
+      "nothing_effect": { "type": "survival_change", "value": -10 }
+    },
+    {
+      "id": "communication_lost",
+      "title": "Потеря связи с внешним миром",
+      "description": "Магические переговорные камни перестали работать. Вы отрезаны от внешнего мира и не можете узнать, что происходит снаружи. Без информации выживать значительно сложнее.",
+      "helpful_professions": ["Рунный кузнец", "Арканист", "Артефактор", "Провидец"],
+      "helpful_items": ["Говорящий камень", "Кристалл-связник", "Фамильяр-разведчик", "Рунический маяк", "Набор для подпитки кристаллов"],
+      "success_effect": { "type": "survival_change", "value": 10 },
+      "failure_effect": { "type": "survival_change", "value": -15 },
+      "nothing_effect": { "type": "survival_change", "value": -10 }
+    },
+    {
+      "id": "poisoning",
+      "title": "Отравление воды",
+      "description": "Анализ показал: в питьевой воде обнаружены следы яда или токсичных веществ. Несколько человек уже чувствуют недомогание. Нужно срочно очистить воду и помочь пострадавшим.",
+      "helpful_professions": ["Алхимик", "Целитель", "Мастер водоводов"],
+      "helpful_items": ["Фильтр для воды", "Таблетки для очистки воды (упаковка)", "Аптечка", "Антидот", "Активированный уголь", "Дистиллятор воды", "Антибиотики"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -30 },
+      "nothing_effect": { "type": "survival_change", "value": -25 }
+    },
+    {
+      "id": "lucky_find",
+      "title": "Находка в запасниках",
+      "description": "При проверке дальних отсеков обнаружен тайник с ресурсами, о котором никто не знал. Медикаменты, еда, инструменты — настоящее сокровище! Нужно грамотно распределить находки.",
+      "helpful_professions": ["Казначей", "Купец", "Хранитель хартий", "Следопыт"],
+      "helpful_items": ["Карта", "Карта местности", "Зачарованный компас", "Компас", "Фамильяр-разведчик"],
+      "success_effect": { "type": "survival_change", "value": 25 },
+      "failure_effect": { "type": "survival_change", "value": 5 },
+      "nothing_effect": { "type": "survival_change", "value": 10 }
+    },
+    {
+      "id": "parasite_bloom",
+      "title": "Заражение паразитами",
+      "description": "В продовольственных запасах завелись паразиты, проникшие в тело нескольких жителей бункера. Болезнь медленно, но верно подтачивает силы.",
+      "helpful_professions": ["Целитель", "Алхимик", "Друид"],
+      "helpful_items": ["Аптечка", "Антибиотики", "Антисептик", "Активированный уголь", "Пузырёк запретного эликсира"],
+      "success_effect": { "type": "survival_change", "value": 15 },
+      "failure_effect": { "type": "survival_change", "value": -25 },
+      "nothing_effect": { "type": "survival_change", "value": -20 }
+    }
+  ]
+}

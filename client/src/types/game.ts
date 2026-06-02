@@ -1,4 +1,4 @@
-export type GameStatus = 'waiting' | 'running' | 'finished';
+export type GameStatus = 'waiting' | 'running' | 'bunker_life' | 'finished';
 
 export type AttributeKey =
   | 'gender' | 'body' | 'trait' | 'profession' | 'health'
@@ -71,11 +71,25 @@ export interface BunkerInfo {
   grid: BunkerCell[][];
 }
 
+export interface GameEvent {
+  id: string;
+  title: string;
+  description: string;
+  helpful_professions: string[];
+  helpful_items: string[];
+}
+
 export interface RoomState {
   room_code: string;
   admin_id: string;
   status: GameStatus;
   is_voting: boolean;
+  round: number;
+  bunker_capacity: number | null;
+  survival_chance: number;
+  current_month: number;
+  active_event: GameEvent | null;
+  confirmed_bunker_life: string[];
   players: Player[];
   bunker: BunkerInfo | null;
   votes: Record<string, string>;
@@ -86,6 +100,12 @@ export interface RoomListing {
   room_code: string;
   player_count: number;
   status: GameStatus;
+}
+
+export interface SelectedItem {
+  player_id: string;
+  item: string;
+  source: 'inventory' | 'backpack';
 }
 
 export type ServerMessage =
@@ -99,7 +119,9 @@ export type ServerMessage =
   | { type: 'player_disconnected'; player_id: string }
   | { type: 'player_reconnected'; player_id: string }
   | { type: 'admin_changed'; new_admin_id: string }
-  | { type: 'profession_ability_used'; message: string };
+  | { type: 'profession_ability_used'; message: string }
+  | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
+  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure' | 'nothing'; survival_change: number; survival_chance: number };
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }
@@ -111,4 +133,6 @@ export type ClientMessage =
   | { type: 'submit_vote'; target_id: string }
   | { type: 'end_game' }
   | { type: 'kick_player'; player_id: string }
-  | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string; variant?: string };
+  | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string; variant?: string }
+  | { type: 'confirm_bunker_life' }
+  | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[] };

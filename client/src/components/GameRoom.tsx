@@ -44,11 +44,31 @@ export default function GameRoom({
       }}
     >
       <header className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
           <span className="text-zinc-700">·</span>
           <span className="font-mono text-zinc-500 text-sm tracking-widest">{roomState.room_code}</span>
+          {roomState.round > 0 && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
+                Раунд {roomState.round}
+              </span>
+            </>
+          )}
+          {roomState.bunker_capacity !== null && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                roomState.players.filter(p => p.is_active).length <= roomState.bunker_capacity
+                  ? 'text-amber-300 border-amber-700/50 bg-amber-950/20'
+                  : 'text-zinc-400 border-zinc-800 bg-zinc-900'
+              }`}>
+                {roomState.players.filter(p => p.is_active).length}/{roomState.bunker_capacity} в бункере
+              </span>
+            </>
+          )}
           {isFinished && (
             <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
               Завершена

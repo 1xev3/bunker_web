@@ -5,6 +5,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import GameLobby from './components/GameLobby';
 import GameRoom from './components/GameRoom';
 import BunkerIntroScreen from './components/BunkerIntroScreen';
+import BunkerLifeScreen from './components/BunkerLifeScreen';
+import ReadyModal from './components/ReadyModal';
 import './index.css';
 
 export default function App() {
@@ -18,6 +20,9 @@ export default function App() {
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
+  const [showReadyModal, setShowReadyModal] = useState(false);
+  const [readyCapacity, setReadyCapacity] = useState<number>(2);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure' | 'nothing'; survival_change: number } | null>(null);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
     setFlashMessage({ kind, text });
@@ -79,6 +84,21 @@ export default function App() {
       if (msg.type === 'game_ended') setGameWinner(msg.winner);
       if (msg.type === 'vote_confirmed') setHasVoted(true);
       if (msg.type === 'profession_ability_used') showFlashMessage('info', msg.message);
+
+      if (msg.type === 'ready_for_bunker_life') {
+        setReadyCapacity(msg.capacity);
+        setShowReadyModal(true);
+      }
+
+      if (msg.type === 'event_resolved') {
+        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change });
+        setTimeout(() => setEventOutcome(null), 5000);
+      }
+
+      // Hide ready modal when bunker_life phase starts (room_state update)
+      if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
+        setShowReadyModal(false);
+      }
 
       handleMessage(msg);
     };
@@ -170,16 +190,39 @@ export default function App() {
     );
   }
 
+  if (roomState.status === 'bunker_life') {
+    return (
+      <BunkerLifeScreen
+        roomState={roomState}
+        myPlayerId={myPlayerId}
+        send={send}
+        onLeave={handleLeave}
+        eventOutcome={eventOutcome}
+      />
+    );
+  }
+
   return (
-    <GameRoom
-      roomState={roomState}
-      myPlayerId={myPlayerId}
-      send={send}
-      votingResult={votingResult}
-      gameWinner={gameWinner}
-      hasVoted={hasVoted}
-      flashMessage={flashMessage}
-      onLeave={handleLeave}
-    />
+    <>
+      <GameRoom
+        roomState={roomState}
+        myPlayerId={myPlayerId}
+        send={send}
+        votingResult={votingResult}
+        gameWinner={gameWinner}
+        hasVoted={hasVoted}
+        flashMessage={flashMessage}
+        onLeave={handleLeave}
+      />
+      {showReadyModal && (
+        <ReadyModal
+          capacity={readyCapacity}
+          activePlayers={roomState.players.filter(p => p.is_active)}
+          confirmedIds={roomState.confirmed_bunker_life}
+          myPlayerId={myPlayerId}
+          send={send}
+        />
+      )}
+    </>
   );
 }

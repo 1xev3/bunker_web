@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions'];
+const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'events'];
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
@@ -301,6 +301,28 @@ function validatePackContent(packName, files) {
         return;
       }
       validateProfessionDefinition(definition, `Professions.json -> PROFESSION_ABILITIES["${professionName}"]`, errors);
+    });
+  }
+
+  if (!isPlainObject(files.events)) {
+    addError(errors, 'events.json', 'корневой JSON должен быть объектом');
+  } else if (!Array.isArray(files.events.EVENTS) || files.events.EVENTS.length === 0) {
+    addError(errors, 'events.json -> EVENTS', 'ожидается непустой массив событий');
+  } else {
+    files.events.EVENTS.forEach((event, index) => {
+      const scope = `events.json -> EVENTS[${index}]`;
+      if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
+      if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
+      if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
+      if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
+      if (!Array.isArray(event.helpful_professions)) addError(errors, `${scope}.helpful_professions`, 'ожидается массив строк');
+      if (!Array.isArray(event.helpful_items)) addError(errors, `${scope}.helpful_items`, 'ожидается массив строк');
+      for (const effectKey of ['success_effect', 'failure_effect', 'nothing_effect']) {
+        const eff = event[effectKey];
+        if (!isPlainObject(eff)) { addError(errors, `${scope}.${effectKey}`, 'ожидается объект эффекта'); continue; }
+        if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.${effectKey}.type`, 'ожидается непустая строка');
+        if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.${effectKey}.value`, 'ожидается число');
+      }
     });
   }
 

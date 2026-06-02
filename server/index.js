@@ -126,6 +126,8 @@ wss.on('connection', (ws) => {
       case 'end_game':      handleEndGame(roomCode, playerId); break;
       case 'kick_player':   handleKick(roomCode, playerId, msg); break;
       case 'use_profession_ability': handleUseProfessionAbility(roomCode, playerId, msg); break;
+      case 'confirm_bunker_life': handleConfirmBunkerLife(roomCode, playerId); break;
+      case 'resolve_event': handleResolveEvent(roomCode, playerId, msg); break;
     }
   });
 
@@ -233,6 +235,7 @@ function handleStartGame(roomCode, playerId) {
 
   room.status = 'running';
   room.bunker.generate(null, room.config);
+  room.bunkerCapacity = Math.max(2, Math.floor(room.players.length / 2) - 1);
 
   for (const player of room.players) {
     player.generateCharacter(room.config);
@@ -336,6 +339,7 @@ function finalizeVoting(roomCode) {
     const id = candidates[0];
     room.removePlayer(id);
     eliminated = room.getPlayer(id).toDict();
+    room.round++;
   }
 
   room.isVoting = false;
@@ -357,7 +361,20 @@ function finalizeVoting(roomCode) {
       winner: active[0]?.toDict() || null,
     });
     wsManager.broadcastState(roomCode, room);
+    return;
   }
+
+  if (room.bunkerCapacity !== null && active.length <= room.bunkerCapacity) {
+    wsManager.broadcast(roomCode, {
+      type: 'ready_for_bunker_life',
+      capacity: room.bunkerCapacity,
+      active_count: active.length,
+    });
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
+
+  wsManager.broadcastState(roomCode, room);
 }
 
 function handleEndGame(roomCode, playerId) {
@@ -416,6 +433,129 @@ function handleUseProfessionAbility(roomCode, playerId, msg) {
     type: 'profession_ability_used',
     message: result.privateMessage || result.publicMessage,
   });
+}
+
+function pickRandomEvent(config) {
+  const events = config.EVENTS;
+  return events[Math.floor(Math.random() * events.length)];
+}
+
+function startNextMonth(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life') return;
+
+  room.currentMonth++;
+
+  if (Math.random() < 0.2) {
+    room.activeEvent = pickRandomEvent(room.config);
+    wsManager.broadcastState(roomCode, room);
+  } else {
+    room.activeEvent = null;
+    wsManager.broadcastState(roomCode, room);
+    setTimeout(() => startNextMonth(roomCode), 4000);
+  }
+}
+
+function handleConfirmBunkerLife(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'running') return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+
+  room.confirmedBunkerLife.add(playerId);
+  wsManager.broadcastState(roomCode, room);
+
+  const active = room.getActivePlayers();
+  if (room.confirmedBunkerLife.size >= active.length) {
+    room.status = 'bunker_life';
+    room.survivalChance = 100;
+    room.currentMonth = 0;
+    room.activeEvent = null;
+    wsManager.broadcastState(roomCode, room);
+    setTimeout(() => startNextMonth(roomCode), 2000);
+  }
+}
+
+function handleResolveEvent(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+
+  const event = room.activeEvent;
+  const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
+  const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
+
+  const hasHelpfulProfession = selectedProfessions.some(p => event.helpful_professions.includes(p));
+  const hasHelpfulItem = selectedItems.some(i => event.helpful_items.includes(i.item));
+  const nothingSelected = selectedProfessions.length === 0 && selectedItems.length === 0;
+
+  let effect;
+  if (nothingSelected) {
+    effect = event.nothing_effect;
+  } else if (hasHelpfulProfession || hasHelpfulItem) {
+    effect = event.success_effect;
+  } else {
+    effect = event.failure_effect;
+  }
+
+  // Remove consumed items from players' inventories
+  for (const entry of selectedItems) {
+    const owner = room.getPlayer(entry.player_id);
+    if (!owner) continue;
+    if (entry.source === 'inventory' && owner.inventory === entry.item) {
+      owner.inventory = '';
+    } else if (entry.source === 'backpack' && owner.backpack) {
+      // backpack is comma-separated: "Топор, Нож (2 шт), Аптечка"
+      const parts = owner.backpack.split(', ');
+      const idx = parts.findIndex(p => {
+        const name = p.replace(/\s*\(\d+ шт\)$/, '');
+        return name === entry.item;
+      });
+      if (idx !== -1) {
+        const match = parts[idx].match(/^(.+)\s+\((\d+) шт\)$/);
+        if (match) {
+          const qty = parseInt(match[2], 10) - 1;
+          if (qty <= 0) parts.splice(idx, 1);
+          else parts[idx] = `${match[1]} (${qty} шт)`;
+        } else {
+          parts.splice(idx, 1);
+        }
+        owner.backpack = parts.join(', ');
+      }
+    }
+  }
+
+  if (effect.type === 'survival_change') {
+    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
+  }
+
+  const isSuccess = !nothingSelected && (hasHelpfulProfession || hasHelpfulItem);
+  const outcomeType = nothingSelected ? 'nothing' : isSuccess ? 'success' : 'failure';
+
+  room.activeEvent = null;
+
+  wsManager.broadcast(roomCode, {
+    type: 'event_resolved',
+    event_id: event.id,
+    outcome: outcomeType,
+    survival_change: effect.value,
+    survival_chance: room.survivalChance,
+  });
+
+  if (room.survivalChance <= 0) {
+    room.status = 'finished';
+    room.revealAllPlayers();
+    wsManager.broadcast(roomCode, {
+      type: 'game_ended',
+      winner: null,
+    });
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
+
+  wsManager.broadcastState(roomCode, room);
+  setTimeout(() => startNextMonth(roomCode), 4000);
 }
 
 function transferAdmin(roomCode) {
