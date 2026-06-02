@@ -32,18 +32,23 @@ export default function GameRoom({
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(9, 9, 11, 0.88), rgba(9, 9, 11, 0.92)),
-          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.04), transparent 35%),
+      className="min-h-screen bg-zinc-950 flex flex-col relative isolate overflow-hidden"
+    >
+      <div
+        className="absolute inset-0 scale-105 blur-sm pointer-events-none"
+        style={{
+          backgroundImage: `
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          linear-gradient(rgba(9, 9, 11, 0.78), rgba(9, 9, 11, 0.86)),
+          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.13), transparent 35%),
           url('/images/bunker-control-room.png')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
-    >
-      <header className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
+      />
+      <header className="topbar px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
@@ -83,12 +88,10 @@ export default function GameRoom({
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col p-4 gap-3 w-full">
+      <div className="relative z-10 flex-1 flex flex-col p-4 gap-3 w-full">
         {isFinished && gameWinner !== undefined && (
-          <div className={`rounded-xl border p-4 text-center animate-fade-in-up ${
-            gameWinner
-              ? 'phase-banner-winner'
-              : 'border-zinc-800 bg-zinc-900/60'
+          <div className={`card p-4 text-center animate-fade-in-up ${
+            gameWinner ? 'phase-banner-winner' : ''
           }`}>
             {gameWinner ? (
               <>
@@ -103,10 +106,8 @@ export default function GameRoom({
         )}
 
         {votingResult && (
-          <div className={`rounded-xl border py-3 px-4 text-center animate-fade-in-up flex items-center justify-center gap-2 ${
-            votingResult.isTie
-              ? 'border-zinc-700 bg-zinc-900/60'
-              : 'border-red-900/40 bg-red-950/20'
+          <div className={`card py-3 px-4 text-center animate-fade-in-up flex items-center justify-center gap-2 ${
+            votingResult.isTie ? '' : 'border-red-900/40 bg-red-950/20'
           }`}>
             {votingResult.isTie ? (
               <>
@@ -123,7 +124,7 @@ export default function GameRoom({
         )}
 
         {amEliminated && (
-          <div className="rounded-xl border border-zinc-800/60 py-2.5 px-4 text-center bg-zinc-900/30 flex items-center justify-center gap-2">
+          <div className="card py-2.5 px-4 text-center flex items-center justify-center gap-2">
             <EyeOff size={13} className="text-zinc-500" />
             <span className="text-zinc-500 text-sm">Вы выбыли. Можно наблюдать за игрой.</span>
           </div>

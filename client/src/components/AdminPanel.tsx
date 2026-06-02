@@ -53,7 +53,7 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
   const canVote = !roomState.is_voting && active.length >= 2;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 shadow-[0_10px_30px_rgba(0,0,0,0.16)] px-4 py-3">
+    <div className="card shadow-[0_10px_30px_rgba(0,0,0,0.16)] px-4 py-3">
       <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3 flex items-center gap-1.5">
         <Crown size={11} className="text-zinc-500" /> Управление
       </p>

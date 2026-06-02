@@ -28,18 +28,23 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(9, 9, 11, 0.86), rgba(9, 9, 11, 0.9)),
-          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.06) 0%, transparent 50%),
+      className="min-h-screen bg-zinc-950 flex flex-col relative isolate overflow-hidden"
+    >
+      <div
+        className="absolute inset-0 scale-105 blur-sm pointer-events-none"
+        style={{
+          backgroundImage: `
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          linear-gradient(rgba(9, 9, 11, 0.75), rgba(9, 9, 11, 0.85)),
+          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.16) 0%, transparent 50%),
           url('/images/nuclear-apocalypse-poster.png')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
-    >
-      <header className="border-b border-zinc-900 px-4 py-3 flex items-center justify-between">
+      />
+      <header className="topbar relative z-10 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
@@ -52,7 +57,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
         </button>
       </header>
 
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="relative z-10 flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in-up">
           {/* Room code */}
           <div className="card glow-card p-6">
@@ -60,7 +65,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
               <Copy size={11} className="text-zinc-500" /> Код комнаты
             </p>
             <div className="text-center mb-5">
-              <span className="text-5xl font-mono font-bold tracking-[0.25em] text-zinc-100 select-all" style={{ textShadow: '0 0 30px rgba(var(--accent-rgb),0.1)' }}>
+              <span className="text-5xl font-mono font-bold tracking-[0.25em] text-zinc-100 select-all" style={{ textShadow: '0 0 30px rgba(var(--accent-rgb),0.45)' }}>
                 {roomState.room_code}
               </span>
             </div>

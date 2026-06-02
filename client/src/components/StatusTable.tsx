@@ -50,12 +50,13 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
   const myPlayer = players.find(p => p.id === myPlayerId);
+  const activePlayers = players.filter(player => player.is_active);
   const hasAnyUnrevealed = myPlayer
     ? ATTRIBUTE_KEYS.some(k => !myPlayer.revealed_attributes[k])
     : false;
 
   return (
-    <div className="rounded-xl border border-zinc-800 overflow-x-auto bg-zinc-950/46 shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+    <div className="card overflow-x-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
       <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
@@ -78,17 +79,14 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
         </thead>
 
         <tbody>
-          {players.map((player, i) => {
+          {activePlayers.map((player, i) => {
             const isMe = player.id === myPlayerId;
-            const eliminated = !player.is_active;
 
             return [
               <tr
                 key={player.id}
                 className={`border-b border-zinc-800/40 transition-colors ${
-                  eliminated
-                    ? 'opacity-35'
-                    : isMe
+                  isMe
                     ? 'status-row-me'
                     : 'hover:bg-zinc-900/40'
                 }`}
@@ -97,17 +95,16 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                 <td className="px-3 py-3 align-top">
                   <div className="flex items-start gap-2">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
-                      eliminated ? 'bg-zinc-800 text-zinc-600' : isMe ? 'status-avatar-me' : 'bg-zinc-800 text-zinc-400'
+                      isMe ? 'status-avatar-me' : 'bg-zinc-800 text-zinc-400'
                     }`}>
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <span className={`font-semibold break-words leading-snug text-sm ${
-                        eliminated ? 'line-through text-zinc-600' : isMe ? 'status-name-me' : 'text-zinc-100'
+                        isMe ? 'status-name-me' : 'text-zinc-100'
                       }`}>
                         {player.name}
                       </span>
-                      {eliminated && <div className="text-zinc-600 text-xs mt-0.5">выбыл</div>}
                     </div>
                   </div>
                 </td>
@@ -115,7 +112,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   const val = player.attributes[key];
                   const revealed = player.revealed_attributes[key];
 
-                  if (isMe && !eliminated && val) {
+                  if (isMe && val) {
                     return (
                       <td key={key} className="px-3 py-3 align-top">
                         {revealed ? (
@@ -144,7 +141,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                 })}
               </tr>,
 
-              isMe && !eliminated && hasAnyUnrevealed && (
+              isMe && hasAnyUnrevealed && (
                 <tr key={player.id + '_ctrl'} className="border-b border-zinc-800/30 status-ctrl-row">
                   <td className="px-3 py-1.5" />
                   <td className="px-3 py-1.5" colSpan={1}>

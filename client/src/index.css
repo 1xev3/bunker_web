@@ -17,7 +17,13 @@
   --accent-rgb: 245, 158, 11;
 }
 
-html, body {
+html {
+  margin: 0;
+  padding: 0;
+  background-color: #09090b;
+}
+
+body {
   margin: 0;
   padding: 0;
   background-color: #09090b;
@@ -74,22 +80,22 @@ td, th {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, #000), color-mix(in srgb, var(--accent) 40%, #000));
-  border: 1px solid rgba(var(--accent-rgb), 0.15);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 85%, #000), color-mix(in srgb, var(--accent) 65%, #000));
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
   transition: all 0.2s ease;
-  box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.25);
+  box-shadow: 0 2px 14px rgba(var(--accent-rgb), 0.45);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #f97316));
-  border-color: rgba(var(--accent-rgb), 0.35);
-  box-shadow: 0 4px 24px rgba(var(--accent-rgb), 0.4);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 80%, #f97316));
+  border-color: rgba(var(--accent-rgb), 0.65);
+  box-shadow: 0 4px 28px rgba(var(--accent-rgb), 0.65);
   transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #000), color-mix(in srgb, var(--accent) 50%, #f97316));
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #f97316));
 }
 
 .btn-primary:disabled {
@@ -113,19 +119,25 @@ td, th {
   transform: translateY(-1px);
 }
 
-.card {
-  border-radius: 0.75rem;
-  border: 1px solid #27272a;
-  background: rgba(24, 24, 27, 0.7);
-  backdrop-filter: blur(8px);
+@layer components {
+  .card {
+    border-radius: 0.75rem;
+    border: 2px solid #1b1b1b;
+    background: #0c0c0c93;
+  }
+
+  .topbar {
+    background: transparent;
+    border: 0;
+  }
 }
 
 .glow-accent {
-  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
+  box-shadow: none;
 }
 
 .glow-amber {
-  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
+  box-shadow: none;
 }
 
 /* Accent utility classes — controlled by --accent CSS variable */
@@ -135,21 +147,21 @@ td, th {
 .ring-accent { --tw-ring-color: var(--accent); }
 
 .accent-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
-  --tw-ring-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent) !important;
+  --tw-ring-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent) !important;
 }
 
 .tab-active {
-  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent) 20%, transparent));
+  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 50%, transparent), color-mix(in srgb, var(--accent) 35%, transparent));
   color: #f4f4f5;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 .badge-waiting {
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-  color: color-mix(in srgb, var(--accent) 80%, #fff);
-  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .room-code-hover:hover {
@@ -157,24 +169,24 @@ td, th {
 }
 
 .progress-bar-accent {
-  background-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 80%, transparent);
 }
 
 /* Player row highlights */
 .player-row-me {
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .player-avatar-me {
-  background-color: color-mix(in srgb, var(--accent) 40%, #18181b);
-  color: color-mix(in srgb, var(--accent) 90%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 65%, #18181b);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
 }
-.player-name-me { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.player-name-me { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 
 .admin-badge {
-  color: color-mix(in srgb, var(--accent) 60%, #fff);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: color-mix(in srgb, var(--accent) 85%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .ready-badge { color: var(--accent); }
@@ -182,63 +194,63 @@ td, th {
 
 /* Glow card */
 .glow-card {
-  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
+  box-shadow: none;
 }
 
 /* Voting / game room states */
 .phase-banner-voting {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
 }
 .phase-banner-winner {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 8%, transparent), color-mix(in srgb, #f97316 8%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, #f97316 16%, transparent));
 }
 .winner-trophy { color: var(--accent); }
-.winner-name { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.winner-name { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 
 /* Flash / notification */
 .flash-info {
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-  color: color-mix(in srgb, var(--accent) 80%, #fff);
-  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* Ready modal */
-.ready-modal-border { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-.ready-modal-title { color: color-mix(in srgb, var(--accent) 80%, #fff); }
-.ready-modal-count { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.ready-modal-border { border-color: color-mix(in srgb, var(--accent) 65%, transparent); }
+.ready-modal-title { color: color-mix(in srgb, var(--accent) 95%, #fff); }
+.ready-modal-count { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .ready-modal-icon { color: var(--accent); }
 
 /* Bunker map entrance */
 .bunker-entrance {
-  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
-  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 90%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
 }
 
 /* Event modal */
 .event-selected {
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
 }
-.event-title-positive { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.event-title-positive { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .event-icon-positive { color: var(--accent); }
 
 /* StatusTable */
 .status-row-me {
-  background-color: color-mix(in srgb, var(--accent) 6%, transparent);
-  border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
 }
 .status-avatar-me {
-  background-color: color-mix(in srgb, var(--accent) 50%, #18181b);
-  color: color-mix(in srgb, var(--accent) 90%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 70%, #18181b);
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
 }
-.status-name-me { color: color-mix(in srgb, var(--accent) 80%, #fff); }
-.status-link:hover { color: color-mix(in srgb, var(--accent) 80%, #fff); }
-.status-ctrl-row { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
+.status-name-me { color: color-mix(in srgb, var(--accent) 95%, #fff); }
+.status-link:hover { color: color-mix(in srgb, var(--accent) 95%, #fff); }
+.status-ctrl-row { background-color: color-mix(in srgb, var(--accent) 9%, transparent); }
 .status-ctrl-btn:hover { color: var(--accent); }
 
 /* Bunker intro */
 .intro-cursor { background-color: var(--accent); }
-.intro-label { color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.intro-label { color: color-mix(in srgb, var(--accent) 80%, transparent); }

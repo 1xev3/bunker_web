@@ -82,8 +82,10 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
       className="min-h-screen bg-zinc-950 flex items-center justify-center p-4"
       style={{
         backgroundImage: `
-          linear-gradient(rgba(9, 9, 11, 0.82), rgba(9, 9, 11, 0.88)),
-          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.08) 0%, transparent 60%),
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          linear-gradient(rgba(9, 9, 11, 0.70), rgba(9, 9, 11, 0.80)),
+          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.18) 0%, transparent 60%),
           url('/images/bunker-hero.png')
         `,
         backgroundSize: 'cover',
@@ -95,7 +97,7 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
         <div className="text-center mb-8">
           <div className="radiation-icon text-accent text-4xl mb-3 select-none">☢</div>
           <h1 className="text-4xl font-bold text-zinc-100 tracking-tight">Бункер</h1>
-          <p className="text-zinc-500 text-sm mt-1.5">Выжить могут не все</p>
+          <p className="text-zinc-500 text-sm mt-1.5">Последний шанс выжить</p>
         </div>
 
         {/* Form */}

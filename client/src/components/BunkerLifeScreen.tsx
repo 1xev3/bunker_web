@@ -124,18 +124,23 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(9, 9, 11, 0.88), rgba(9, 9, 11, 0.92)),
-          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.04), transparent 35%),
+      className="min-h-screen bg-zinc-950 flex flex-col relative isolate overflow-hidden"
+    >
+      <div
+        className="absolute inset-0 scale-105 blur-sm pointer-events-none"
+        style={{
+          backgroundImage: `
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          linear-gradient(rgba(9, 9, 11, 0.78), rgba(9, 9, 11, 0.86)),
+          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.13), transparent 35%),
           url('/images/bunker-control-room.png')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
-    >
-      <header className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
+      />
+      <header className="topbar px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
@@ -165,9 +170,9 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col p-4 gap-4 w-full">
+      <div className="relative z-10 flex-1 flex flex-col p-4 gap-4 w-full">
         {/* Survival + food bars */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 flex flex-col gap-3">
+        <div className="card px-4 py-3 flex flex-col gap-3">
           <SurvivalBar chance={roomState.survival_chance} />
           <div className="w-full h-px bg-zinc-800" />
           <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
@@ -208,7 +213,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
 
         {/* Month animation — shown when no event */}
         {!hasEvent && (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-8 text-center">
+          <div className="card px-4 py-8 text-center">
             <div className="text-5xl font-mono font-bold text-zinc-700 mb-2 tabular-nums">
               {String(roomState.current_month).padStart(2, '0')}
             </div>

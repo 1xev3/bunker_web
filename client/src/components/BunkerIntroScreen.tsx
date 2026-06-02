@@ -98,9 +98,17 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
   const hasMap = bunker.grid?.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
+    <div
+      className="min-h-screen bg-zinc-950 flex flex-col"
+      style={{
+        backgroundImage: `
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%)
+        `,
+      }}
+    >
       <header
-        className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 bg-zinc-950/95 sticky top-0 z-10"
+        className="topbar px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 intro-label text-xs tracking-[0.25em] uppercase">
@@ -164,7 +172,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
                 )}
 
                 {stage >= S.BUNKER && (
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 animate-fade-in-up">
+                  <div className="card p-4 animate-fade-in-up">
                     <p className="flex items-center gap-2 text-zinc-400/70 text-xs uppercase tracking-widest mb-2.5">
                       <Building2 size={11} /> Убежище
                     </p>
@@ -185,7 +193,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
                       ].map(({ icon, label, value, delay }) => (
                         <div
                           key={label}
-                          className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 animate-fade-in-up"
+                          className="card p-3 animate-fade-in-up"
                           style={{ animationDelay: delay }}
                         >
                           <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-1.5">{icon}{label}</p>
@@ -193,7 +201,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
                         </div>
                       ))}
                     </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
+                    <div className="card p-3 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
                       <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-1.5">
                         <Package size={13} /> Инвентарь бункера
                       </p>
@@ -205,7 +213,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
 
               {/* Right: map — square (width-driven), sticky */}
               {stage >= S.MAP && hasMap && (
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 animate-fade-in-up sticky top-[60px]">
+                <div className="card p-3 animate-fade-in-up sticky top-[60px]">
                   <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
                     <Map size={13} /> Карта бункера
                   </p>
@@ -216,7 +224,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
 
             {/* Players list */}
             {stage >= S.PLAYERS && players.length > 0 && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 animate-fade-in-up">
+              <div className="card p-4 animate-fade-in-up">
                 <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
                   <Users size={13} /> Участники ({players.length})
                 </p>

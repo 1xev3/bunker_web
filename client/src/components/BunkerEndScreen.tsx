@@ -13,17 +13,22 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col items-center justify-start"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(9, 9, 11, 0.85), rgba(9, 9, 11, 0.95)),
+      className="min-h-screen bg-zinc-950 flex flex-col items-center justify-start relative isolate overflow-hidden"
+    >
+      <div
+        className="absolute inset-0 scale-105 blur-sm pointer-events-none"
+        style={{
+          backgroundImage: `
+          radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+          linear-gradient(rgba(9, 9, 11, 0.75), rgba(9, 9, 11, 0.86)),
           url('/images/bunker-control-room.png')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
-    >
-      <header className="w-full border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 backdrop-blur-sm bg-zinc-950/90 sticky top-0 z-10">
+      />
+      <header className="topbar w-full px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
@@ -38,7 +43,7 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
         </button>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 w-full max-w-lg mx-auto">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 gap-6 w-full max-w-lg mx-auto">
         {/* Main result icon */}
         <div className={`rounded-full p-6 ${survived ? 'bg-green-950/40 border border-green-800/40' : 'bg-red-950/40 border border-red-800/40'}`}>
           {survived
@@ -61,7 +66,7 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
         </div>
 
         {/* Stats */}
-        <div className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 divide-y divide-zinc-800/60">
+        <div className="card w-full divide-y divide-zinc-800">
           {bunker?.theme && (
             <div className="px-4 py-3 flex items-center justify-between">
               <span className="text-zinc-500 text-sm">Катастрофа</span>
@@ -96,13 +101,13 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
 
         {/* Survivors */}
         {activePlayers.length > 0 && (
-          <div className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
+          <div className="card w-full px-4 py-3">
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3">
               {survived ? 'Выжившие' : 'Последние в живых'}
             </p>
             <div className="flex flex-col gap-2">
               {activePlayers.map(p => (
-                <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900/60">
+                <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-800">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-zinc-200 text-sm font-medium">{p.name}</span>
                     {p.attributes.profession && (

@@ -11,7 +11,7 @@ export default function BunkerInfo({ bunker }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl border border-zinc-800 overflow-hidden bg-zinc-950/50 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+    <div className="card overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
       <button
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/40 transition-colors text-left group"
         onClick={() => setOpen(o => !o)}
@@ -31,7 +31,7 @@ export default function BunkerInfo({ bunker }: Props) {
       </button>
 
       {open && (
-        <div className="border-t border-zinc-800 px-4 py-4 space-y-4 bg-zinc-950/30 animate-fade-in-up">
+        <div className="border-t border-zinc-800 px-4 py-4 space-y-4 animate-fade-in-up">
           {bunker.disaster_info && (
             <Section icon={<AlertTriangle size={11} />} title="Ситуация снаружи" text={bunker.disaster_info} />
           )}
