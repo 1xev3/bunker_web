@@ -134,11 +134,16 @@ export interface RoomListing {
   status: GameStatus;
 }
 
-export interface SelectedItem {
-  player_id: string;
-  item_id: string;
-  source: 'inventory' | 'backpack';
-}
+export type SelectedItem =
+  | {
+      player_id: string;
+      item_id: string;
+      source: 'inventory' | 'backpack';
+    }
+  | {
+      item_id: string;
+      source: 'bunker';
+    };
 
 export type ServerMessage =
   | { type: 'room_state'; data: RoomState }

@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { AlertTriangle, Send, Sparkles, Users, Utensils } from 'lucide-react';
-import type { GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
+import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
 
 const FOOD_REPLENISH_PERCENT_PER_RESOURCE = 25;
 
 interface Props {
   event: GameEvent;
   activePlayers: Player[];
+  bunker: BunkerInfo | null;
   send: (msg: ClientMessage) => void;
+}
+
+interface ItemOption {
+  entry: SelectedItem;
+  label: string;
+  owner: string;
 }
 
 function getSuccessChance(resourceCount: number, baseChance: number): number {
@@ -27,6 +34,74 @@ function ChanceBar({ chance }: { chance: number }) {
       <span className={`text-xs font-mono font-bold w-10 text-right ${
         chance >= 90 ? 'text-green-400' : chance >= 75 ? 'text-yellow-400' : chance >= 30 ? 'text-orange-400' : 'text-red-400'
       }`}>{chance}%</span>
+    </div>
+  );
+}
+
+function getItemKey(entry: SelectedItem): string {
+  return entry.source === 'bunker'
+    ? `bunker:${entry.item_id}`
+    : `${entry.player_id}:${entry.source}:${entry.item_id}`;
+}
+
+function getPlayerItemOptions(activePlayers: Player[]): ItemOption[] {
+  return activePlayers.flatMap(p => {
+    const items: ItemOption[] = [];
+    if (p.attributes.inventory) {
+      items.push({
+        entry: { player_id: p.id, item_id: String(p.attributes.inventory.value.id), source: 'inventory' },
+        label: p.attributes.inventory.display,
+        owner: p.name,
+      });
+    }
+    p.attributes.backpack?.value.forEach(item => {
+      items.push({
+        entry: { player_id: p.id, item_id: item.id, source: 'backpack' },
+        label: item.quantity > 1 ? `${item.label} (${item.quantity} шт)` : item.label,
+        owner: p.name,
+      });
+    });
+    return items;
+  });
+}
+
+function getBunkerItemOptions(bunker: BunkerInfo | null): ItemOption[] {
+  return bunker?.items.map(item => ({
+    entry: { item_id: item.id, source: 'bunker' as const },
+    label: item.label,
+    owner: 'Бункер',
+  })) ?? [];
+}
+
+function SelectableItemList({
+  items,
+  isItemSelected,
+  toggleItem,
+}: {
+  items: ItemOption[];
+  isItemSelected: (entry: SelectedItem) => boolean;
+  toggleItem: (entry: SelectedItem) => void;
+}) {
+  if (items.length === 0) {
+    return <p className="text-zinc-600 text-xs px-3 py-2 rounded-lg bg-zinc-900/50">Нет доступных предметов</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map(({ entry, label, owner }) => {
+        const selected = isItemSelected(entry);
+        const key = getItemKey(entry);
+        const sourceLabel = entry.source === 'inventory' ? 'инвентарь' : entry.source === 'backpack' ? 'рюкзак' : 'бункер';
+        return (
+          <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+            selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+          }`}>
+            <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleItem(entry)} />
+            <span className="text-zinc-300 text-sm flex-1">{label}</span>
+            <span className="text-zinc-500 text-xs">{owner} · {sourceLabel}</span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -85,9 +160,11 @@ function PassiveEventCard({ event, send }: { event: GameEvent; send: (msg: Clien
   );
 }
 
-function FoodReplenishCard({ event, activePlayers, send }: Props) {
+function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const playerItems = getPlayerItemOptions(activePlayers);
+  const bunkerItems = getBunkerItemOptions(bunker);
 
   const toggleProfession = (profession: string) => {
     setSelectedProfessions(prev =>
@@ -96,15 +173,15 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
   };
 
   const toggleItem = (entry: SelectedItem) => {
-    const key = `${entry.player_id}:${entry.source}:${entry.item_id}`;
+    const key = getItemKey(entry);
     setSelectedItems(prev => {
-      const exists = prev.some(i => `${i.player_id}:${i.source}:${i.item_id}` === key);
-      return exists ? prev.filter(i => `${i.player_id}:${i.source}:${i.item_id}` !== key) : [...prev, entry];
+      const exists = prev.some(i => getItemKey(i) === key);
+      return exists ? prev.filter(i => getItemKey(i) !== key) : [...prev, entry];
     });
   };
 
   const isItemSelected = (entry: SelectedItem) =>
-    selectedItems.some(i => i.player_id === entry.player_id && i.source === entry.source && i.item_id === entry.item_id);
+    selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
 
@@ -114,7 +191,7 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm animate-fade-in-up overflow-y-auto py-6">
-      <div className="bg-zinc-900 border border-orange-900/50 rounded-2xl shadow-2xl max-w-lg w-full mx-4 flex flex-col">
+      <div className="bg-zinc-900 border border-orange-900/50 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start gap-3">
@@ -151,37 +228,15 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
           {/* Items */}
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Предметы</p>
-            <div className="flex flex-col gap-1">
-              {activePlayers.flatMap(p => {
-                const items: { entry: SelectedItem; label: string; owner: string }[] = [];
-                if (p.attributes.inventory) {
-                  items.push({
-                    entry: { player_id: p.id, item_id: String(p.attributes.inventory.value.id), source: 'inventory' },
-                    label: p.attributes.inventory.display,
-                    owner: p.name,
-                  });
-                }
-                p.attributes.backpack?.value.forEach(item => {
-                  items.push({
-                    entry: { player_id: p.id, item_id: item.id, source: 'backpack' },
-                    label: item.quantity > 1 ? `${item.label} (${item.quantity} шт)` : item.label,
-                    owner: p.name,
-                  });
-                });
-                return items;
-              }).map(({ entry, label, owner }) => {
-                const selected = isItemSelected(entry);
-                const key = `${entry.player_id}:${entry.source}:${entry.item_id}`;
-                return (
-                  <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
-                  }`}>
-                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleItem(entry)} />
-                    <span className="text-zinc-300 text-sm flex-1">{label}</span>
-                    <span className="text-zinc-500 text-xs">{owner} · {entry.source === 'inventory' ? 'инвентарь' : 'рюкзак'}</span>
-                  </label>
-                );
-              })}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <p className="text-zinc-600 text-xs mb-2">Выжившие</p>
+                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+              </div>
+              <div>
+                <p className="text-zinc-600 text-xs mb-2">Бункер</p>
+                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+              </div>
             </div>
           </div>
         </div>
@@ -210,16 +265,18 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
   );
 }
 
-export default function EventModal({ event, activePlayers, send }: Props) {
+export default function EventModal({ event, activePlayers, bunker, send }: Props) {
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const playerItems = getPlayerItemOptions(activePlayers);
+  const bunkerItems = getBunkerItemOptions(bunker);
 
   if (event.event_type === 'passive') {
     return <PassiveEventCard event={event} send={send} />;
   }
 
   if (event.event_type === 'food_replenish') {
-    return <FoodReplenishCard event={event} activePlayers={activePlayers} send={send} />;
+    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} send={send} />;
   }
 
   const toggleProfession = (profession: string) => {
@@ -229,15 +286,15 @@ export default function EventModal({ event, activePlayers, send }: Props) {
   };
 
   const toggleItem = (entry: SelectedItem) => {
-    const key = `${entry.player_id}:${entry.source}:${entry.item_id}`;
+    const key = getItemKey(entry);
     setSelectedItems(prev => {
-      const exists = prev.some(i => `${i.player_id}:${i.source}:${i.item_id}` === key);
-      return exists ? prev.filter(i => `${i.player_id}:${i.source}:${i.item_id}` !== key) : [...prev, entry];
+      const exists = prev.some(i => getItemKey(i) === key);
+      return exists ? prev.filter(i => getItemKey(i) !== key) : [...prev, entry];
     });
   };
 
   const isItemSelected = (entry: SelectedItem) =>
-    selectedItems.some(i => i.player_id === entry.player_id && i.source === entry.source && i.item_id === entry.item_id);
+    selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
   const successChance = getSuccessChance(resourceCount, event.base_chance ?? 0.1);
@@ -248,7 +305,7 @@ export default function EventModal({ event, activePlayers, send }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm animate-fade-in-up overflow-y-auto py-6">
-      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl shadow-2xl max-w-lg w-full mx-4 flex flex-col">
+      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start gap-3">
@@ -291,37 +348,15 @@ export default function EventModal({ event, activePlayers, send }: Props) {
           {/* Items */}
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Предметы</p>
-            <div className="flex flex-col gap-1">
-              {activePlayers.flatMap(p => {
-                const items: { entry: SelectedItem; label: string; owner: string }[] = [];
-                if (p.attributes.inventory) {
-                  items.push({
-                    entry: { player_id: p.id, item_id: String(p.attributes.inventory.value.id), source: 'inventory' },
-                    label: p.attributes.inventory.display,
-                    owner: p.name,
-                  });
-                }
-                p.attributes.backpack?.value.forEach(item => {
-                  items.push({
-                    entry: { player_id: p.id, item_id: item.id, source: 'backpack' },
-                    label: item.quantity > 1 ? `${item.label} (${item.quantity} шт)` : item.label,
-                    owner: p.name,
-                  });
-                });
-                return items;
-              }).map(({ entry, label, owner }) => {
-                const selected = isItemSelected(entry);
-                const key = `${entry.player_id}:${entry.source}:${entry.item_id}`;
-                return (
-                  <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
-                  }`}>
-                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleItem(entry)} />
-                    <span className="text-zinc-300 text-sm flex-1">{label}</span>
-                    <span className="text-zinc-500 text-xs">{owner} · {entry.source === 'inventory' ? 'инвентарь' : 'рюкзак'}</span>
-                  </label>
-                );
-              })}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <p className="text-zinc-600 text-xs mb-2">Выжившие</p>
+                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+              </div>
+              <div>
+                <p className="text-zinc-600 text-xs mb-2">Бункер</p>
+                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+              </div>
             </div>
           </div>
         </div>

@@ -21,6 +21,9 @@
       "title": "Вспышка болезни",
       "description": "Несколько обитателей бункера слегли с жаром и кашлем. Болезнь быстро распространяется в замкнутом пространстве. Нужно срочно взяться за лечение.",
       "base_chance": 0.10,
+      "participants_template": "random_group",
+      "participants_min": 2,
+      "participants_max": 4,
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -30 }
     },
@@ -64,6 +67,9 @@
       "title": "Магическая аномалия",
       "description": "В одном из отсеков бункера возникла нестабильная магическая аномалия. Она искажает пространство и вызывает галлюцинации у обитателей. Срочно нужна нейтрализация.",
       "base_chance": 0.05,
+      "participants_template": "random_group",
+      "participants_min": 2,
+      "participants_max": 4,
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -25 }
     },
@@ -112,6 +118,7 @@
       "title": "Кража запасов",
       "description": "Кто-то тайно похищает еду и ресурсы из общих запасов. Доверие в группе подорвано. Вора нужно найти и восстановить порядок.",
       "base_chance": 0.20,
+      "participants_template": "random_one",
       "success_effect": { "type": "food_change", "value": 0 },
       "failure_effect": { "type": "food_change", "value": -2 }
     },
@@ -120,6 +127,7 @@
       "title": "Тяжёлое ранение",
       "description": "Один из обитателей бункера получил серьёзную травму во время работ — сломаны рёбра и сильное кровотечение. Без немедленной медицинской помощи он может погибнуть.",
       "base_chance": 0.10,
+      "participants_template": "random_one",
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -25 }
     },
@@ -144,6 +152,9 @@
       "title": "Отравление воды",
       "description": "Анализ показал: в питьевой воде обнаружены следы яда или токсичных веществ. Несколько человек уже чувствуют недомогание. Нужно срочно очистить воду и помочь пострадавшим.",
       "base_chance": 0.05,
+      "participants_template": "random_group",
+      "participants_min": 2,
+      "participants_max": 4,
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -30 }
     },
@@ -160,6 +171,9 @@
       "title": "Заражение паразитами",
       "description": "В продовольственных запасах завелись паразиты, проникшие в тело нескольких жителей бункера. Болезнь медленно, но верно подтачивает силы.",
       "base_chance": 0.10,
+      "participants_template": "random_group",
+      "participants_min": 2,
+      "participants_max": 4,
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -25 }
     },

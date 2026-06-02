@@ -32,7 +32,7 @@ class GameRoom {
     this.starvationPending = false;
     this.activeEvent = null;
     this.monthStartTime = null;
-    this.monthDuration = 1500; // ms per month (empty months)
+    this.monthDuration = 750; // ms per month (empty months)
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.createdAt = Date.now();
     this.lastActivity = Date.now();

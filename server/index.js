@@ -681,6 +681,41 @@ function applyBunkerEventEffect(room, effect) {
   return result;
 }
 
+function consumeSelectedItem(room, entry) {
+  if (!entry || typeof entry.item_id !== 'string' || typeof entry.source !== 'string') return;
+
+  if (entry.source === 'bunker') {
+    const itemIdx = room.bunker.items.findIndex(item => item.id === entry.item_id);
+    if (itemIdx !== -1) {
+      room.bunker.items.splice(itemIdx, 1);
+    }
+
+    for (const row of room.bunker.grid) {
+      for (const cell of row) {
+        if (!cell || !Array.isArray(cell.items)) continue;
+        const gridItemIdx = cell.items.findIndex(item => item.id === entry.item_id);
+        if (gridItemIdx !== -1) {
+          cell.items.splice(gridItemIdx, 1);
+          return;
+        }
+      }
+    }
+    return;
+  }
+
+  const owner = room.getPlayer(entry.player_id);
+  if (!owner) return;
+  if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
+    owner.inventory = null;
+  } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
+    const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
+    if (idx !== -1) {
+      owner.backpack[idx].quantity -= 1;
+      if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
+    }
+  }
+}
+
 function resolveFoodReplenishEvent(roomCode, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
@@ -708,17 +743,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
 
   // Resources provided — consume them and replenish part of the required stay per resource.
   for (const entry of selectedItems) {
-    const owner = room.getPlayer(entry.player_id);
-    if (!owner) continue;
-    if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
-      owner.inventory = null;
-    } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
-      const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
-      if (idx !== -1) {
-        owner.backpack[idx].quantity -= 1;
-        if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
-      }
-    }
+    consumeSelectedItem(room, entry);
   }
 
   const foodBefore = room.foodMonths;
@@ -818,19 +843,9 @@ function handleResolveEvent(roomCode, playerId, msg) {
   const succeeded = Math.random() < successChance;
   const effect = succeeded ? event.success_effect : event.failure_effect;
 
-  // Remove consumed items from players' inventories
+  // Remove consumed items from players or bunker storage.
   for (const entry of selectedItems) {
-    const owner = room.getPlayer(entry.player_id);
-    if (!owner) continue;
-    if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
-      owner.inventory = null;
-    } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
-      const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
-      if (idx !== -1) {
-        owner.backpack[idx].quantity -= 1;
-        if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
-      }
-    }
+    consumeSelectedItem(room, entry);
   }
 
   const effectResult = applyBunkerEventEffect(room, effect);

@@ -245,6 +245,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
         <EventModal
           event={roomState.active_event}
           activePlayers={activePlayers}
+          bunker={roomState.bunker}
           send={send}
         />
       )}

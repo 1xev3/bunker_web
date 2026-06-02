@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
 
-const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'events'];
+const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'Event'];
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
@@ -308,13 +308,13 @@ function validatePackContent(packName, files) {
     });
   }
 
-  if (!isPlainObject(files.events)) {
-    addError(errors, 'events.json', 'корневой JSON должен быть объектом');
-  } else if (!Array.isArray(files.events.EVENTS) || files.events.EVENTS.length === 0) {
-    addError(errors, 'events.json -> EVENTS', 'ожидается непустой массив событий');
+  if (!isPlainObject(files.Event)) {
+    addError(errors, 'Event.json', 'корневой JSON должен быть объектом');
+  } else if (!Array.isArray(files.Event.EVENTS) || files.Event.EVENTS.length === 0) {
+    addError(errors, 'Event.json -> EVENTS', 'ожидается непустой массив событий');
   } else {
-    files.events.EVENTS.forEach((event, index) => {
-      const scope = `events.json -> EVENTS[${index}]`;
+    files.Event.EVENTS.forEach((event, index) => {
+      const scope = `Event.json -> EVENTS[${index}]`;
       if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
       if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
@@ -356,7 +356,7 @@ function validatePackContent(packName, files) {
       ...files.Inventory,
       ...files.Bunker,
       ...files.Professions,
-      ...files.events,
+      ...files.Event,
     }))
     : [];
 
