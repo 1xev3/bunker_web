@@ -1,0 +1,23 @@
+id: stranger_arrives
+title:
+  - Незнакомец у двери
+  - Стук изнутри стены
+  - Кто-то выжил снаружи
+description:
+  - >-
+    Глухой стук донёсся из-за бронированной двери. Снаружи — выживший человек.
+    Впустить его? Он мало что помнит, но готов влиться в группу.
+  - >-
+    Сигнальный огонь на верхнем уровне заметил кто-то снаружи.
+    Незнакомец выглядит истощённым, но живым. Бункер стал его единственным шансом.
+choice_labels:
+  success: Впустить
+  failure: Отказать
+success_effects:
+  - type: survival_change
+    value: 5
+  - type: add_player
+    character_type: full
+failure_effects:
+  - type: survival_change
+    value: -5

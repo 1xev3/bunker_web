@@ -32,9 +32,12 @@ class GameRoom {
     this.starvationPending = false;
     this.activeEvent = null;
     this.activeEventSelection = { selected_professions: [], selected_items: [] };
+    this.choiceVotes = {};
+    this.pendingChainKills = [];
     this.monthStartTime = null;
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
+    this.scheduledEvents = []; // [{ event_id, trigger_month, context }]
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
   }
@@ -105,6 +108,7 @@ class GameRoom {
       food_months: this.foodMonths,
       food_months_display: Math.ceil(this.foodMonths / Math.max(1, this.getActivePlayers().length)),
       active_event: this.activeEvent,
+      choice_votes: { ...this.choiceVotes },
       active_event_selection: {
         selected_professions: [...this.activeEventSelection.selected_professions],
         selected_items: this.activeEventSelection.selected_items.map(item => ({ ...item })),
@@ -112,6 +116,7 @@ class GameRoom {
       month_start_time: this.monthStartTime,
       month_duration: this.monthDuration,
       confirmed_bunker_life: [...this.confirmedBunkerLife],
+      scheduled_events: this.scheduledEvents,
       players: this.players.map(p => p.toDict(viewerId)),
       bunker: this.status !== 'waiting' ? this.bunker.toDict() : null,
       votes: this.isVoting ? { ...this.votes } : {},

@@ -1,0 +1,57 @@
+# Эвент + цепочка нарративов
+- id: structural_damage
+  title:
+    - Трещины в стенах
+    - Опасный хруст свода
+    - Проседание сектора
+  description:
+    - >-
+      После {alt.cause} в нескольких стенах бункера появились глубокие трещины,
+      а из перекрытия уже сыплется {alt.debris}.
+      Чем мы можем укрепить стены, чтобы свод не обрушился?
+    - >-
+      В {alt.location} пошли заметные трещины после {alt.cause_case}.
+      Что мы используем, чтобы удержать свод и не потерять целый отсек?
+  alt:
+    - cause:
+        - серии подземных толчков
+        - сильного подземного гула
+        - резкой просадки грунта
+      cause_case:
+        - серии толчков
+        - сильного подземного гула
+        - просадки грунта
+      debris:
+        - каменная крошка
+        - бетонная пыль
+        - мелкие куски штукатурки
+      location:
+        - жилом секторе
+        - проходе к складу
+        - переходе между отсеками
+  base_chance: 0.10
+  success_effects:
+    - type: survival_change
+      value: 15
+  failure_effects:
+    - type: survival_change
+      value: -20
+    - type: remove_room
+  chain_success: structure_reinforced
+  chain_failure: section_collapsed
+
+- id: structure_reinforced
+  event_type: narrative
+  title: Конструкция укреплена
+  description: >-
+    Трещины удалось заделать, свод укреплён.
+    Бункер снова надёжно держит нагрузку.
+  success_effects: []
+
+- id: section_collapsed
+  event_type: narrative
+  title: Отсек обрушился
+  description: >-
+    Предотвратить обрушение не удалось. Часть бункера потеряна —
+    секция замурована завалом навсегда.
+  success_effects: []

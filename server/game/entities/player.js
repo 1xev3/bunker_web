@@ -164,6 +164,24 @@ class Player {
     this.additional = { id: config.ADDITIONAL_INFO[Math.floor(Math.random() * config.ADDITIONAL_INFO.length)].id };
   }
 
+  generateMinimalCharacter(config, options = {}) {
+    this.config = config;
+
+    const healthyId = config.HEALTH_STATES[0]?.value.id;
+    this.health = { stateId: healthyId, stageId: null };
+
+    const raceId = options.raceId ?? weightedRandom(config.RACES).id;
+    this.race = { id: raceId };
+
+    const affix = weightedRandom(config.GENDER_AFFIXES);
+    const gender = weightedRandom(config.GENDERS);
+    this.gender = { genderId: gender.id, affixId: affix.id, age: 0 };
+
+    for (const attr of ATTRIBUTE_KEYS) {
+      this.revealed_attributes[attr] = true;
+    }
+  }
+
   revealAttribute(attr) {
     if (!this.revealed_attributes[attr]) {
       this.revealed_attributes[attr] = true;

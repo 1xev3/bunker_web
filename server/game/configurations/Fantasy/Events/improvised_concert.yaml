@@ -1,0 +1,24 @@
+id: improvised_concert
+title:
+  - Самодеятельный концерт
+  - Вечер музыки
+  - Нашлась {alt.instrument_title}
+description:
+  - >-
+    Благодаря {participant1} в кладовке нашлась {alt.instrument_title}.
+    Вечер импровизированного концерта собрал всех обитателей —
+    люди пели, смеялись и на миг забыли о страхе.
+  - >-
+    {participant1} задаёт тон маленькому концерту: {alt.instrument_title} снова зазвучала,
+    и даже самые мрачные лица впервые за долгое время расслабились.
+alt:
+  - instrument: старую гитару
+    instrument_title: старая гитара
+  - instrument: потрёпанную лютню
+    instrument_title: потрёпанная лютня
+  - instrument: походную флейту
+    instrument_title: походная флейта
+participants_template: random_one
+success_effects:
+  - type: survival_change
+    value: 4

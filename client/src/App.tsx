@@ -23,6 +23,7 @@ export default function App() {
   const intentionalCloseRef = useRef(false);
 
   const { roomState, handleMessage, myPlayerIdRef } = useGameState();
+  const [isConnectionLost, setIsConnectionLost] = useState(false);
   const [showBunkerIntro, setShowBunkerIntro] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
@@ -30,7 +31,7 @@ export default function App() {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number; food_change?: number; event_id?: string } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
@@ -56,6 +57,7 @@ export default function App() {
 
     ws.onopen = () => {
       intentionalCloseRef.current = false;
+      setIsConnectionLost(false);
       ws.send(JSON.stringify(authMsg));
     };
 
@@ -105,8 +107,8 @@ export default function App() {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change, food_change: msg.food_change, event_id: msg.event_id });
-        setTimeout(() => setEventOutcome(null), 5000);
+        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
+        setTimeout(() => setEventOutcome(null), 6000);
       }
 
       // Hide ready modal when bunker_life phase starts (room_state update)
@@ -122,6 +124,7 @@ export default function App() {
       if (intentionalCloseRef.current) return;
       const token = localStorage.getItem('bunker_token');
       if (token) {
+        setIsConnectionLost(true);
         reconnectRef.current = setTimeout(() => connect({ type: 'rejoin', token }), 2000);
       }
     };
@@ -161,6 +164,7 @@ export default function App() {
     clearTimeout(reconnectRef.current);
     wsRef.current?.close();
     wsRef.current = null;
+    setIsConnectionLost(false);
     localStorage.removeItem('bunker_token');
     localStorage.removeItem('bunker_room');
     localStorage.removeItem('bunker_player_id');
@@ -185,6 +189,15 @@ export default function App() {
   }, [roomState?.pack_meta?.color]);
 
   const myPlayerId = myPlayerIdRef.current;
+  const connectionOverlay = isConnectionLost && roomState && myPlayerId ? (
+    <div className="connection-overlay" role="alert" aria-live="assertive">
+      <div className="connection-overlay__panel">
+        <div className="connection-overlay__badge">Связь потеряна</div>
+        <h2>Соединение с сервером прервано</h2>
+        <p>Пытаемся переподключиться. Не закрывайте вкладку.</p>
+      </div>
+    </div>
+  ) : null;
 
   if (!roomState || !myPlayerId) {
     return (
@@ -197,45 +210,57 @@ export default function App() {
 
   if (roomState.status === 'waiting') {
     return (
-      <GameLobby
-        roomState={roomState}
-        myPlayerId={myPlayerId}
-        send={send}
-        onLeave={handleLeave}
-      />
+      <>
+        <GameLobby
+          roomState={roomState}
+          myPlayerId={myPlayerId}
+          send={send}
+          onLeave={handleLeave}
+        />
+        {connectionOverlay}
+      </>
     );
   }
 
   if (roomState.status === 'bunker_life') {
     return (
-      <BunkerLifeScreen
-        roomState={roomState}
-        myPlayerId={myPlayerId}
-        send={send}
-        onLeave={handleLeave}
-        eventOutcome={eventOutcome}
-      />
+      <>
+        <BunkerLifeScreen
+          roomState={roomState}
+          myPlayerId={myPlayerId}
+          send={send}
+          onLeave={handleLeave}
+          eventOutcome={eventOutcome}
+        />
+        {connectionOverlay}
+      </>
     );
   }
 
   if (showBunkerIntro && roomState.bunker) {
     return (
-      <BunkerIntroScreen
-        bunker={roomState.bunker}
-        players={roomState.players}
-        onContinue={handleIntroContinue}
-        onLeave={handleLeave}
-      />
+      <>
+        <BunkerIntroScreen
+          bunker={roomState.bunker}
+          players={roomState.players}
+          onContinue={handleIntroContinue}
+          onLeave={handleLeave}
+        />
+        {connectionOverlay}
+      </>
     );
   }
 
   if (roomState.status === 'finished' && bunkerLifeResult !== null) {
     return (
-      <BunkerEndScreen
-        survived={bunkerLifeResult.survived}
-        roomState={roomState}
-        onLeave={handleLeave}
-      />
+      <>
+        <BunkerEndScreen
+          survived={bunkerLifeResult.survived}
+          roomState={roomState}
+          onLeave={handleLeave}
+        />
+        {connectionOverlay}
+      </>
     );
   }
 
@@ -260,6 +285,7 @@ export default function App() {
           send={send}
         />
       )}
+      {connectionOverlay}
     </>
   );
 }

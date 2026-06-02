@@ -1,0 +1,53 @@
+# Эвент + цепочка нарративов
+- id: medical_emergency
+  title:
+    - Тяжёлое ранение
+    - Несчастный случай
+    - Срочная травма
+  description:
+    - >-
+      Пострадавший в этом происшествии — {participant1}: {alt.injury}.
+      Чем мы можем помочь ему прямо сейчас, чтобы он не погиб?
+    - >-
+      Произошёл несчастный случай, и {participant1} уже теряет силы
+      из-за {alt.injury_cause}. Что мы сделаем в первую очередь,
+      чтобы его стабилизировать?
+  alt:
+    - injury:
+        - сломаны рёбра и сильное кровотечение
+        - глубокий порез и повреждённая нога
+        - тяжёлый ушиб груди и потеря крови
+      injury_cause:
+        - сломанных рёбер и сильного кровотечения
+        - глубокого пореза и повреждённой ноги
+        - тяжёлого ушиба груди и потери крови
+  base_chance: 0.10
+  participants_template: random_one
+  success_effects:
+    - type: survival_change
+      value: 15
+  failure_effects:
+    - type: survival_change
+      value: -10
+    - type: kill_participant
+      target: participant1
+  chain_success: patient_stabilized
+  chain_failure: patient_died
+
+- id: patient_stabilized
+  event_type: narrative
+  title: Пострадавший выжил
+  description: >-
+    Своевременная помощь дала результат. Пострадавший стабилизирован и будет жить.
+    В бункере немного легче дышится.
+  success_effects: []
+
+- id: patient_died
+  event_type: narrative
+  title: Смерть в бункере
+  description: >-
+    Несмотря на все усилия, спасти пострадавшего не удалось.
+    Бункер потерял одного из своих.
+  success_effects:
+    - type: survival_change
+      value: -5

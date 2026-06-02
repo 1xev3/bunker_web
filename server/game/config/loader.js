@@ -5,7 +5,7 @@ const { normalizeConfig } = require('./structuredConfig');
 const { normalizePackSettings } = require('./settings');
 const { addError, validatePackContent } = require('./validator');
 
-const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'Event'];
+const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions'];
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const CONFIGS_DIR = path.join(__dirname, '../configurations');
 const lastReportedIssues = new Map();
@@ -20,6 +20,53 @@ function readConfigFile(dir, baseName) {
   if (fs.existsSync(yamlPath)) return yaml.load(fs.readFileSync(yamlPath, 'utf8'));
   if (fs.existsSync(jsonPath)) return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   return null;
+}
+
+function walkDir(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...walkDir(full));
+    } else if (entry.name.endsWith('.yaml') || entry.name.endsWith('.json')) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function readEventsDirectory(packDir) {
+  const eventsDir = path.join(packDir, 'Events');
+  if (!fs.existsSync(eventsDir) || !fs.statSync(eventsDir).isDirectory()) return null;
+
+  let eventSettings = {};
+  const events = [];
+
+  for (const filePath of walkDir(eventsDir)) {
+    let content;
+    try {
+      content = filePath.endsWith('.json')
+        ? JSON.parse(fs.readFileSync(filePath, 'utf8'))
+        : yaml.load(fs.readFileSync(filePath, 'utf8'));
+    } catch (e) {
+      throw new Error(`Не удалось распарсить ${filePath}: ${e.message}`);
+    }
+    if (!content) continue;
+
+    if (path.basename(filePath, path.extname(filePath)) === '_settings') {
+      if (content.EVENT_SETTINGS) eventSettings = content.EVENT_SETTINGS;
+      continue;
+    }
+
+    if (Array.isArray(content)) {
+      events.push(...content);
+    } else if (content && typeof content === 'object' && content.id) {
+      events.push(content);
+    }
+  }
+
+  return { EVENT_SETTINGS: eventSettings, EVENTS: events };
 }
 
 function readPackFiles(packName) {
@@ -43,6 +90,23 @@ function readPackFiles(packName) {
     } catch (error) {
       addError(errors, `${packName}/${file}`, `не удалось распарсить файл: ${error.message}`);
     }
+  }
+
+  // Load events: prefer Events/ directory, fall back to Event.yaml
+  try {
+    const eventsFromDir = readEventsDirectory(dir);
+    if (eventsFromDir !== null) {
+      files['Event'] = eventsFromDir;
+    } else {
+      const eventFile = readConfigFile(dir, 'Event');
+      if (eventFile === null) {
+        addError(errors, `${packName}/Event`, 'ни папка Events/ ни файл Event.yaml не найдены');
+      } else {
+        files['Event'] = eventFile;
+      }
+    }
+  } catch (error) {
+    addError(errors, `${packName}/Events`, `не удалось загрузить события: ${error.message}`);
   }
 
   try {
@@ -116,6 +180,8 @@ function loadPack(packName = getDefaultPackName()) {
 
   const dir = getPackDir(packName);
   const rawConfig = PACK_FILES.reduce((cfg, file) => ({ ...cfg, ...readConfigFile(dir, file) }), {});
+  const eventData = readEventsDirectory(dir) ?? readConfigFile(dir, 'Event') ?? {};
+  Object.assign(rawConfig, eventData);
   const config = normalizeConfig(rawConfig);
   config.packMeta = readPackMeta(packName);
   config.packSettings = normalizePackSettings(rawConfig);

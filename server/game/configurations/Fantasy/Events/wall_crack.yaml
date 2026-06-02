@@ -1,0 +1,49 @@
+# Эвент + цепочка нарративов
+- id: wall_crack
+  title:
+    - Трещина в стене
+    - Разлом в перекрытии
+    - Опасная щель в секторе
+  description:
+    - >-
+      В {alt.location} обнаружена глубокая трещина, из которой начала сочиться вода.
+      Нужно срочно решить — чем залатаем разрыв, пока не затопило отсек?
+    - >-
+      Из {alt.entry} потянуло сыростью, а затем пошла вода: {alt.location} дал трещину.
+      Есть ли у нас чем заткнуть разрыв прямо сейчас?
+  alt:
+    - location:
+        - южном секторе
+        - техническом отсеке
+        - нижнем коридоре
+      entry:
+        - стены
+        - перекрытия
+        - стыка труб
+  base_chance: 0.12
+  success_effects:
+    - type: survival_change
+      value: 10
+  failure_effects:
+    - type: survival_change
+      value: -15
+  chain_success: wall_crack_sealed
+  chain_failure: wall_crack_flooded
+
+- id: wall_crack_sealed
+  event_type: narrative
+  title: Трещина заделана
+  description: >-
+    Усилиями выживших разрыв удалось залатать подручными материалами.
+    Вода перестала поступать. Бункер держится.
+  success_effects:
+    - type: survival_change
+      value: 5
+
+- id: wall_crack_flooded
+  event_type: narrative
+  title: Отсек затоплен
+  description: >-
+    Попытки заделать трещину провалились. Вода хлынула и затопила отсек — он потерян.
+  success_effects:
+    - type: remove_room

@@ -28,10 +28,10 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
     send({ type: 'update_event_selection', selected_professions: nextProfessions, selected_items: nextItems });
   };
 
-  const toggleProfession = (profession: string) => {
-    const nextProfessions = selectedProfessions.includes(profession)
-      ? selectedProfessions.filter(p => p !== profession)
-      : [...selectedProfessions, profession];
+  const toggleProfession = (playerId: string) => {
+    const nextProfessions = selectedProfessions.includes(playerId)
+      ? selectedProfessions.filter(p => p !== playerId)
+      : [...selectedProfessions, playerId];
     pushSelection(nextProfessions, selectedItems);
   };
 
@@ -71,13 +71,12 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
             <div className="flex flex-col gap-1">
               {activePlayers.map(p => {
                 if (!p.attributes.profession) return null;
-                const profId = String(p.attributes.profession.value.id);
-                const selected = selectedProfessions.includes(profId);
+                const selected = selectedProfessions.includes(p.id);
                 return (
                   <EventSelectableRow
                     key={p.id}
                     selected={selected}
-                    onToggle={() => toggleProfession(profId)}
+                    onToggle={() => toggleProfession(p.id)}
                     primary={p.attributes.profession.display}
                     secondary={p.name}
                     ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}

@@ -1,0 +1,30 @@
+id: generator_failure
+title:
+  - Отказ рунного генератора
+  - Сбой в {alt.generator}
+  - Гаснет {alt.system_name_title}
+description:
+  - >-
+    {alt.generator} начал давать серьёзные сбои, и под угрозой остались
+    освещение и вентиляция. Чем мы можем его починить, пока бункер не остался
+    без света и свежего воздуха?
+  - >-
+    Из-за неполадок в {alt.system_name_case} по отсекам уже идут перебои энергии.
+    Что мы используем, чтобы восстановить питание до полной остановки систем?
+alt:
+  - generator: Рунный генератор
+    system_name_title: аварийное питание
+    system_name_case: аварийном питании
+  - generator: Главный генератор
+    system_name_title: узел освещения
+    system_name_case: узле освещения
+  - generator: Энергетический контур бункера
+    system_name_title: система вентиляции
+    system_name_case: системе вентиляции
+base_chance: 0.10
+success_effects:
+  - type: survival_change
+    value: 15
+failure_effects:
+  - type: survival_change
+    value: -25

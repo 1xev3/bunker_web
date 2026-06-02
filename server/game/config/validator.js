@@ -101,7 +101,7 @@ function extractTemplateKeys(value) {
 }
 
 function isParticipantTemplateKey(key) {
-  return key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key);
+  return key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key) || key.startsWith('context.');
 }
 
 function validateEventText(value, scope, errors) {
@@ -481,21 +481,73 @@ function validatePackContent(packName, files) {
         if (Number.isInteger(event.participants_min) && Number.isInteger(event.participants_max) && event.participants_max < event.participants_min) {
           addError(errors, `${scope}.participants_max`, 'must be greater than or equal to participants_min');
         }
-        const isPassive = event.base_chance == null;
-        if (!isPassive) {
-          if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
-          for (const effectKey of ['success_effect', 'failure_effect']) {
-            const eff = event[effectKey];
-            if (!isPlainObject(eff)) { addError(errors, `${scope}.${effectKey}`, 'ожидается объект эффекта'); continue; }
-            if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.${effectKey}.type`, 'ожидается непустая строка');
-            if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.${effectKey}.value`, 'ожидается число');
+        const KNOWN_EFFECT_TYPES = new Set([
+          'survival_change', 'food_change',
+          'kill_participant', 'kill_random_active',
+          'remove_room', 'add_room', 'add_player', 'schedule_event',
+        ]);
+
+        const validateEffect = (eff, effScope) => {
+          if (!isPlainObject(eff)) { addError(errors, effScope, 'ожидается объект эффекта'); return; }
+          if (typeof eff.type !== 'string' || eff.type.trim() === '') { addError(errors, `${effScope}.type`, 'ожидается непустая строка'); return; }
+          if (!KNOWN_EFFECT_TYPES.has(eff.type)) addError(errors, `${effScope}.type`, `неизвестный тип: "${eff.type}"`);
+          if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${effScope}.value`, 'ожидается число');
+          if (eff.type === 'food_change' && typeof eff.value !== 'number') addError(errors, `${effScope}.value`, 'ожидается число');
+          if (eff.chance != null && (typeof eff.chance !== 'number' || eff.chance <= 0 || eff.chance > 1)) addError(errors, `${effScope}.chance`, 'ожидается число от 0 (исключительно) до 1');
+          if (eff.per_target_chance != null && (typeof eff.per_target_chance !== 'number' || eff.per_target_chance <= 0 || eff.per_target_chance > 1)) addError(errors, `${effScope}.per_target_chance`, 'ожидается число от 0 (исключительно) до 1');
+          if (eff.type === 'kill_participant' && eff.target != null && !['participant1', 'participant2', 'random_participant', 'each_participant'].includes(eff.target)) {
+            addError(errors, `${effScope}.target`, 'ожидается participant1 | participant2 | random_participant | each_participant');
           }
+          if (eff.per_target_chance != null && !(eff.type === 'kill_participant' && eff.target === 'each_participant')) {
+            addError(errors, `${effScope}.per_target_chance`, 'допустим только для kill_participant с target: each_participant');
+          }
+          if (eff.type === 'schedule_event') {
+            if (typeof eff.event_id !== 'string' || eff.event_id.trim() === '') addError(errors, `${effScope}.event_id`, 'ожидается непустая строка');
+            if (!Number.isInteger(eff.delay_months) || eff.delay_months < 1) addError(errors, `${effScope}.delay_months`, 'ожидается целое число >= 1');
+          }
+        };
+
+        const validateEffectsField = (singKey, arrKey, required) => {
+          if (Array.isArray(event[arrKey])) {
+            event[arrKey].forEach((eff, i) => validateEffect(eff, `${scope}.${arrKey}[${i}]`));
+          } else if (isPlainObject(event[singKey])) {
+            validateEffect(event[singKey], `${scope}.${singKey}`);
+          } else if (required) {
+            addError(errors, `${scope}.${singKey}`, 'ожидается объект или массив эффектов');
+          }
+        };
+
+        const isNarrative = event.event_type === 'narrative';
+        const isChoice = event.choice_labels != null;
+        const isPassive = !isChoice && event.base_chance == null;
+
+        if (isChoice) {
+          if (typeof event.choice_labels?.success !== 'string' || event.choice_labels.success.trim() === '') addError(errors, `${scope}.choice_labels.success`, 'ожидается непустая строка');
+          if (typeof event.choice_labels?.failure !== 'string' || event.choice_labels.failure.trim() === '') addError(errors, `${scope}.choice_labels.failure`, 'ожидается непустая строка');
+          validateEffectsField('success_effect', 'success_effects', true);
+          validateEffectsField('failure_effect', 'failure_effects', true);
+        } else if (!isPassive && !isNarrative) {
+          if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
+          validateEffectsField('success_effect', 'success_effects', true);
+          validateEffectsField('failure_effect', 'failure_effects', true);
         } else {
-          const eff = event.success_effect;
-          if (!isPlainObject(eff)) { addError(errors, `${scope}.success_effect`, 'ожидается объект эффекта'); }
-          else {
-            if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.success_effect.type`, 'ожидается непустая строка');
-            if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.success_effect.value`, 'ожидается число');
+          validateEffectsField('success_effect', 'success_effects', !isNarrative);
+        }
+
+        if (isNarrative && event.narrative_duration_ms != null) {
+          if (!Number.isInteger(event.narrative_duration_ms) || event.narrative_duration_ms < 100) {
+            addError(errors, `${scope}.narrative_duration_ms`, 'ожидается целое число >= 100');
+          }
+        }
+
+        const allEventIds = files.Event?.EVENTS?.map(e => e.id).filter(Boolean) ?? [];
+        for (const chainKey of ['chain_success', 'chain_failure']) {
+          if (event[chainKey] != null) {
+            if (typeof event[chainKey] !== 'string' || event[chainKey].trim() === '') {
+              addError(errors, `${scope}.${chainKey}`, 'ожидается непустая строка (ID события)');
+            } else if (!allEventIds.includes(event[chainKey])) {
+              addError(errors, `${scope}.${chainKey}`, `событие с ID "${event[chainKey]}" не найдено`);
+            }
           }
         }
       });

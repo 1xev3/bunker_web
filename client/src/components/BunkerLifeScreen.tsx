@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown, Utensils } from 'lucide-react';
+import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown, Utensils, Skull, Baby, DoorOpen } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../types/game';
 import EventModal from './EventModal';
 import StatusTable from './StatusTable';
@@ -9,7 +9,7 @@ interface Props {
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
   onLeave: () => void;
-  eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string } | null;
+  eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null;
 }
 
 function SurvivalBar({ chance, maxChance }: { chance: number; maxChance: number }) {
@@ -96,6 +96,11 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
   const hasEvent = Boolean(roomState.active_event);
   const [monthProgress, setMonthProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
+  const showPrimaryOutcome = eventOutcome && (
+    eventOutcome.event_id === 'food_replenish' ||
+    eventOutcome.food_change !== undefined ||
+    eventOutcome.survival_change !== 0
+  );
 
   useEffect(() => {
     if (hasEvent || !roomState.month_start_time) {
@@ -226,39 +231,64 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           </div>
         </div>
 
-        {/* Event outcome notification */}
+        {/* Event outcome notifications */}
         {eventOutcome && (
-          <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
-            eventOutcome.event_id === 'food_replenish'
-              ? eventOutcome.outcome === 'success'
-                ? 'border-green-900/40 bg-green-950/20 text-green-300'
-                : 'border-orange-900/40 bg-orange-950/20 text-orange-300'
-              : eventOutcome.food_change !== undefined
-                ? eventOutcome.food_change < 0
-                  ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
-                  : 'border-green-900/40 bg-green-950/20 text-green-300'
-                : eventOutcome.survival_change > 0
-                  ? 'border-green-900/40 bg-green-950/20 text-green-300'
-                  : 'border-red-900/40 bg-red-950/20 text-red-300'
-          }`}>
-            {eventOutcome.event_id === 'food_replenish' ? (
-              eventOutcome.outcome === 'success' ? (
-                <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
-              ) : (
-                <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
-              )
-            ) : eventOutcome.food_change !== undefined ? (
-              eventOutcome.food_change > 0 ? (
-                <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
-              ) : eventOutcome.food_change < 0 ? (
-                <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
-              ) : (
-                <><Utensils size={14} /> Запасы еды не изменились</>
-              )
-            ) : eventOutcome.survival_change > 0 ? (
-              <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
-            ) : (
-              <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
+          <div className="flex flex-col gap-2">
+            {showPrimaryOutcome && (
+              <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
+                eventOutcome.event_id === 'food_replenish'
+                  ? eventOutcome.outcome === 'success'
+                    ? 'border-green-900/40 bg-green-950/20 text-green-300'
+                    : 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+                  : eventOutcome.food_change !== undefined
+                    ? eventOutcome.food_change < 0
+                      ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+                      : 'border-green-900/40 bg-green-950/20 text-green-300'
+                    : eventOutcome.survival_change > 0
+                      ? 'border-green-900/40 bg-green-950/20 text-green-300'
+                      : 'border-red-900/40 bg-red-950/20 text-red-300'
+              }`}>
+                {eventOutcome.event_id === 'food_replenish' ? (
+                  eventOutcome.outcome === 'success' ? (
+                    <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
+                  ) : (
+                    <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
+                  )
+                ) : eventOutcome.food_change !== undefined ? (
+                  eventOutcome.food_change > 0 ? (
+                    <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
+                  ) : eventOutcome.food_change < 0 ? (
+                    <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
+                  ) : (
+                    <><Utensils size={14} /> Запасы еды не изменились</>
+                  )
+                ) : eventOutcome.survival_change > 0 ? (
+                  <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
+                ) : (
+                  <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
+                )}
+              </div>
+            )}
+
+            {eventOutcome.players_killed && eventOutcome.players_killed.length > 0 && (
+              <div className="rounded-xl border border-red-900/50 bg-red-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-red-300">
+                <Skull size={14} className="shrink-0" />
+                <span>{eventOutcome.players_killed.map(p => p.name).join(', ')} погиб{eventOutcome.players_killed.length > 1 ? 'и' : ''}</span>
+              </div>
+            )}
+
+            {eventOutcome.players_added && eventOutcome.players_added.length > 0 && (
+              <div className="rounded-xl border border-blue-900/50 bg-blue-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-blue-300">
+                <Baby size={14} className="shrink-0" />
+                <span>{eventOutcome.players_added.map(p => p.name).join(', ')} присоединился{eventOutcome.players_added.length > 1 ? 'ь' : ''} к выжившим</span>
+              </div>
+            )}
+
+            {eventOutcome.room_changed && (
+              <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-amber-300">
+                <DoorOpen size={14} className="shrink-0" />
+                <span>Структура бункера изменилась</span>
+              </div>
             )}
           </div>
         )}
@@ -278,6 +308,8 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           bunker={roomState.bunker}
           packSettings={roomState.pack_settings}
           eventSelection={roomState.active_event_selection}
+          choiceVotes={roomState.choice_votes}
+          myPlayerId={myPlayerId}
           send={send}
         />
       )}

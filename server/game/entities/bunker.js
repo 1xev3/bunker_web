@@ -94,6 +94,47 @@ class Bunker {
       .flatMap(cell => cell.items);
   }
 
+  removeRandomRoom() {
+    const removable = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const cell = this.grid[r][c];
+        if (cell && !cell.isEntrance) removable.push([r, c]);
+      }
+    }
+    if (removable.length === 0) return null;
+
+    const [r, c] = removable[Math.floor(Math.random() * removable.length)];
+    const removedItems = this.grid[r][c].items ?? [];
+    this.grid[r][c] = null;
+
+    for (const item of removedItems) {
+      const idx = this.items.findIndex(i => i.id === item.id);
+      if (idx !== -1) this.items.splice(idx, 1);
+    }
+    return removedItems;
+  }
+
+  addRoom(newItems = []) {
+    const frontier = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (this.grid[r][c] !== null) continue;
+        const adjacent = DIRS.some(([dr, dc]) => {
+          const nr = r + dr, nc = c + dc;
+          return nr >= 0 && nr < 5 && nc >= 0 && nc < 5 && this.grid[nr][nc] !== null;
+        });
+        if (adjacent) frontier.push([r, c]);
+      }
+    }
+    if (frontier.length === 0) return false;
+
+    const [r, c] = frontier[Math.floor(Math.random() * frontier.length)];
+    this.grid[r][c] = { items: newItems };
+    for (const item of newItems) this.items.push(item);
+    return true;
+  }
+
   toDict() {
     return {
       theme: this.theme,

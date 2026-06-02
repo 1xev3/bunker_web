@@ -1,0 +1,37 @@
+# Два эвента: coitus (пассивный) + birth (запланированный результат)
+- id: coitus
+  title:
+    - Секс
+    - Поебались
+    - Переспали
+  description:
+    - >-
+      {participant1} вставил {participant2} как следует.
+      Тепло человеческой близости немного подняло общий дух.
+    - >-
+      {participant1} случайно застрял, а {participant2} время не терял(а).
+      Вот такие дела.
+  participants_template: couple
+  success_effects:
+    - type: survival_change
+      value: 5
+    - type: schedule_event
+      event_id: birth
+      delay_months: 9
+      context_from_participants:
+        mother: participant2
+        father: participant1
+
+- id: birth
+  event_type: passive
+  title: Рождение ребёнка
+  description: >-
+    У {context.mother_name} родился ребёнок.
+    Новая жизнь в бункере — повод задуматься, ради чего всё это.
+  success_effects:
+    - type: survival_change
+      value: 3
+    - type: add_player
+      character_type: child
+      name_template: "Ребёнок {context.mother_name}"
+      race_from_context: mother_race_id

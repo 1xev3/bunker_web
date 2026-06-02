@@ -58,6 +58,8 @@ function resolveEventText(sourceValue, context, cache) {
 }
 
 function inferEventType(event) {
+  if (event.event_type) return event.event_type;
+  if (event.choice_labels) return 'interactive';
   return event.base_chance == null ? 'passive' : 'interactive';
 }
 
@@ -101,6 +103,29 @@ function materializeEventParticipants(event, participants) {
     title: renderParticipantText(event.title, participants),
     description: renderParticipantText(event.description, participants),
     participants: participants.map(player => player.name),
+    participant_ids: participants.map(player => player.id),
+  };
+}
+
+function renderContextText(template, context) {
+  if (typeof template !== 'string' || !context) return template;
+  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
+    if (!key.startsWith('context.')) return match;
+    const contextKey = key.slice(8);
+    const value = context[contextKey];
+    if (typeof value !== 'string' && typeof value !== 'number') return match;
+    return `${EVENT_HIGHLIGHT_START}${value}${EVENT_HIGHLIGHT_END}`;
+  });
+}
+
+function materializeScheduledEvent(event, context) {
+  const base = materializeEvent(event);
+  if (!context) return base;
+  return {
+    ...base,
+    title: renderContextText(base.title, context),
+    description: renderContextText(base.description, context),
+    scheduled_context: context,
   };
 }
 
@@ -157,15 +182,22 @@ function resolveEventParticipants(event, activePlayers) {
 }
 
 function pickRandomEvent(config) {
-  const events = config.EVENTS;
-  return materializeEvent(events[Math.floor(Math.random() * events.length)]);
+  const events = Array.isArray(config.EVENTS) ? config.EVENTS : [];
+  const chainedEventIds = new Set(
+    events.flatMap(event => [event.chain_success, event.chain_failure].filter(id => typeof id === 'string'))
+  );
+  const randomPool = events.filter(event => !chainedEventIds.has(event.id));
+  const pool = randomPool.length > 0 ? randomPool : events;
+  return materializeEvent(pool[Math.floor(Math.random() * pool.length)]);
 }
 
 module.exports = {
   parseDurationMonths,
   parseFoodMonths,
   pickRandomEvent,
+  materializeEvent,
   materializeEventParticipants,
+  materializeScheduledEvent,
   resolveEventParticipants,
   EVENT_HIGHLIGHT_START,
   EVENT_HIGHLIGHT_END,

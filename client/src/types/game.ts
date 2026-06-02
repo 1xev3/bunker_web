@@ -92,18 +92,44 @@ export interface BunkerInfo {
   grid: BunkerCell[][];
 }
 
+export interface EventEffect {
+  type: string;
+  value?: number;
+  target?: string;
+  chance?: number;
+  per_target_chance?: number;
+  event_id?: string;
+  delay_months?: number;
+  character_type?: 'full' | 'child';
+  name_template?: string;
+  race_from_context?: string;
+}
+
+export interface ScheduledEvent {
+  event_id: string;
+  trigger_month: number;
+  context: Record<string, unknown>;
+}
+
 export interface GameEvent {
   id: string;
   title: string;
   description: string;
   base_chance?: number;
-  event_type?: 'passive' | 'interactive' | 'food_replenish';
+  event_type?: 'passive' | 'interactive' | 'food_replenish' | 'narrative';
+  narrative_duration_ms?: number;
   participants_template?: 'couple' | 'random_one' | 'random_group' | null;
   participants_min?: number;
   participants_max?: number;
   participants?: string[];
-  success_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
-  failure_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
+  participant_ids?: string[];
+  success_effect?: EventEffect;
+  failure_effect?: EventEffect;
+  success_effects?: EventEffect[];
+  failure_effects?: EventEffect[];
+  chain_success?: string;
+  chain_failure?: string;
+  choice_labels?: { success: string; failure: string };
 }
 
 export interface PackMeta {
@@ -169,7 +195,9 @@ export interface RoomState {
   food_months: number;
   food_months_display: number;
   active_event: GameEvent | null;
+  choice_votes: Record<string, 'success' | 'failure'>;
   active_event_selection: EventSelection;
+  scheduled_events: ScheduledEvent[];
   month_start_time: number | null;
   month_duration: number;
   confirmed_bunker_life: string[];
@@ -214,7 +242,7 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number; food_change?: number };
+  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] };
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }
@@ -235,4 +263,5 @@ export type ClientMessage =
   | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string }
   | { type: 'confirm_bunker_life' }
   | { type: 'update_event_selection'; selected_professions: string[]; selected_items: SelectedItem[] }
-  | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[] };
+  | { type: 'cast_choice_vote'; vote: 'success' | 'failure' }
+  | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[]; forced_outcome?: 'success' | 'failure' };

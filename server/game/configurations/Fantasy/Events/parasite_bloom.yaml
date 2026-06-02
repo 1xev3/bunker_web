@@ -1,0 +1,42 @@
+id: parasite_bloom
+title:
+  - Заражение паразитами
+  - Нечистые припасы
+  - Паразиты в запасах
+description:
+  - >-
+    В продовольственных запасах завелись {alt.parasites},
+    и {participants} уже жалуются на {alt.symptom}.
+    Как мы можем остановить заражение и спасти силы пострадавших?
+  - >-
+    В ящиках с едой обнаружили {alt.parasites},
+    а у {participants} появились {alt.symptom_case}.
+    Что мы предпримем, чтобы локализовать заражение?
+alt:
+  - parasites:
+      - паразиты
+      - личинки
+      - мелкие черви
+    symptom:
+      - слабость и жар
+      - рези в животе
+      - сильное недомогание
+    symptom_case:
+      - слабость и жар
+      - рези в животе
+      - признаки сильного недомогания
+base_chance: 0.10
+participants_template: random_group
+participants_min: 2
+participants_max: 4
+success_effects:
+  - type: survival_change
+    value: 15
+failure_effects:
+  - type: food_change
+    value: -20
+  - type: survival_change
+    value: -10
+  - type: kill_participant
+    target: each_participant
+    per_target_chance: 0.5
