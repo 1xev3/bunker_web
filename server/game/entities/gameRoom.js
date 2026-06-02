@@ -31,6 +31,7 @@ class GameRoom {
     this.foodMaxPersonMonths = 0;
     this.starvationPending = false;
     this.activeEvent = null;
+    this.activeEventSelection = { selected_professions: [], selected_items: [] };
     this.monthStartTime = null;
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
@@ -104,6 +105,10 @@ class GameRoom {
       food_months: this.foodMonths,
       food_months_display: Math.ceil(this.foodMonths / Math.max(1, this.getActivePlayers().length)),
       active_event: this.activeEvent,
+      active_event_selection: {
+        selected_professions: [...this.activeEventSelection.selected_professions],
+        selected_items: this.activeEventSelection.selected_items.map(item => ({ ...item })),
+      },
       month_start_time: this.monthStartTime,
       month_duration: this.monthDuration,
       confirmed_bunker_life: [...this.confirmedBunkerLife],

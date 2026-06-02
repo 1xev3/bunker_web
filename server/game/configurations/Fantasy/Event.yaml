@@ -651,16 +651,16 @@ EVENTS:
 
   - id: coitus
     title:
-      - Близость
-      - Личное утешение
-      - Ночь тепла
+      - Секс
+      - Поебались
+      - Переспали
     description:
       - >-
-        Среди монотонных будней бункера {participant1} и {participant2} нашли утешение друг в друге.
+        {participant1} вставил {participant2} как следует. 
         Тепло человеческой близости немного подняло общий дух.
       - >-
-        В тесноте и напряжении {participant1} и {participant2} всё же нашли время для нежности.
-        Такое напоминание о нормальной жизни неожиданно согрело всех вокруг.
+        {participant1} случайно застрял, а {participant2} время не терял(а).
+        Вот такие дела.
     participants_template: couple
     success_effect:
       type: survival_change

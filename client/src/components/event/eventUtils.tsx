@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import type { BunkerInfo, Player, SelectedItem, PackSettings } from '../../types/game';
+import EventSelectableRow from './EventSelectableRow';
 
 export interface ItemOption {
   entry: SelectedItem;
@@ -135,13 +136,14 @@ export function SelectableItemList({
         const key = getItemKey(entry);
         const sourceLabel = entry.source === 'inventory' ? 'инвентарь' : entry.source === 'backpack' ? 'рюкзак' : 'бункер';
         return (
-          <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
-            selected ? 'event-selected' : 'bg-zinc-800/50 border-transparent hover:bg-zinc-800'
-          }`}>
-            <input type="checkbox" className="accent-[var(--accent)]" checked={selected} onChange={() => toggleItem(entry)} />
-            <span className="text-zinc-300 text-sm flex-1">{label}</span>
-            <span className="text-zinc-500 text-xs">{owner} · {sourceLabel}</span>
-          </label>
+          <EventSelectableRow
+            key={key}
+            selected={selected}
+            onToggle={() => toggleItem(entry)}
+            primary={label}
+            secondary={`${owner} · ${sourceLabel}`}
+            ariaLabel={`Выбрать предмет ${label}`}
+          />
         );
       })}
     </div>

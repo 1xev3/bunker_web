@@ -277,6 +277,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           activePlayers={activePlayers}
           bunker={roomState.bunker}
           packSettings={roomState.pack_settings}
+          eventSelection={roomState.active_event_selection}
           send={send}
         />
       )}

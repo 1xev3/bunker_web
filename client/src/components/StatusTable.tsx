@@ -84,12 +84,12 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
 
         <thead>
           <tr className="bg-zinc-900/80 border-b border-zinc-800">
-            <th className="px-3 py-3 text-left text-zinc-600 font-medium text-xs">#</th>
-            <th className="px-3 py-3 text-left text-zinc-400 font-semibold text-xs uppercase tracking-widest">Игрок</th>
+            <th className="px-3 py-3 text-left text-zinc-600 font-medium text-sm">#</th>
+            <th className="px-3 py-3 text-left text-zinc-400 font-semibold text-sm uppercase tracking-widest">Игрок</th>
             {ATTRIBUTE_KEYS.map(k => {
               const Icon = ATTRIBUTE_ICONS[k];
               return (
-                <th key={k} className="px-3 py-3 text-left text-zinc-500 font-medium text-xs">
+                <th key={k} className="px-3 py-3 text-left text-zinc-500 font-medium text-sm">
                   <span className="flex items-center gap-1">
                     <Icon size={12} className="shrink-0" />
                     {ATTRIBUTE_LABELS[k]}

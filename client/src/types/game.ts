@@ -169,6 +169,7 @@ export interface RoomState {
   food_months: number;
   food_months_display: number;
   active_event: GameEvent | null;
+  active_event_selection: EventSelection;
   month_start_time: number | null;
   month_duration: number;
   confirmed_bunker_life: string[];
@@ -194,6 +195,11 @@ export type SelectedItem =
       item_id: string;
       source: 'bunker';
     };
+
+export interface EventSelection {
+  selected_professions: string[];
+  selected_items: SelectedItem[];
+}
 
 export type ServerMessage =
   | { type: 'room_state'; data: RoomState }
@@ -221,6 +227,12 @@ export type ClientMessage =
   | { type: 'submit_vote'; target_id: string }
   | { type: 'end_game' }
   | { type: 'kick_player'; player_id: string }
+  | { type: 'admin_reveal_player_attribute'; player_id: string; attribute: AttributeKey }
+  | { type: 'admin_reveal_player_attributes'; player_id: string; attributes: AttributeKey[] }
+  | { type: 'admin_reveal_player_all'; player_id: string }
+  | { type: 'admin_reveal_all_players' }
+  | { type: 'force_start_bunker_life' }
   | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string; variant?: string }
   | { type: 'confirm_bunker_life' }
+  | { type: 'update_event_selection'; selected_professions: string[]; selected_items: SelectedItem[] }
   | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[] };

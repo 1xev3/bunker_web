@@ -274,12 +274,12 @@ PROFESSION_ABILITIES:
 
   Разбойник:
     title: Налёт
-    description: "Забирает инвентарь выбранного игрока себе, тому ставит «Разграблен»."
+    description: "Забирает инвентарь выбранного игрока себе, тому ставит Табличка 'лох'."
     targetType: other
     effect:
       type: steal_attribute
       attribute: inventory
-      stolenValue: Разграблен
+      stolenValue: "Табличка 'лох'"
     publicMessage: "{actor} ограбил игрока {target}."
 
   Медовар:

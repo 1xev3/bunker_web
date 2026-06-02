@@ -1,5 +1,5 @@
 const { rooms, sessions, wsManager, pendingAdminTransfers } = require('../state');
-const { Player, publicAttribute } = require('../game/entities/player');
+const { Player, publicAttribute, ATTRIBUTE_KEYS } = require('../game/entities/player');
 const { applyProfessionAbility } = require('../game/abilities/professionAbilities');
 const { getDefaultPackName } = require('../game/gameConfig');
 const GameRoom = require('../game/entities/gameRoom');
@@ -250,6 +250,85 @@ function handleKick(roomCode, playerId, msg) {
   }
 }
 
+function canAdminReveal(room) {
+  return room.status === 'running' || room.status === 'bunker_life';
+}
+
+function handleAdminRevealPlayerAttribute(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !canAdminReveal(room)) return;
+  if (typeof msg.player_id !== 'string' || typeof msg.attribute !== 'string') return;
+  if (!ATTRIBUTE_KEYS.includes(msg.attribute)) return;
+
+  const target = room.getPlayer(msg.player_id);
+  if (!target) return;
+
+  if (target.revealAttribute(msg.attribute)) {
+    wsManager.broadcast(roomCode, {
+      type: 'attribute_revealed',
+      player_id: target.id,
+      attribute: msg.attribute,
+      value: publicAttribute(msg.attribute, target[msg.attribute], room.config),
+    });
+  }
+}
+
+function handleAdminRevealPlayerAttributes(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !canAdminReveal(room)) return;
+  if (typeof msg.player_id !== 'string' || !Array.isArray(msg.attributes) || msg.attributes.length === 0) return;
+
+  const target = room.getPlayer(msg.player_id);
+  if (!target) return;
+
+  const uniqueAttributes = [...new Set(msg.attributes)].filter(attribute => ATTRIBUTE_KEYS.includes(attribute));
+  for (const attribute of uniqueAttributes) {
+    if (!target.revealAttribute(attribute)) continue;
+    wsManager.broadcast(roomCode, {
+      type: 'attribute_revealed',
+      player_id: target.id,
+      attribute,
+      value: publicAttribute(attribute, target[attribute], room.config),
+    });
+  }
+}
+
+function handleAdminRevealPlayerAll(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !canAdminReveal(room)) return;
+  if (typeof msg.player_id !== 'string') return;
+
+  const target = room.getPlayer(msg.player_id);
+  if (!target) return;
+
+  const revealed = target.revealAll();
+  for (const attr of revealed) {
+    wsManager.broadcast(roomCode, {
+      type: 'attribute_revealed',
+      player_id: target.id,
+      attribute: attr,
+      value: publicAttribute(attr, target[attr], room.config),
+    });
+  }
+}
+
+function handleAdminRevealAllPlayers(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !canAdminReveal(room)) return;
+
+  for (const target of room.players) {
+    const revealed = target.revealAll();
+    for (const attr of revealed) {
+      wsManager.broadcast(roomCode, {
+        type: 'attribute_revealed',
+        player_id: target.id,
+        attribute: attr,
+        value: publicAttribute(attr, target[attr], room.config),
+      });
+    }
+  }
+}
+
 function handleUseProfessionAbility(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'running' || room.isVoting) return;
@@ -296,6 +375,10 @@ module.exports = {
   handleVote,
   handleEndGame,
   handleKick,
+  handleAdminRevealPlayerAttribute,
+  handleAdminRevealPlayerAttributes,
+  handleAdminRevealPlayerAll,
+  handleAdminRevealAllPlayers,
   handleUseProfessionAbility,
   transferAdmin,
 };

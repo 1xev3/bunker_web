@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { AlertTriangle, Send, Users } from 'lucide-react';
-import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, PackSettings } from '../../types/game';
+import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, PackSettings, EventSelection } from '../../types/game';
 import {
   renderEventText,
   getItemKey,
@@ -11,33 +10,39 @@ import {
   OutcomePreview,
   SelectableItemList,
 } from './eventUtils';
+import EventSelectableRow from './EventSelectableRow';
 
 interface Props {
   event: GameEvent;
   activePlayers: Player[];
   bunker: BunkerInfo | null;
   packSettings: PackSettings;
+  eventSelection: EventSelection;
   send: (msg: ClientMessage) => void;
 }
 
-export default function InteractiveEventCard({ event, activePlayers, bunker, packSettings, send }: Props) {
-  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
-  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+export default function InteractiveEventCard({ event, activePlayers, bunker, packSettings, eventSelection, send }: Props) {
+  const selectedProfessions = eventSelection.selected_professions;
+  const selectedItems = eventSelection.selected_items;
   const playerItems = getPlayerItemOptions(activePlayers);
   const bunkerItems = getBunkerItemOptions(bunker);
 
+  const pushSelection = (nextProfessions: string[], nextItems: SelectedItem[]) => {
+    send({ type: 'update_event_selection', selected_professions: nextProfessions, selected_items: nextItems });
+  };
+
   const toggleProfession = (profession: string) => {
-    setSelectedProfessions(prev =>
-      prev.includes(profession) ? prev.filter(p => p !== profession) : [...prev, profession]
-    );
+    const nextProfessions = selectedProfessions.includes(profession)
+      ? selectedProfessions.filter(p => p !== profession)
+      : [...selectedProfessions, profession];
+    pushSelection(nextProfessions, selectedItems);
   };
 
   const toggleItem = (entry: SelectedItem) => {
     const key = getItemKey(entry);
-    setSelectedItems(prev => {
-      const exists = prev.some(i => getItemKey(i) === key);
-      return exists ? prev.filter(i => getItemKey(i) !== key) : [...prev, entry];
-    });
+    const exists = selectedItems.some(i => getItemKey(i) === key);
+    const nextItems = exists ? selectedItems.filter(i => getItemKey(i) !== key) : [...selectedItems, entry];
+    pushSelection(selectedProfessions, nextItems);
   };
 
   const isItemSelected = (entry: SelectedItem) =>
@@ -83,13 +88,14 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
                 const profId = String(p.attributes.profession.value.id);
                 const selected = selectedProfessions.includes(profId);
                 return (
-                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
-                    selected ? 'event-selected' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'
-                  }`}>
-                    <input type="checkbox" className="accent-[var(--accent)]" checked={selected} onChange={() => toggleProfession(profId)} />
-                    <span className="text-zinc-300 text-sm flex-1">{p.attributes.profession.display}</span>
-                    <span className="text-zinc-500 text-xs">{p.name}</span>
-                  </label>
+                  <EventSelectableRow
+                    key={p.id}
+                    selected={selected}
+                    onToggle={() => toggleProfession(profId)}
+                    primary={p.attributes.profession.display}
+                    secondary={p.name}
+                    ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}
+                  />
                 );
               })}
             </div>

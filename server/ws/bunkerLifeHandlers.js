@@ -70,12 +70,40 @@ function consumeSelectedItem(room, entry) {
   }
 }
 
+function normalizeEventSelection(msg) {
+  const selectedProfessions = Array.isArray(msg?.selected_professions)
+    ? [...new Set(msg.selected_professions.filter(id => typeof id === 'string'))]
+    : [];
+  const selectedItems = Array.isArray(msg?.selected_items)
+    ? msg.selected_items
+      .filter(entry => entry && typeof entry.item_id === 'string' && typeof entry.source === 'string')
+      .map(entry => entry.source === 'bunker'
+        ? { item_id: entry.item_id, source: 'bunker' }
+        : {
+            player_id: typeof entry.player_id === 'string' ? entry.player_id : '',
+            item_id: entry.item_id,
+            source: entry.source,
+          })
+      .filter(entry =>
+        entry.source === 'bunker' ||
+        (entry.player_id && (entry.source === 'inventory' || entry.source === 'backpack'))
+      )
+    : [];
+
+  return { selectedProfessions, selectedItems };
+}
+
+function resetEventSelection(room) {
+  room.activeEventSelection = { selected_professions: [], selected_items: [] };
+}
+
 function startNextMonth(roomCode) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
 
   room.currentMonth++;
   room.monthStartTime = Date.now();
+  resetEventSelection(room);
 
   const activePlayers = room.getActivePlayers();
   room.foodMonths = Math.max(0, room.foodMonths - activePlayers.length);
@@ -141,6 +169,7 @@ function resolvePassiveEvent(roomCode) {
 
   const result = applyBunkerEventEffect(room, event.success_effect);
   room.activeEvent = null;
+  resetEventSelection(room);
 
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
@@ -167,11 +196,11 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
 
-  const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
-  const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
+  const { selectedProfessions, selectedItems } = normalizeEventSelection(msg);
   const resourceCount = selectedProfessions.length + selectedItems.length;
 
   room.activeEvent = null;
+  resetEventSelection(room);
 
   if (resourceCount === 0) {
     wsManager.broadcast(roomCode, {
@@ -229,10 +258,26 @@ function tryStartBunkerLife(roomCode, room) {
   room.foodMaxPersonMonths = Math.max(foodDurationMonths, room.totalMonths) * activeCount;
   room.starvationPending = false;
   room.activeEvent = null;
+  resetEventSelection(room);
   room.monthStartTime = Date.now();
   wsManager.broadcastState(roomCode, room);
   setTimeout(() => startNextMonth(roomCode), room.monthDuration);
   return true;
+}
+
+function handleUpdateEventSelection(roomCode, playerId, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+  if (room.activeEvent.event_type === 'passive') return;
+
+  const { selectedProfessions, selectedItems } = normalizeEventSelection(msg);
+  room.activeEventSelection = {
+    selected_professions: selectedProfessions,
+    selected_items: selectedItems,
+  };
+  wsManager.broadcastState(roomCode, room);
 }
 
 function handleConfirmBunkerLife(roomCode, playerId) {
@@ -247,6 +292,16 @@ function handleConfirmBunkerLife(roomCode, playerId) {
   tryStartBunkerLife(roomCode, room);
 }
 
+function handleForceStartBunkerLife(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'running' || room.adminId !== playerId || room.isVoting) return;
+  const active = room.getActivePlayers();
+
+  room.confirmedBunkerLife = new Set(active.map(player => player.id));
+  wsManager.broadcastState(roomCode, room);
+  tryStartBunkerLife(roomCode, room);
+}
+
 function handleResolveEvent(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
@@ -255,10 +310,13 @@ function handleResolveEvent(roomCode, playerId, msg) {
 
   const event = room.activeEvent;
   if (event.event_type === 'passive') { resolvePassiveEvent(roomCode); return; }
-  if (event.event_type === 'food_replenish') { resolveFoodReplenishEvent(roomCode, msg); return; }
+  if (event.event_type === 'food_replenish') {
+    resolveFoodReplenishEvent(roomCode, room.activeEventSelection);
+    return;
+  }
 
-  const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
-  const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
+  const selectedProfessions = room.activeEventSelection.selected_professions;
+  const selectedItems = room.activeEventSelection.selected_items;
 
   const successChances = room.config.packSettings.events.success_chances;
   const resourceCount = selectedProfessions.length + selectedItems.length;
@@ -275,6 +333,7 @@ function handleResolveEvent(roomCode, playerId, msg) {
 
   const effectResult = applyBunkerEventEffect(room, effect);
   room.activeEvent = null;
+  resetEventSelection(room);
 
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
@@ -300,6 +359,8 @@ function handleResolveEvent(roomCode, playerId, msg) {
 module.exports = {
   startNextMonth,
   handleConfirmBunkerLife,
+  handleForceStartBunkerLife,
+  handleUpdateEventSelection,
   handleResolveEvent,
   confirmBotsForBunkerLife,
   tryStartBunkerLife,

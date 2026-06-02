@@ -112,6 +112,7 @@ export default function App() {
       // Hide ready modal when bunker_life phase starts (room_state update)
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
         setShowReadyModal(false);
+        setShowBunkerIntro(false);
       }
 
       handleMessage(msg);
@@ -205,17 +206,6 @@ export default function App() {
     );
   }
 
-  if (showBunkerIntro && roomState.bunker) {
-    return (
-      <BunkerIntroScreen
-        bunker={roomState.bunker}
-        players={roomState.players}
-        onContinue={handleIntroContinue}
-        onLeave={handleLeave}
-      />
-    );
-  }
-
   if (roomState.status === 'bunker_life') {
     return (
       <BunkerLifeScreen
@@ -224,6 +214,17 @@ export default function App() {
         send={send}
         onLeave={handleLeave}
         eventOutcome={eventOutcome}
+      />
+    );
+  }
+
+  if (showBunkerIntro && roomState.bunker) {
+    return (
+      <BunkerIntroScreen
+        bunker={roomState.bunker}
+        players={roomState.players}
+        onContinue={handleIntroContinue}
+        onLeave={handleLeave}
       />
     );
   }

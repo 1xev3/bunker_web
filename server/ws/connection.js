@@ -10,10 +10,14 @@ const {
   handleVote,
   handleEndGame,
   handleKick,
+  handleAdminRevealPlayerAttribute,
+  handleAdminRevealPlayerAttributes,
+  handleAdminRevealPlayerAll,
+  handleAdminRevealAllPlayers,
   handleUseProfessionAbility,
   transferAdmin,
 } = require('./gameHandlers');
-const { handleConfirmBunkerLife, handleResolveEvent } = require('./bunkerLifeHandlers');
+const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent } = require('./bunkerLifeHandlers');
 
 function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
@@ -62,8 +66,14 @@ function setupWebSocket(wss) {
         case 'submit_vote':           handleVote(roomCode, playerId, msg); break;
         case 'end_game':              handleEndGame(roomCode, playerId); break;
         case 'kick_player':           handleKick(roomCode, playerId, msg); break;
+        case 'admin_reveal_player_attribute': handleAdminRevealPlayerAttribute(roomCode, playerId, msg); break;
+        case 'admin_reveal_player_attributes': handleAdminRevealPlayerAttributes(roomCode, playerId, msg); break;
+        case 'admin_reveal_player_all': handleAdminRevealPlayerAll(roomCode, playerId, msg); break;
+        case 'admin_reveal_all_players': handleAdminRevealAllPlayers(roomCode, playerId); break;
         case 'use_profession_ability': handleUseProfessionAbility(roomCode, playerId, msg); break;
         case 'confirm_bunker_life':   handleConfirmBunkerLife(roomCode, playerId); break;
+        case 'force_start_bunker_life': handleForceStartBunkerLife(roomCode, playerId); break;
+        case 'update_event_selection': handleUpdateEventSelection(roomCode, playerId, msg); break;
         case 'resolve_event':         handleResolveEvent(roomCode, playerId, msg); break;
       }
     });
