@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { AlertTriangle, Send, Sparkles, Users, Utensils } from 'lucide-react';
 import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
 
@@ -21,6 +21,10 @@ interface EventEffect {
   type: 'survival_change' | 'food_change' | string;
   value: number;
 }
+
+const EVENT_HIGHLIGHT_RE = /(<<event-highlight>>.*?<<\/event-highlight>>)/g;
+const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
+const EVENT_HIGHLIGHT_END = '<</event-highlight>>';
 
 function getSuccessChance(resourceCount: number, baseChance: number): number {
   if (resourceCount === 0) return Math.round(baseChance * 100);
@@ -76,6 +80,16 @@ function OutcomePreview({
       <p className="mt-1 text-sm font-semibold">{formatEffect(effect)}</p>
     </div>
   );
+}
+
+function renderEventText(text: string) {
+  return text.split(EVENT_HIGHLIGHT_RE).filter(Boolean).map((part, index) => {
+    if (part.startsWith(EVENT_HIGHLIGHT_START) && part.endsWith(EVENT_HIGHLIGHT_END)) {
+      const value = part.slice(EVENT_HIGHLIGHT_START.length, -EVENT_HIGHLIGHT_END.length);
+      return <span key={index} className="event-text-highlight">{value}</span>;
+    }
+    return <Fragment key={index}>{part}</Fragment>;
+  });
 }
 
 function getItemKey(entry: SelectedItem): string {
@@ -166,8 +180,8 @@ function PassiveEventCard({ event, send }: { event: GameEvent; send: (msg: Clien
             <Sparkles size={20} className={isPositive ? 'event-icon-positive shrink-0 mt-0.5' : 'text-zinc-500 shrink-0 mt-0.5'} />
           )}
           <div>
-            <h2 className={`font-bold text-lg ${isPositive ? 'event-title-positive' : 'text-zinc-300'}`}>{event.title}</h2>
-            <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
+            <h2 className={`font-bold text-lg ${isPositive ? 'event-title-positive' : 'text-zinc-300'}`}>{renderEventText(event.title)}</h2>
+            <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{renderEventText(event.description)}</p>
           </div>
         </div>
 
@@ -241,8 +255,8 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
           <div className="flex items-start gap-3">
             <Utensils size={22} className="text-orange-400 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h2 className="text-orange-300 font-bold text-lg">{event.title}</h2>
-              <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
+              <h2 className="text-orange-300 font-bold text-lg">{renderEventText(event.title)}</h2>
+              <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{renderEventText(event.description)}</p>
             </div>
           </div>
         </div>
@@ -373,8 +387,8 @@ export default function EventModal({ event, activePlayers, bunker, send }: Props
           <div className="flex items-start gap-3">
             <AlertTriangle size={22} className="text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h2 className="text-red-300 font-bold text-lg">{event.title}</h2>
-              <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
+              <h2 className="text-red-300 font-bold text-lg">{renderEventText(event.title)}</h2>
+              <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{renderEventText(event.description)}</p>
             </div>
           </div>
           {event.participants && event.participants.length > 0 && (

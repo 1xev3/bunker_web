@@ -46,10 +46,11 @@ function SurvivalBar({ chance }: { chance: number }) {
   );
 }
 
-function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths: number }) {
-  const pct = totalMonths > 0
-    ? Math.min(100, Math.round((foodMonths / totalMonths) * 100))
-    : 100;
+function FoodBar({ foodMonths, totalMonths, currentMonth }: { foodMonths: number; totalMonths: number; currentMonth: number }) {
+  const remainingMonths = totalMonths > 0 ? totalMonths - currentMonth : 0;
+  const pct = remainingMonths > 0
+    ? Math.min(100, Math.round((foodMonths / remainingMonths) * 100))
+    : foodMonths > 0 ? 100 : 0;
   const color =
     pct >= 60 ? 'bg-green-500' :
     pct >= 30 ? 'bg-yellow-500' :
@@ -218,7 +219,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
             <SurvivalBar chance={roomState.survival_chance} />
             <div className="w-full h-px bg-zinc-800" />
-            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
+            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} currentMonth={roomState.current_month} />
           </div>
         </div>
 

@@ -32,6 +32,8 @@ const FOOD_REPLENISH_RATIO = 0.25;
 const MAX_SURVIVAL_CHANCE = 150;
 const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
 const EVENT_PARTICIPANT_TEMPLATE_RE = /^participant(\d+)$/;
+const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
+const EVENT_HIGHLIGHT_END = '<</event-highlight>>';
 
 const rooms = new Map();   // roomCode -> GameRoom
 const sessions = new SessionManager();
@@ -522,7 +524,7 @@ function renderEventText(template, context, cache) {
     if (typeof value !== 'string') {
       return `{${key}}`;
     }
-    return value;
+    return `${EVENT_HIGHLIGHT_START}${value}${EVENT_HIGHLIGHT_END}`;
   });
 }
 
@@ -530,16 +532,21 @@ function resolveEventText(sourceValue, context, cache) {
   return renderEventText(pickEventTextValue(sourceValue), context, cache);
 }
 
+function inferEventType(event) {
+  return event.base_chance == null ? 'passive' : 'interactive';
+}
+
 function materializeEvent(event) {
   const altText = Array.isArray(event.alt) && event.alt.length > 0
-    ? pickRandomValue([null, ...event.alt])
+    ? pickRandomValue(event.alt)
     : null;
   const context = { event, alt: altText };
   const cache = new Map();
   return {
     ...event,
-    title: resolveEventText(altText?.title ?? event.title, context, cache),
-    description: resolveEventText(altText?.description ?? event.description, context, cache),
+    event_type: inferEventType(event),
+    title: resolveEventText(event.title, context, cache),
+    description: resolveEventText(event.description, context, cache),
   };
 }
 
@@ -554,14 +561,14 @@ function renderParticipantText(template, participants) {
   const names = participants.map(player => player.name);
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') {
-      return formatParticipantList(names);
+      return `${EVENT_HIGHLIGHT_START}${formatParticipantList(names)}${EVENT_HIGHLIGHT_END}`;
     }
     const participantMatch = key.match(EVENT_PARTICIPANT_TEMPLATE_RE);
     if (!participantMatch) {
       return match;
     }
     const index = Number.parseInt(participantMatch[1], 10) - 1;
-    return names[index] ?? match;
+    return names[index] ? `${EVENT_HIGHLIGHT_START}${names[index]}${EVENT_HIGHLIGHT_END}` : match;
   });
 }
 
@@ -646,15 +653,16 @@ function startNextMonth(roomCode) {
   const activePlayers = room.getActivePlayers();
   room.foodMonths = Math.max(0, room.foodMonths - activePlayers.length);
 
-  // Duration check wins over starvation on the final required month.
+  // Duration check: roll against survival_chance to determine final outcome.
   if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
     room.status = 'finished';
     room.revealAllPlayers();
+    const survived = Math.random() * 100 < room.survivalChance;
     wsManager.broadcast(roomCode, {
       type: 'game_ended',
       winner: null,
       from_bunker_life: true,
-      survived: true,
+      survived,
     });
     wsManager.broadcastState(roomCode, room);
     return;

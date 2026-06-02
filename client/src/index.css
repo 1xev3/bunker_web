@@ -280,6 +280,10 @@ td, th {
 }
 .event-title-positive { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .event-icon-positive { color: var(--accent); }
+.event-text-highlight {
+  color: color-mix(in srgb, var(--accent) 95%, #fff);
+  font-weight: 600;
+}
 
 /* StatusTable */
 .status-row-me {
