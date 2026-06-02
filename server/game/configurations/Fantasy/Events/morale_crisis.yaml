@@ -27,7 +27,7 @@ alt:
 base_chance: 0.20
 success_effects:
   - type: survival_change
-    value: 15
+    value: 10
 failure_effects:
   - type: survival_change
     value: -20

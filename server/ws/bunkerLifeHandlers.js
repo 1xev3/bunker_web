@@ -106,7 +106,14 @@ function applyBunkerEventEffect(room, effect, context) {
   }
 
   if (effect.type === 'food_change') {
-    result.foodChange = updateFood(room, effect.value ?? 0);
+    const rawValue = effect.value ?? 0;
+    if (rawValue < 0) {
+      const percent = Math.abs(rawValue);
+      const loss = room.food > 0 ? Math.ceil((room.food * percent) / 100) : 0;
+      result.foodChange = updateFood(room, -Math.min(room.food, loss));
+      return result;
+    }
+    result.foodChange = updateFood(room, rawValue);
     return result;
   }
 

@@ -28,4 +28,4 @@ failure_effects:
     value: -20
   - type: kill_participant
     target: each_participant
-    per_target_chance: 0.5
+    per_target_chance: 0.3
