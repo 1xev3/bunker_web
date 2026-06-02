@@ -21,6 +21,54 @@ function getGenderLabel(player) {
   return player?.config?.GENDERS.find(entry => entry.value.id === player.gender?.genderId)?.value?.label ?? null;
 }
 
+function normalizeBirthContext(room, context = {}) {
+  const next = { ...context };
+  const motherPlayer = next.mother_id ? room.getPlayer(next.mother_id) : null;
+  const fatherPlayer = next.father_id ? room.getPlayer(next.father_id) : null;
+
+  let resolvedMother = motherPlayer;
+  let resolvedFather = fatherPlayer;
+
+  if (motherPlayer && fatherPlayer) {
+    const motherGender = getGenderLabel(motherPlayer);
+    const fatherGender = getGenderLabel(fatherPlayer);
+    if (motherGender === 'Мужчина' && fatherGender === 'Женщина') {
+      resolvedMother = fatherPlayer;
+      resolvedFather = motherPlayer;
+    } else if (motherGender !== 'Женщина' && fatherGender === 'Женщина') {
+      resolvedMother = fatherPlayer;
+      resolvedFather = motherPlayer;
+    }
+  }
+
+  if (resolvedMother) {
+    next.mother_id = resolvedMother.id;
+    next.mother_name = resolvedMother.name;
+    next.mother_race_id = resolvedMother.race?.id ?? next.mother_race_id;
+  }
+  if (resolvedFather) {
+    next.father_id = resolvedFather.id;
+    next.father_name = resolvedFather.name;
+    next.father_race_id = resolvedFather.race?.id ?? next.father_race_id;
+  }
+
+  return next;
+}
+
+function normalizeScheduledEventContext(room, eventId, context = {}) {
+  if (eventId === 'birth') return normalizeBirthContext(room, context);
+  return context;
+}
+
+function hasScheduledEvent(room, scheduledEvent) {
+  return room.scheduledEvents.some(existing =>
+    existing.event_id === scheduledEvent.event_id
+    && existing.trigger_month === scheduledEvent.trigger_month
+    && existing.context?.mother_id === scheduledEvent.context?.mother_id
+    && existing.context?.father_id === scheduledEvent.context?.father_id
+  );
+}
+
 function resolveScheduledParticipant(participants, participantRef, contextKey, effect) {
   if (effect?.event_id === 'birth' && (contextKey === 'mother' || contextKey === 'father')) {
     const female = participants.find(player => getGenderLabel(player) === 'Женщина') ?? null;
@@ -148,7 +196,7 @@ function applyBunkerEventEffect(room, effect, context) {
     result.scheduledEvent = {
       event_id: effect.event_id,
       trigger_month: room.currentMonth + (effect.delay_months ?? 1),
-      context: scheduledContext,
+      context: normalizeScheduledEventContext(room, effect.event_id, scheduledContext),
     };
     return result;
   }
@@ -173,7 +221,7 @@ function applyEffectsArray(room, effects, context) {
     if (Array.isArray(r.playersKilled) && r.playersKilled.length > 0) accumulated.playersKilled.push(...r.playersKilled);
     if (r.roomChanged) accumulated.roomChanged = true;
     if (r.playerAdded) accumulated.playersAdded.push(r.playerAdded);
-    if (r.scheduledEvent) room.scheduledEvents.push(r.scheduledEvent);
+    if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
   }
 
   return accumulated;
@@ -332,7 +380,10 @@ function startNextMonth(roomCode) {
     const scheduled = due[0];
     const eventDef = room.config.EVENTS.find(e => e.id === scheduled.event_id);
     if (eventDef) {
-      const materialized = materializeScheduledEvent(eventDef, scheduled.context);
+      const materialized = materializeScheduledEvent(
+        eventDef,
+        normalizeScheduledEventContext(room, scheduled.event_id, scheduled.context),
+      );
       room.activeEvent = materialized;
       wsManager.broadcastState(roomCode, room);
       // Remaining due events are dropped this month (next month check will handle if still pending)
