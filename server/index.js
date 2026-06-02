@@ -458,20 +458,139 @@ function pickRandomEvent(config) {
   return events[Math.floor(Math.random() * events.length)];
 }
 
+function getCompatibleGenders(affix) {
+  const a = affix.toLowerCase();
+  if (a.includes('гетеросексуал')) return null; // handled separately
+  if (a.includes('гомосексуал')) return 'same';
+  if (a.includes('бисексуал')) return 'any';
+  if (a.includes('асексуал')) return 'none';
+  if (a.includes('трансгендер')) return 'any';
+  return null;
+}
+
+function parseGenderAffix(genderStr) {
+  if (!genderStr) return { gender: null, affix: null };
+  // Format: "Мужчина Гетеросексуал (28 лет)"
+  const parts = genderStr.split(' ');
+  return { gender: parts[0] || null, affix: parts[1] || null };
+}
+
+function canBeCouple(p1, p2) {
+  const g1 = parseGenderAffix(p1.gender);
+  const g2 = parseGenderAffix(p2.gender);
+  if (!g1.affix || !g2.affix) return true;
+
+  const a1 = g1.affix.toLowerCase();
+  const a2 = g2.affix.toLowerCase();
+
+  if (a1.includes('асексуал') || a2.includes('асексуал')) return false;
+  if (a1.includes('бисексуал') || a2.includes('бисексуал')) return true;
+
+  const sameSex = g1.gender === g2.gender;
+  if (a1.includes('гомосексуал') && a2.includes('гомосексуал')) return sameSex;
+  if (a1.includes('гомосексуал') || a2.includes('гомосексуал')) return sameSex;
+  // both hetero
+  return !sameSex;
+}
+
+function resolvePassiveParticipants(event, activePlayers) {
+  const template = event.participants_template;
+  if (!template || activePlayers.length === 0) return [];
+
+  if (template === 'couple') {
+    const pairs = [];
+    for (let i = 0; i < activePlayers.length; i++) {
+      for (let j = i + 1; j < activePlayers.length; j++) {
+        if (canBeCouple(activePlayers[i], activePlayers[j])) {
+          pairs.push([activePlayers[i], activePlayers[j]]);
+        }
+      }
+    }
+    if (pairs.length === 0) {
+      // fallback: any random pair
+      const shuffled = [...activePlayers].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 2);
+    }
+    const pair = pairs[Math.floor(Math.random() * pairs.length)];
+    return pair;
+  }
+
+  if (template === 'random_one') {
+    const idx = Math.floor(Math.random() * activePlayers.length);
+    return [activePlayers[idx]];
+  }
+
+  if (template === 'random_group') {
+    const count = Math.min(activePlayers.length, 2 + Math.floor(Math.random() * 3));
+    const shuffled = [...activePlayers].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  return [];
+}
+
 function startNextMonth(roomCode) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
 
   room.currentMonth++;
+  room.monthStartTime = Date.now();
 
-  if (Math.random() < 0.2) {
-    room.activeEvent = pickRandomEvent(room.config);
+  if (Math.random() < 0.35) {
+    const event = pickRandomEvent(room.config);
+    const isPassive = event.event_type === 'passive';
+
+    if (isPassive) {
+      const participants = resolvePassiveParticipants(event, room.getActivePlayers());
+      room.activeEvent = { ...event, participants: participants.map(p => p.name) };
+    } else {
+      room.activeEvent = event;
+    }
+
     wsManager.broadcastState(roomCode, room);
+
+    if (isPassive) {
+      // Auto-resolve passive events after a short display delay
+      setTimeout(() => resolvePassiveEvent(roomCode), 3500);
+    }
   } else {
     room.activeEvent = null;
     wsManager.broadcastState(roomCode, room);
-    setTimeout(() => startNextMonth(roomCode), 4000);
+    setTimeout(() => startNextMonth(roomCode), 2500);
   }
+}
+
+function resolvePassiveEvent(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
+  const event = room.activeEvent;
+  if (event.event_type !== 'passive') return;
+
+  const effect = event.success_effect;
+  if (effect && effect.type === 'survival_change') {
+    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
+  }
+
+  room.activeEvent = null;
+
+  wsManager.broadcast(roomCode, {
+    type: 'event_resolved',
+    event_id: event.id,
+    outcome: 'success',
+    survival_change: effect ? effect.value : 0,
+    survival_chance: room.survivalChance,
+  });
+
+  if (room.survivalChance <= 0) {
+    room.status = 'finished';
+    room.revealAllPlayers();
+    wsManager.broadcast(roomCode, { type: 'game_ended', winner: null });
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
+
+  wsManager.broadcastState(roomCode, room);
+  setTimeout(() => startNextMonth(roomCode), 2500);
 }
 
 function handleConfirmBunkerLife(roomCode, playerId) {
@@ -503,6 +622,7 @@ function tryStartBunkerLife(roomCode, room) {
   room.survivalChance = 100;
   room.currentMonth = 0;
   room.activeEvent = null;
+  room.monthStartTime = Date.now();
   wsManager.broadcastState(roomCode, room);
   setTimeout(() => startNextMonth(roomCode), 2000);
   return true;
@@ -589,7 +709,7 @@ function handleResolveEvent(roomCode, playerId, msg) {
   }
 
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), 4000);
+  setTimeout(() => startNextMonth(roomCode), 2500);
 }
 
 function transferAdmin(roomCode) {

@@ -77,7 +77,10 @@ export interface GameEvent {
   id: string;
   title: string;
   description: string;
-  base_chance: number;
+  base_chance?: number;
+  event_type?: 'passive' | 'interactive';
+  participants?: string[];
+  success_effect?: { type: string; value: number };
 }
 
 export interface RoomState {
@@ -90,6 +93,8 @@ export interface RoomState {
   survival_chance: number;
   current_month: number;
   active_event: GameEvent | null;
+  month_start_time: number | null;
+  month_duration: number;
   confirmed_bunker_life: string[];
   players: Player[];
   bunker: BunkerInfo | null;

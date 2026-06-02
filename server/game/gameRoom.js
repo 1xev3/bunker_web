@@ -27,6 +27,8 @@ class GameRoom {
     this.survivalChance = 100;
     this.currentMonth = 0;
     this.activeEvent = null;
+    this.monthStartTime = null;
+    this.monthDuration = 2500; // ms per month (empty months)
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
@@ -93,6 +95,8 @@ class GameRoom {
       survival_chance: this.survivalChance,
       current_month: this.currentMonth,
       active_event: this.activeEvent,
+      month_start_time: this.monthStartTime,
+      month_duration: this.monthDuration,
       confirmed_bunker_life: [...this.confirmedBunkerLife],
       players: this.players.map(p => p.toDict(viewerId)),
       bunker: this.status !== 'waiting' ? this.bunker.toDict() : null,

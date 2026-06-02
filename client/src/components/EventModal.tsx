@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Send } from 'lucide-react';
+import { AlertTriangle, Send, Sparkles, Users } from 'lucide-react';
 import type { GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
 
 interface Props {
@@ -37,9 +37,51 @@ function ChanceBar({ chance }: { chance: number }) {
   );
 }
 
+function PassiveEventCard({ event }: { event: GameEvent }) {
+  const isPositive = (event.success_effect?.value ?? 0) >= 0;
+  const value = event.success_effect?.value ?? 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in-up">
+      <div className={`bg-zinc-900 border rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 flex flex-col gap-4 ${
+        isPositive ? 'border-amber-700/40' : 'border-zinc-700/40'
+      }`}>
+        <div className="flex items-start gap-3">
+          <Sparkles size={20} className={isPositive ? 'text-amber-400 shrink-0 mt-0.5' : 'text-zinc-500 shrink-0 mt-0.5'} />
+          <div>
+            <h2 className={`font-bold text-lg ${isPositive ? 'text-amber-300' : 'text-zinc-300'}`}>{event.title}</h2>
+            <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
+          </div>
+        </div>
+
+        {event.participants && event.participants.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800/60">
+            <Users size={13} className="text-zinc-500 shrink-0" />
+            <span className="text-zinc-400 text-sm">{event.participants.join(', ')}</span>
+          </div>
+        )}
+
+        <div className={`text-center text-sm font-semibold rounded-lg py-2 ${
+          isPositive
+            ? 'text-green-400 bg-green-950/30 border border-green-900/30'
+            : 'text-red-400 bg-red-950/30 border border-red-900/30'
+        }`}>
+          {value > 0 ? '+' : ''}{value}% к шансу выживания
+        </div>
+
+        <p className="text-zinc-600 text-xs text-center">Разрешается автоматически…</p>
+      </div>
+    </div>
+  );
+}
+
 export default function EventModal({ event, activePlayers, send }: Props) {
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+
+  if (event.event_type === 'passive') {
+    return <PassiveEventCard event={event} />;
+  }
 
   const toggleProfession = (profession: string) => {
     setSelectedProfessions(prev =>
@@ -59,7 +101,7 @@ export default function EventModal({ event, activePlayers, send }: Props) {
     selectedItems.some(i => i.player_id === entry.player_id && i.source === entry.source && i.item === entry.item);
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
-  const successChance = getSuccessChance(resourceCount, event.base_chance);
+  const successChance = getSuccessChance(resourceCount, event.base_chance ?? 0.1);
 
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });

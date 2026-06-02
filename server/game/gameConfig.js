@@ -318,12 +318,22 @@ function validatePackContent(packName, files) {
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
       if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
       if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
-      if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
-      for (const effectKey of ['success_effect', 'failure_effect']) {
-        const eff = event[effectKey];
-        if (!isPlainObject(eff)) { addError(errors, `${scope}.${effectKey}`, 'ожидается объект эффекта'); continue; }
-        if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.${effectKey}.type`, 'ожидается непустая строка');
-        if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.${effectKey}.value`, 'ожидается число');
+      const isPassive = event.event_type === 'passive';
+      if (!isPassive) {
+        if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
+        for (const effectKey of ['success_effect', 'failure_effect']) {
+          const eff = event[effectKey];
+          if (!isPlainObject(eff)) { addError(errors, `${scope}.${effectKey}`, 'ожидается объект эффекта'); continue; }
+          if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.${effectKey}.type`, 'ожидается непустая строка');
+          if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.${effectKey}.value`, 'ожидается число');
+        }
+      } else {
+        const eff = event.success_effect;
+        if (!isPlainObject(eff)) { addError(errors, `${scope}.success_effect`, 'ожидается объект эффекта'); }
+        else {
+          if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.success_effect.type`, 'ожидается непустая строка');
+          if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${scope}.success_effect.value`, 'ожидается число');
+        }
       }
     });
   }

@@ -1,3 +1,4 @@
+import { useEffect, useState, useRef } from 'react';
 import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../types/game';
 import EventModal from './EventModal';
@@ -36,6 +37,45 @@ function SurvivalBar({ chance }: { chance: number }) {
           style={{ width: `${chance}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function MonthProgressBar({ monthStartTime, monthDuration, hasEvent }: {
+  monthStartTime: number | null;
+  monthDuration: number;
+  hasEvent: boolean;
+}) {
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (hasEvent || !monthStartTime) {
+      setProgress(hasEvent ? 100 : 0);
+      return;
+    }
+
+    const tick = () => {
+      const elapsed = Date.now() - monthStartTime;
+      const pct = Math.min(100, (elapsed / monthDuration) * 100);
+      setProgress(pct);
+      if (pct < 100) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [monthStartTime, monthDuration, hasEvent]);
+
+  return (
+    <div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
+      <div
+        className="h-full rounded-full bg-amber-600/60 transition-none"
+        style={{ width: `${progress}%` }}
+      />
     </div>
   );
 }
@@ -112,7 +152,14 @@ export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcom
               {String(roomState.current_month).padStart(2, '0')}
             </div>
             <p className="text-zinc-600 text-sm">месяц в бункере</p>
-            <div className="flex justify-center gap-1 mt-4">
+            <div className="mt-4 px-4">
+              <MonthProgressBar
+                monthStartTime={roomState.month_start_time}
+                monthDuration={roomState.month_duration}
+                hasEvent={hasEvent}
+              />
+            </div>
+            <div className="flex justify-center gap-1 mt-3">
               {[0, 1, 2].map(i => (
                 <span
                   key={i}

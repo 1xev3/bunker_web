@@ -159,6 +159,86 @@
       "base_chance": 0.10,
       "success_effect": { "type": "survival_change", "value": 15 },
       "failure_effect": { "type": "survival_change", "value": -25 }
+    },
+    {
+      "id": "coitus",
+      "title": "Соитие",
+      "description": "Среди монотонных будней бункера двое выживших нашли утешение друг в друге. Тепло человеческой близости подняло дух всей группы.",
+      "event_type": "passive",
+      "participants_template": "couple",
+      "success_effect": { "type": "survival_change", "value": 5 }
+    },
+    {
+      "id": "birthday_celebration",
+      "title": "День рождения",
+      "description": "Сегодня у одного из обитателей бункера день рождения! Несмотря на тяжёлые обстоятельства, группа решила устроить небольшое торжество. Немного радости в этой тьме.",
+      "event_type": "passive",
+      "participants_template": "random_one",
+      "success_effect": { "type": "survival_change", "value": 3 }
+    },
+    {
+      "id": "dream_sharing",
+      "title": "Общие сны",
+      "description": "Несколько обитателей бункера рассказали друг другу сны, которые им снятся. Оказалось, что у многих — похожие видения. Это странным образом сблизило людей.",
+      "event_type": "passive",
+      "participants_template": "random_group",
+      "success_effect": { "type": "survival_change", "value": 2 }
+    },
+    {
+      "id": "improvised_concert",
+      "title": "Самодеятельный концерт",
+      "description": "Кто-то откопал старую гитару в кладовке. Вечер импровизированного концерта собрал всех обитателей бункера — люди пели, смеялись и на миг забыли о страхе.",
+      "event_type": "passive",
+      "participants_template": "random_one",
+      "success_effect": { "type": "survival_change", "value": 4 }
+    },
+    {
+      "id": "old_photo",
+      "title": "Старая фотография",
+      "description": "Один из выживших нашёл в кармане фотографию своей семьи. Когда он показал её остальным, все почувствовали — за что именно они борются. Воля к выживанию окрепла.",
+      "event_type": "passive",
+      "participants_template": "random_one",
+      "success_effect": { "type": "survival_change", "value": 3 }
+    },
+    {
+      "id": "nightmare_wave",
+      "title": "Волна кошмаров",
+      "description": "Несколько ночей подряд почти все в бункере мучаются ночными кошмарами. Никто толком не высыпается — усталость и тревога нарастают.",
+      "event_type": "passive",
+      "participants_template": "random_group",
+      "success_effect": { "type": "survival_change", "value": -5 }
+    },
+    {
+      "id": "argument_forgotten",
+      "title": "Примирение",
+      "description": "Два человека, которые давно не разговаривали после ссоры, неожиданно помирились. Атмосфера в бункере заметно потеплела.",
+      "event_type": "passive",
+      "participants_template": "couple",
+      "success_effect": { "type": "survival_change", "value": 4 }
+    },
+    {
+      "id": "ration_discovery",
+      "title": "Забытые рационы",
+      "description": "При уборке одного из дальних отсеков нашли несколько забытых упаковок с сухпайками. Немного, но приятно.",
+      "event_type": "passive",
+      "participants_template": "random_one",
+      "success_effect": { "type": "survival_change", "value": 6 }
+    },
+    {
+      "id": "skill_training",
+      "title": "Занятие по выживанию",
+      "description": "Один из обитателей провёл импровизированное занятие — учил остальных базовым навыкам первой помощи и ориентирования. Группа стала немного более подготовленной.",
+      "event_type": "passive",
+      "participants_template": "random_one",
+      "success_effect": { "type": "survival_change", "value": 3 }
+    },
+    {
+      "id": "supplies_decay",
+      "title": "Порча части запасов",
+      "description": "Из-за влажности часть запасённых материалов пришла в негодность. Потери небольшие, но неприятные.",
+      "event_type": "passive",
+      "participants_template": null,
+      "success_effect": { "type": "survival_change", "value": -4 }
     }
   ]
 }
