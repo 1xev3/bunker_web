@@ -32,7 +32,7 @@ const DEFAULT_PACK_SETTINGS = {
     height: {
       min: 150,
       max: 210,
-      female_offset: 10,
+      female_height_offset: 10,
       age_curves: [
         { max_age: 17, mean: 160, std: 20 },
         { max_age: 29, mean: 180, std: 15 },
@@ -83,8 +83,22 @@ function mergeObjects(base, override) {
   return result;
 }
 
-function normalizePackSettings(packConfig) {
-  return mergeObjects(DEFAULT_PACK_SETTINGS, packConfig?.game_settings ?? {});
+function normalizePackSettings(rawConfig) {
+  return mergeObjects(DEFAULT_PACK_SETTINGS, {
+    bunker_life: rawConfig.BUNKER_LIFE_SETTINGS,
+    events: rawConfig.EVENT_SETTINGS && {
+      bunker_event_chance: rawConfig.EVENT_SETTINGS.bunker_event_chance,
+      success_chances: Array.isArray(rawConfig.EVENT_SETTINGS.success_chances_by_resources)
+        ? {
+            one_resource: rawConfig.EVENT_SETTINGS.success_chances_by_resources[0],
+            two_resources: rawConfig.EVENT_SETTINGS.success_chances_by_resources[1],
+            three_plus_resources: rawConfig.EVENT_SETTINGS.success_chances_by_resources[2],
+          }
+        : undefined,
+      food_replenish: rawConfig.EVENT_SETTINGS.food_replenish,
+    },
+    bunker_generation: rawConfig.BUNKER_GENERATION_SETTINGS,
+  });
 }
 
 function validateStringArray(value, scope, errors) {
@@ -109,6 +123,73 @@ function validateNumberInRange(value, scope, errors, min, max) {
 function validatePositiveInteger(value, scope, errors) {
   if (!Number.isInteger(value) || value < 1) {
     addError(errors, scope, 'ожидается положительное целое число');
+  }
+}
+
+function validateBunkerLifeSettings(settings, scope, errors) {
+  if (!isPlainObject(settings)) {
+    addError(errors, scope, 'ожидается объект');
+    return;
+  }
+
+  if (settings.initial_survival_chance !== undefined) {
+    validatePositiveInteger(settings.initial_survival_chance, `${scope}.initial_survival_chance`, errors);
+  }
+  if (settings.max_survival_chance !== undefined) {
+    validatePositiveInteger(settings.max_survival_chance, `${scope}.max_survival_chance`, errors);
+  }
+  if (
+    settings.initial_survival_chance !== undefined
+    && settings.max_survival_chance !== undefined
+    && settings.initial_survival_chance > settings.max_survival_chance
+  ) {
+    addError(errors, `${scope}.initial_survival_chance`, 'не может быть больше max_survival_chance');
+  }
+  if (settings.month_duration_ms !== undefined) {
+    validatePositiveInteger(settings.month_duration_ms, `${scope}.month_duration_ms`, errors);
+  }
+}
+
+function validateBunkerGenerationSettings(settings, scope, errors) {
+  if (!isPlainObject(settings)) {
+    addError(errors, scope, 'ожидается объект');
+    return;
+  }
+
+  if (settings.max_empty_fraction !== undefined) {
+    validateNumberInRange(settings.max_empty_fraction, `${scope}.max_empty_fraction`, errors, 0, 1);
+  }
+  if (settings.max_extra_items !== undefined && (!Number.isInteger(settings.max_extra_items) || settings.max_extra_items < 0)) {
+    addError(errors, `${scope}.max_extra_items`, 'ожидается целое число не меньше 0');
+  }
+}
+
+function validateEventSettings(settings, scope, errors) {
+  if (!isPlainObject(settings)) {
+    addError(errors, scope, 'ожидается объект');
+    return;
+  }
+
+  if (settings.bunker_event_chance !== undefined) {
+    validateNumberInRange(settings.bunker_event_chance, `${scope}.bunker_event_chance`, errors, 0, 1);
+  }
+
+  if (settings.success_chances_by_resources !== undefined) {
+    if (!Array.isArray(settings.success_chances_by_resources) || settings.success_chances_by_resources.length !== 3) {
+      addError(errors, `${scope}.success_chances_by_resources`, 'ожидается массив из 3 чисел: [1 ресурс, 2 ресурса, 3+ ресурса]');
+    } else {
+      settings.success_chances_by_resources.forEach((chance, index) => {
+        validateNumberInRange(chance, `${scope}.success_chances_by_resources[${index}]`, errors, 0, 1);
+      });
+    }
+  }
+
+  if (settings.food_replenish !== undefined) {
+    if (!isPlainObject(settings.food_replenish)) {
+      addError(errors, `${scope}.food_replenish`, 'ожидается объект');
+    } else if (settings.food_replenish.ratio_per_resource !== undefined) {
+      validateNumberInRange(settings.food_replenish.ratio_per_resource, `${scope}.food_replenish.ratio_per_resource`, errors, 0, 1);
+    }
   }
 }
 
@@ -462,6 +543,13 @@ function validatePackContent(packName, files) {
         `длина массива (${files.Bunker.ROOM_COUNTS.length}) должна совпадать с количеством BUNKER_SIZES (${files.Bunker.BUNKER_SIZES.length})`,
       );
     }
+
+    if (files.Bunker.BUNKER_LIFE_SETTINGS !== undefined) {
+      validateBunkerLifeSettings(files.Bunker.BUNKER_LIFE_SETTINGS, 'Bunker -> BUNKER_LIFE_SETTINGS', errors);
+    }
+    if (files.Bunker.BUNKER_GENERATION_SETTINGS !== undefined) {
+      validateBunkerGenerationSettings(files.Bunker.BUNKER_GENERATION_SETTINGS, 'Bunker -> BUNKER_GENERATION_SETTINGS', errors);
+    }
   }
 
   if (!isPlainObject(files.Professions)) {
@@ -480,9 +568,13 @@ function validatePackContent(packName, files) {
 
   if (!isPlainObject(files.Event)) {
     addError(errors, 'Event', 'корневой объект не найден');
-  } else if (!Array.isArray(files.Event.EVENTS) || files.Event.EVENTS.length === 0) {
-    addError(errors, 'Event -> EVENTS', 'ожидается непустой массив событий');
   } else {
+    if (files.Event.EVENT_SETTINGS !== undefined) {
+      validateEventSettings(files.Event.EVENT_SETTINGS, 'Event -> EVENT_SETTINGS', errors);
+    }
+    if (!Array.isArray(files.Event.EVENTS) || files.Event.EVENTS.length === 0) {
+      addError(errors, 'Event -> EVENTS', 'ожидается непустой массив событий');
+    } else {
     files.Event.EVENTS.forEach((event, index) => {
       const scope = `Event -> EVENTS[${index}]`;
       if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
@@ -559,6 +651,7 @@ function validatePackContent(packName, files) {
         }
       }
     });
+    }
   }
 
   if (files.Pack !== undefined) {
@@ -573,122 +666,6 @@ function validatePackContent(packName, files) {
       }
       if (typeof files.Pack.color !== 'string' || !HEX_COLOR_RE.test(files.Pack.color)) {
         addError(errors, 'Pack -> color', 'ожидается hex-цвет в формате #rrggbb');
-      }
-      if (files.Pack.game_settings !== undefined) {
-        if (!isPlainObject(files.Pack.game_settings)) {
-          addError(errors, 'Pack -> game_settings', 'ожидается объект');
-        } else {
-          const settings = files.Pack.game_settings;
-          if (settings.bunker_life !== undefined) {
-            if (!isPlainObject(settings.bunker_life)) {
-              addError(errors, 'Pack -> game_settings.bunker_life', 'ожидается объект');
-            } else {
-              if (settings.bunker_life.initial_survival_chance !== undefined) {
-                validatePositiveInteger(settings.bunker_life.initial_survival_chance, 'Pack -> game_settings.bunker_life.initial_survival_chance', errors);
-              }
-              if (settings.bunker_life.max_survival_chance !== undefined) {
-                validatePositiveInteger(settings.bunker_life.max_survival_chance, 'Pack -> game_settings.bunker_life.max_survival_chance', errors);
-              }
-              if (
-                settings.bunker_life.initial_survival_chance !== undefined
-                && settings.bunker_life.max_survival_chance !== undefined
-                && settings.bunker_life.initial_survival_chance > settings.bunker_life.max_survival_chance
-              ) {
-                addError(errors, 'Pack -> game_settings.bunker_life.initial_survival_chance', 'не может быть больше max_survival_chance');
-              }
-              if (settings.bunker_life.month_duration_ms !== undefined) {
-                validatePositiveInteger(settings.bunker_life.month_duration_ms, 'Pack -> game_settings.bunker_life.month_duration_ms', errors);
-              }
-            }
-          }
-          if (settings.events !== undefined) {
-            if (!isPlainObject(settings.events)) {
-              addError(errors, 'Pack -> game_settings.events', 'ожидается объект');
-            } else {
-              if (settings.events.bunker_event_chance !== undefined) {
-                validateNumberInRange(settings.events.bunker_event_chance, 'Pack -> game_settings.events.bunker_event_chance', errors, 0, 1);
-              }
-              if (settings.events.success_chances !== undefined) {
-                if (!isPlainObject(settings.events.success_chances)) {
-                  addError(errors, 'Pack -> game_settings.events.success_chances', 'ожидается объект');
-                } else {
-                  for (const key of ['one_resource', 'two_resources', 'three_plus_resources']) {
-                    if (settings.events.success_chances[key] !== undefined) {
-                      validateNumberInRange(settings.events.success_chances[key], `Pack -> game_settings.events.success_chances.${key}`, errors, 0, 1);
-                    }
-                  }
-                }
-              }
-              if (settings.events.food_replenish !== undefined) {
-                if (!isPlainObject(settings.events.food_replenish)) {
-                  addError(errors, 'Pack -> game_settings.events.food_replenish', 'ожидается объект');
-                } else if (settings.events.food_replenish.ratio_per_resource !== undefined) {
-                  validateNumberInRange(settings.events.food_replenish.ratio_per_resource, 'Pack -> game_settings.events.food_replenish.ratio_per_resource', errors, 0, 1);
-                }
-              }
-            }
-          }
-          if (settings.characters !== undefined) {
-            if (!isPlainObject(settings.characters)) {
-              addError(errors, 'Pack -> game_settings.characters', 'ожидается объект');
-            } else {
-              if (settings.characters.health_randomize_worse_chance !== undefined) {
-                validateNumberInRange(settings.characters.health_randomize_worse_chance, 'Pack -> game_settings.characters.health_randomize_worse_chance', errors, 0, 1);
-              }
-              if (settings.characters.height !== undefined) {
-                if (!isPlainObject(settings.characters.height)) {
-                  addError(errors, 'Pack -> game_settings.characters.height', 'ожидается объект');
-                } else {
-                  const height = settings.characters.height;
-                  if (height.min !== undefined) validatePositiveInteger(height.min, 'Pack -> game_settings.characters.height.min', errors);
-                  if (height.max !== undefined) validatePositiveInteger(height.max, 'Pack -> game_settings.characters.height.max', errors);
-                  if (height.female_offset !== undefined && (!Number.isInteger(height.female_offset) || height.female_offset < 0)) {
-                    addError(errors, 'Pack -> game_settings.characters.height.female_offset', 'ожидается целое число не меньше 0');
-                  }
-                  if (height.min !== undefined && height.max !== undefined && height.min > height.max) {
-                    addError(errors, 'Pack -> game_settings.characters.height.min', 'не может быть больше max');
-                  }
-                  if (height.age_curves !== undefined) {
-                    if (!Array.isArray(height.age_curves) || height.age_curves.length === 0) {
-                      addError(errors, 'Pack -> game_settings.characters.height.age_curves', 'ожидается непустой массив');
-                    } else {
-                      height.age_curves.forEach((curve, index) => {
-                        const scope = `Pack -> game_settings.characters.height.age_curves[${index}]`;
-                        if (!isPlainObject(curve)) {
-                          addError(errors, scope, 'ожидается объект');
-                          return;
-                        }
-                        if (curve.max_age !== null && curve.max_age !== undefined && (!Number.isInteger(curve.max_age) || curve.max_age < 0)) {
-                          addError(errors, `${scope}.max_age`, 'ожидается null или целое число не меньше 0');
-                        }
-                        if (typeof curve.mean !== 'number' || !Number.isFinite(curve.mean)) {
-                          addError(errors, `${scope}.mean`, 'ожидается число');
-                        }
-                        if (typeof curve.std !== 'number' || !Number.isFinite(curve.std) || curve.std <= 0) {
-                          addError(errors, `${scope}.std`, 'ожидается положительное число');
-                        }
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          }
-          if (settings.bunker_generation !== undefined) {
-            if (!isPlainObject(settings.bunker_generation)) {
-              addError(errors, 'Pack -> game_settings.bunker_generation', 'ожидается объект');
-            } else {
-              if (settings.bunker_generation.max_empty_fraction !== undefined) {
-                validateNumberInRange(settings.bunker_generation.max_empty_fraction, 'Pack -> game_settings.bunker_generation.max_empty_fraction', errors, 0, 1);
-              }
-              if (settings.bunker_generation.max_extra_items !== undefined) {
-                if (!Number.isInteger(settings.bunker_generation.max_extra_items) || settings.bunker_generation.max_extra_items < 0) {
-                  addError(errors, 'Pack -> game_settings.bunker_generation.max_extra_items', 'ожидается целое число не меньше 0');
-                }
-              }
-            }
-          }
-        }
       }
     }
   }
@@ -825,14 +802,13 @@ function loadPack(packName = getDefaultPackName()) {
   }
 
   const dir = getPackDir(packName);
-  const packConfig = readConfigFile(dir, 'Pack') ?? {};
   const rawConfig = PACK_FILES.reduce((cfg, file) => ({
     ...cfg,
     ...readConfigFile(dir, file),
   }), {});
   const config = normalizeConfig(rawConfig);
   config.packMeta = readPackMeta(packName);
-  config.packSettings = normalizePackSettings(packConfig);
+  config.packSettings = normalizePackSettings(rawConfig);
   return config;
 }
 

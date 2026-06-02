@@ -1,4 +1,13 @@
 # BUNKER_THEMES и BUNKER_SIZES: массив объектов с полями name и description.
+BUNKER_LIFE_SETTINGS:
+  initial_survival_chance: 100
+  max_survival_chance: 150
+  month_duration_ms: 750
+
+BUNKER_GENERATION_SETTINGS:
+  max_empty_fraction: 0.33
+  max_extra_items: 3
+
 BUNKER_THEMES:
   - name: Пробуждение древнего дракона
     description: >-

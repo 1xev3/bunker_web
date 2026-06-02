@@ -133,7 +133,7 @@ export interface PackSettings {
     height: {
       min: number;
       max: number;
-      female_offset: number;
+      female_height_offset: number;
       age_curves: Array<{
         max_age: number | null;
         mean: number;

@@ -120,7 +120,7 @@ class Player {
     const heightSettings = config.packSettings.characters.height;
     const curve = getHeightCurve(config, age);
     let height = Math.round(gaussRandom(curve.mean, curve.std));
-    if (gender.id === 'gender_2') height -= heightSettings.female_offset;
+    if (gender.id === 'gender_2') height -= heightSettings.female_height_offset;
     height = Math.max(heightSettings.min, Math.min(heightSettings.max, height));
     this.body = { bodyTypeId: bodyType.id, height };
 
