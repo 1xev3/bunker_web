@@ -683,7 +683,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
     return;
   }
 
-  // Resources provided — consume them and replenish 20% of max food per resource
+  // Resources provided — consume them and replenish 40% of max food per resource
   for (const entry of selectedItems) {
     const owner = room.getPlayer(entry.player_id);
     if (!owner) continue;
@@ -699,7 +699,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   }
 
   const foodBefore = room.foodMonths;
-  const replenish = Math.round(0.2 * room.foodMaxPersonMonths * resourceCount);
+  const replenish = Math.round(0.4 * room.foodMaxPersonMonths * resourceCount);
   room.foodMonths = Math.min(room.foodMaxPersonMonths, room.foodMonths + replenish);
   room.starvationPending = false;
 

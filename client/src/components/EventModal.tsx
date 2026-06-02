@@ -193,7 +193,7 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
           )}
           {resourceCount > 0 && (
             <p className="text-green-400/70 text-xs text-center">
-              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{Math.round(20 * resourceCount)}% запасов
+              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{Math.round(40 * resourceCount)}% запасов
             </p>
           )}
           <button
