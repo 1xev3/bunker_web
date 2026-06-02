@@ -1,7 +1,22 @@
 import React from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, User, Globe, Dumbbell, Sparkles, Briefcase, Heart, Gamepad2, AlertTriangle, Package, Backpack, Plus } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
+
+const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
+  gender: User,
+  race: Globe,
+  body: Dumbbell,
+  trait: Sparkles,
+  profession: Briefcase,
+  health: Heart,
+  hobby: Gamepad2,
+  phobia: AlertTriangle,
+  inventory: Package,
+  backpack: Backpack,
+  additional: Plus,
+};
 import { getProfessionIcon } from '../config/professions';
 import { getGenderIcons, getRaceIcon } from '../config/genders';
 
@@ -57,24 +72,31 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
 
   return (
     <div className="card overflow-x-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
-      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
+      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
-          <col style={{ width: '130px' }} />
-          {ATTRIBUTE_KEYS.map(k => (
-            <col key={k} style={{ width: '95px' }} />
-          ))}
+          <col style={{ width: '105px' }} />
+          {ATTRIBUTE_KEYS.map(k => {
+            const w: Partial<Record<AttributeKey, string>> = { race: '82px', trait: '82px', backpack: '130px' };
+            return <col key={k} style={{ width: w[k] ?? '105px' }} />;
+          })}
         </colgroup>
 
         <thead>
           <tr className="bg-zinc-900/80 border-b border-zinc-800">
             <th className="px-3 py-3 text-left text-zinc-600 font-medium text-xs">#</th>
             <th className="px-3 py-3 text-left text-zinc-400 font-semibold text-xs uppercase tracking-widest">Игрок</th>
-            {ATTRIBUTE_KEYS.map(k => (
-              <th key={k} className="px-3 py-3 text-left text-zinc-500 font-medium text-xs uppercase tracking-wide">
-                {ATTRIBUTE_LABELS[k]}
-              </th>
-            ))}
+            {ATTRIBUTE_KEYS.map(k => {
+              const Icon = ATTRIBUTE_ICONS[k];
+              return (
+                <th key={k} className="px-3 py-3 text-left text-zinc-500 font-medium text-xs">
+                  <span className="flex items-center gap-1">
+                    <Icon size={12} className="shrink-0" />
+                    {ATTRIBUTE_LABELS[k]}
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
 

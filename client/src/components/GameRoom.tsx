@@ -155,6 +155,7 @@ export default function GameRoom({
         <VotingModal
           players={roomState.players}
           myPlayerId={myPlayerId}
+          isAdmin={roomState.admin_id === myPlayerId}
           hasVoted={hasVoted}
           votedPlayers={roomState.voted_players}
           votes={roomState.votes}

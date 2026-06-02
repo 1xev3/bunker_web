@@ -7,7 +7,7 @@ export type AttributeKey =
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   gender: 'Пол',
   race: 'Раса',
-  body: 'Телосложение',
+  body: 'Телослож.',
   trait: 'Черта',
   profession: 'Профессия',
   health: 'Здоровье',
@@ -217,6 +217,7 @@ export type ClientMessage =
   | { type: 'reveal_attribute'; attribute: AttributeKey }
   | { type: 'reveal_all' }
   | { type: 'start_voting' }
+  | { type: 'cancel_voting' }
   | { type: 'submit_vote'; target_id: string }
   | { type: 'end_game' }
   | { type: 'kick_player'; player_id: string }

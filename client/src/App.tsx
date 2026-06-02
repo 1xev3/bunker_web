@@ -136,6 +136,12 @@ export default function App() {
   }, [roomState?.status, roomState?.room_code]);
 
   useEffect(() => {
+    if (!roomState?.is_voting) {
+      setHasVoted(false);
+    }
+  }, [roomState?.is_voting]);
+
+  useEffect(() => {
     const token = localStorage.getItem('bunker_token');
     if (token) {
       const savedId = localStorage.getItem('bunker_player_id');

@@ -150,6 +150,14 @@ function handleStartVoting(roomCode, playerId) {
   wsManager.broadcastState(roomCode, room);
 }
 
+function handleCancelVoting(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !room.isVoting) return;
+  room.isVoting = false;
+  room.resetVotes();
+  wsManager.broadcastState(roomCode, room);
+}
+
 function finalizeVoting(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
@@ -284,6 +292,7 @@ module.exports = {
   handleRevealAttr,
   handleRevealAll,
   handleStartVoting,
+  handleCancelVoting,
   handleVote,
   handleEndGame,
   handleKick,

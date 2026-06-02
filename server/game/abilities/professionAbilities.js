@@ -1,7 +1,7 @@
 const ATTRIBUTE_LABELS = {
   gender: 'Пол',
   race: 'Раса',
-  body: 'Телосложение',
+  body: 'Телослож.',
   trait: 'Черта',
   profession: 'Профессия',
   health: 'Здоровье',

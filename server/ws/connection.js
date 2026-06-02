@@ -6,6 +6,7 @@ const {
   handleRevealAttr,
   handleRevealAll,
   handleStartVoting,
+  handleCancelVoting,
   handleVote,
   handleEndGame,
   handleKick,
@@ -57,6 +58,7 @@ function setupWebSocket(wss) {
         case 'reveal_attribute':      handleRevealAttr(roomCode, playerId, msg); break;
         case 'reveal_all':            handleRevealAll(roomCode, playerId); break;
         case 'start_voting':          handleStartVoting(roomCode, playerId); break;
+        case 'cancel_voting':         handleCancelVoting(roomCode, playerId); break;
         case 'submit_vote':           handleVote(roomCode, playerId, msg); break;
         case 'end_game':              handleEndGame(roomCode, playerId); break;
         case 'kick_player':           handleKick(roomCode, playerId, msg); break;

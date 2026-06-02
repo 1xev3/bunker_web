@@ -1,16 +1,17 @@
-import { Vote, Check } from 'lucide-react';
+import { Vote, Check, PauseCircle } from 'lucide-react';
 import type { Player, ClientMessage, RoomState } from '../types/game';
 
 interface Props {
   players: Player[];
   myPlayerId: string;
+  isAdmin: boolean;
   hasVoted: boolean;
   votedPlayers: string[];
   votes: RoomState['votes'];
   send: (msg: ClientMessage) => void;
 }
 
-export default function VotingModal({ players, myPlayerId, hasVoted, votedPlayers, votes, send }: Props) {
+export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, votedPlayers, votes, send }: Props) {
   const active = players.filter(p => p.is_active);
   const votableOptions = active.filter(p => p.id !== myPlayerId);
   const myVoteTarget = votes[myPlayerId];
@@ -50,6 +51,14 @@ export default function VotingModal({ players, myPlayerId, hasVoted, votedPlayer
                 />
               ))}
             </div>
+            {isAdmin && (
+              <button
+                className="mt-5 w-full px-4 py-2.5 rounded-xl text-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all flex items-center justify-center gap-2"
+                onClick={() => send({ type: 'cancel_voting' })}
+              >
+                <PauseCircle size={14} /> Отложить голосование
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -70,6 +79,14 @@ export default function VotingModal({ players, myPlayerId, hasVoted, votedPlayer
                 </button>
               ))}
             </div>
+            {isAdmin && (
+              <button
+                className="mt-4 w-full px-4 py-2.5 rounded-xl text-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all flex items-center justify-center gap-2"
+                onClick={() => send({ type: 'cancel_voting' })}
+              >
+                <PauseCircle size={14} /> Отложить голосование
+              </button>
+            )}
           </>
         )}
       </div>

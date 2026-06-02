@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Vote, UserX, Flag, Check, X, Crown } from 'lucide-react';
+import { Vote, UserX, Flag, Check, X, Crown, PauseCircle } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../types/game';
 
 interface Props {
@@ -156,6 +156,15 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
               : <><Vote size={14} /> Начать голосование</>
             }
           </button>
+
+          {roomState.is_voting && (
+            <button
+              className="px-4 py-2 rounded-xl text-sm border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all flex items-center gap-2"
+              onClick={() => send({ type: 'cancel_voting' })}
+            >
+              <PauseCircle size={14} /> Отложить голосование
+            </button>
+          )}
 
           <KickDropdown players={roomState.players} send={send} />
 
