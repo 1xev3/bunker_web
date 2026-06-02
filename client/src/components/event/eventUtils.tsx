@@ -27,7 +27,7 @@ export function formatEffectLabel(effect: EventEffect): string {
   }
   if (effect.type === 'food_change') {
     if (!effect.value) return 'Запасы еды без изменений';
-    return `${effect.value > 0 ? '+' : ''}${effect.value}% запасов еды`;
+    return `${effect.value > 0 ? '+' : ''}${effect.value} еды`;
   }
   if (effect.type === 'kill_random_active') return 'Случайный выживший погибнет';
   if (effect.type === 'kill_participant') {

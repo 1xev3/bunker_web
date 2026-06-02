@@ -95,7 +95,7 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
           {bunker?.food && (
             <div className="px-4 py-3 flex items-center justify-between">
               <span className="text-zinc-500 text-sm">Еда</span>
-              <span className="text-zinc-300 text-sm font-medium text-right max-w-[60%]">{bunker.food.label}</span>
+              <span className="text-zinc-300 text-sm font-medium text-right max-w-[60%]">{bunker.food.label} ({bunker.food.amount} на человека)</span>
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import BunkerMap from './BunkerMap';
 interface Props {
   bunker: BunkerInfo;
   players: Player[];
+  bunkerCapacity: number | null;
   onContinue: () => void;
   onLeave: () => void;
 }
@@ -40,9 +41,12 @@ function useTypewriter(text: string, speedMs: number, active: boolean, skip: boo
 
 const S = { FLASH: 0, TITLE: 1, DISASTER: 2, BUNKER: 3, STATS: 4, MAP: 5, PLAYERS: 6, BUTTON: 7 };
 
-export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave }: Props) {
+export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onContinue, onLeave }: Props) {
   const [stage, setStage] = useState(S.FLASH);
   const [skipped, setSkipped] = useState(false);
+  const bunkerCapacityDisplay = Math.max(1, bunkerCapacity ?? players.filter(player => player.is_active).length);
+  const totalFood = bunker.food.amount * bunkerCapacityDisplay;
+  const approxFoodMonths = Math.floor(totalFood / (bunkerCapacityDisplay * 90));
 
   const title    = useTypewriter(bunker.theme.label,   45, stage >= S.TITLE,    skipped);
   const disaster = useTypewriter(bunker.disaster_info,  14, stage >= S.DISASTER, skipped);
@@ -185,11 +189,12 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
 
                 {stage >= S.STATS && (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {[
                         { icon: <Ruler size={13} />, label: 'Размер',           value: bunker.size.label,     delay: '0ms'   },
                         { icon: <Timer size={13} />, label: 'Время проживания', value: bunker.duration.label, delay: '80ms'  },
-                        { icon: <Wheat size={13} />, label: 'Еда',              value: bunker.food.label,     delay: '160ms' },
+                        { icon: <Users size={13} />, label: 'Вместимость',      value: `${bunkerCapacityDisplay} чел.`, delay: '160ms' },
+                        { icon: <Wheat size={13} />, label: 'Еда',              value: `${bunker.food.label} (${bunker.food.amount} на человека, ~${approxFoodMonths} мес. на ${bunkerCapacityDisplay})`, delay: '240ms' },
                       ].map(({ icon, label, value, delay }) => (
                         <div
                           key={label}
@@ -201,7 +206,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
                         </div>
                       ))}
                     </div>
-                    <div className="card p-3 animate-fade-in-up" style={{ animationDelay: '240ms' }}>
+                    <div className="card p-3 animate-fade-in-up" style={{ animationDelay: '320ms' }}>
                       <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-1.5">
                         <Package size={13} /> Инвентарь бункера
                       </p>

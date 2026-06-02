@@ -27,8 +27,8 @@ class GameRoom {
     this.survivalChance = this.config.packSettings.bunker_life.initial_survival_chance;
     this.currentMonth = 0;
     this.totalMonths = 0;
-    this.foodMonths = 0;
-    this.foodMaxPersonMonths = 0;
+    this.food = 0;
+    this.foodMax = 0;
     this.starvationPending = false;
     this.activeEvent = null;
     this.activeEventSelection = { selected_professions: [], selected_items: [] };
@@ -105,8 +105,8 @@ class GameRoom {
       survival_chance: this.survivalChance,
       current_month: this.currentMonth,
       total_months: this.totalMonths,
-      food_months: this.foodMonths,
-      food_months_display: Math.ceil(this.foodMonths / Math.max(1, this.getActivePlayers().length)),
+      food: this.food,
+      food_max: this.foodMax,
       active_event: this.activeEvent,
       choice_votes: { ...this.choiceVotes },
       active_event_selection: {

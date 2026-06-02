@@ -243,6 +243,7 @@ export default function App() {
         <BunkerIntroScreen
           bunker={roomState.bunker}
           players={roomState.players}
+          bunkerCapacity={roomState.bunker_capacity}
           onContinue={handleIntroContinue}
           onLeave={handleLeave}
         />

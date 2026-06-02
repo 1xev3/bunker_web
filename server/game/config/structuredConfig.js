@@ -92,6 +92,18 @@ function normalizeDuration(value, index) {
   return entity(value, 'bunker_duration', index);
 }
 
+function normalizeFoodSupply(value, index) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return {
+      ...value,
+      id: value.id ?? `food_supply_${index + 1}`,
+      label: value.label ?? value.name,
+      amount: value.amount,
+    };
+  }
+  return entity(value, 'food_supply', index);
+}
+
 function normalizeConfig(config) {
   const next = { ...config };
 
@@ -117,7 +129,9 @@ function normalizeConfig(config) {
   next.BUNKER_THEMES = normalizeNamedObjects(config.BUNKER_THEMES ?? [], 'bunker_theme');
   next.BUNKER_SIZES = normalizeNamedObjects(config.BUNKER_SIZES ?? [], 'bunker_size');
   next.BUNKER_DURATIONS = (config.BUNKER_DURATIONS ?? []).map((value, index) => normalizeDuration(value, index));
-  next.FOOD_SUPPLIES = plainEntities(config.FOOD_SUPPLIES ?? [], 'food_supply').map((item, order) => ({ ...item, order }));
+  next.FOOD_SUPPLIES = (config.FOOD_SUPPLIES ?? [])
+    .map((value, index) => normalizeFoodSupply(value, index))
+    .map((item, order) => ({ ...item, order }));
   next.BUNKER_ITEMS = plainEntities(config.BUNKER_ITEMS ?? [], 'bunker_item');
 
   const inventoryByLabel = new Map(next.INVENTORY.map(item => [item.label, item]));

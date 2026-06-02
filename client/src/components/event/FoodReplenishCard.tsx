@@ -46,7 +46,10 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
     selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
-  const projectedFoodPercent = Math.round(packSettings.events.food_replenish.ratio_per_resource * resourceCount * 100);
+  const projectedFoodGain = packSettings.events.food_replenish.food_per_resource * activePlayers.length * resourceCount;
+  const projectedMonths = resourceCount > 0
+    ? Math.floor(projectedFoodGain / Math.max(1, activePlayers.length * packSettings.bunker_life.food_consumption_per_player))
+    : 0;
 
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
@@ -111,7 +114,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
               <p className="text-[11px] uppercase tracking-widest opacity-70">Если помочь</p>
               <p className="mt-1 text-sm font-semibold">
                 {resourceCount > 0
-                  ? `Примерно +${projectedFoodPercent}% от срока запасов еды`
+                  ? `Примерно +${projectedFoodGain} еды (~${projectedMonths} мес.)`
                   : 'Нужно выбрать хотя бы один ресурс'}
               </p>
             </div>
@@ -127,7 +130,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
           )}
           {resourceCount > 0 && (
             <p className="text-green-400/70 text-xs text-center">
-              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{projectedFoodPercent}% срока
+              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{projectedFoodGain} еды, это около {projectedMonths} мес.
             </p>
           )}
           <button

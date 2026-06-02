@@ -13,17 +13,6 @@ function parseDurationMonths(label) {
   return Math.round(n * 12);
 }
 
-function parseFoodMonths(label) {
-  if (!label) return 12;
-  if (/пол\s*года/i.test(label)) return 6;
-  const m = label.match(/(\d+(?:[.,]\d+)?)\s*(год|года|лет|месяц|месяца|месяцев)/i);
-  if (!m) return 12;
-  const n = parseFloat(m[1].replace(',', '.'));
-  const unit = m[2].toLowerCase();
-  if (unit.startsWith('месяц')) return Math.round(n);
-  return Math.round(n * 12);
-}
-
 function pickRandomValue(values) {
   return values[Math.floor(Math.random() * values.length)];
 }
@@ -210,7 +199,6 @@ function pickRandomEvent(config) {
 
 module.exports = {
   parseDurationMonths,
-  parseFoodMonths,
   pickRandomEvent,
   materializeEvent,
   materializeEventParticipants,

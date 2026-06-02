@@ -3,6 +3,7 @@ BUNKER_LIFE_SETTINGS:
   initial_survival_chance: 100
   max_survival_chance: 150
   month_duration_ms: 750
+  food_consumption_per_player: 90
 
 BUNKER_GENERATION_SETTINGS:
   max_empty_fraction: 0.33
@@ -139,11 +140,16 @@ BUNKER_DURATIONS:
   - [7 лет, 84]
 
 FOOD_SUPPLIES:
-  - Очень мало еды (на пол года)
-  - Мало еды (на 1 год)
-  - Достаточно еды (на 2 года)
-  - Много еды (на 4 года)
-  - Стратегический запас (на 8 лет)
+  - name: Очень мало еды
+    amount: 1080
+  - name: Мало еды
+    amount: 2160
+  - name: Достаточно еды
+    amount: 4320
+  - name: Много еды
+    amount: 8640
+  - name: Стратегический запас
+    amount: 17280
 
 ROOM_COUNTS:
   - 3
@@ -252,7 +258,7 @@ BUNKER_ITEMS:
   - Лицензия на Фотошоп
   - Обогреватель Таркова
   - Настенные часы с пони
-  - Abrams M1 с цельной ходовой, без бензина
+  - Abrams M1 с цельной ходовой
   - Бирка от трусов
   - Небольшое количество кала
   - Большое количество кала

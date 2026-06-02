@@ -83,13 +83,17 @@ export interface BunkerDurationEntity extends ConfigEntity {
   months: number;
 }
 
+export interface FoodSupplyEntity extends ConfigEntity {
+  amount: number;
+}
+
 export type BunkerCell = { items: ConfigEntity[]; isEntrance?: boolean } | null;
 
 export interface BunkerInfo {
   theme: ConfigEntity;
   size: ConfigEntity;
   duration: BunkerDurationEntity;
-  food: ConfigEntity;
+  food: FoodSupplyEntity;
   items: ConfigEntity[];
   disaster_info: string;
   bunker_info: string;
@@ -147,6 +151,7 @@ export interface PackSettings {
     initial_survival_chance: number;
     max_survival_chance: number;
     month_duration_ms: number;
+    food_consumption_per_player: number;
   };
   events: {
     bunker_event_chance: number;
@@ -156,7 +161,7 @@ export interface PackSettings {
       three_plus_resources: number;
     };
     food_replenish: {
-      ratio_per_resource: number;
+      food_per_resource: number;
     };
   };
   characters: {
@@ -196,8 +201,8 @@ export interface RoomState {
   survival_chance: number;
   current_month: number;
   total_months: number;
-  food_months: number;
-  food_months_display: number;
+  food: number;
+  food_max: number;
   active_event: GameEvent | null;
   choice_votes: Record<string, 'success' | 'failure'>;
   active_event_selection: EventSelection;

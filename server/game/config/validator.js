@@ -60,6 +60,9 @@ function validateBunkerLifeSettings(settings, scope, errors) {
   if (settings.month_duration_ms !== undefined) {
     validatePositiveInteger(settings.month_duration_ms, `${scope}.month_duration_ms`, errors);
   }
+  if (settings.food_consumption_per_player !== undefined) {
+    validatePositiveInteger(settings.food_consumption_per_player, `${scope}.food_consumption_per_player`, errors);
+  }
 }
 
 function validateBunkerGenerationSettings(settings, scope, errors) {
@@ -89,8 +92,8 @@ function validateEventSettings(settings, scope, errors) {
   if (settings.food_replenish !== undefined) {
     if (!isPlainObject(settings.food_replenish)) {
       addError(errors, `${scope}.food_replenish`, 'ожидается объект');
-    } else if (settings.food_replenish.ratio_per_resource !== undefined) {
-      validateNumberInRange(settings.food_replenish.ratio_per_resource, `${scope}.food_replenish.ratio_per_resource`, errors, 0, 1);
+    } else if (settings.food_replenish.food_per_resource !== undefined) {
+      validatePositiveInteger(settings.food_replenish.food_per_resource, `${scope}.food_replenish.food_per_resource`, errors);
     }
   }
 }
@@ -223,6 +226,21 @@ function validateNamedObjectArray(value, scope, errors) {
     if (item.description !== undefined && typeof item.description !== 'string') {
       addError(errors, `${scope}[${index}].description`, 'если поле указано, оно должно быть строкой');
     }
+  });
+}
+
+function validateFoodSupplies(value, scope, errors) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addError(errors, scope, 'ожидается непустой массив объектов');
+    return;
+  }
+  value.forEach((item, index) => {
+    if (!isPlainObject(item)) { addError(errors, `${scope}[${index}]`, 'ожидается объект'); return; }
+    const label = item.label ?? item.name;
+    if (typeof label !== 'string' || label.trim() === '') {
+      addError(errors, `${scope}[${index}].label`, 'ожидается непустая строка');
+    }
+    validatePositiveInteger(item.amount, `${scope}[${index}].amount`, errors);
   });
 }
 
@@ -397,7 +415,7 @@ function validatePackContent(packName, files) {
     validateNamedObjectArray(files.Bunker.BUNKER_THEMES, 'Bunker -> BUNKER_THEMES', errors);
     validateNamedObjectArray(files.Bunker.BUNKER_SIZES, 'Bunker -> BUNKER_SIZES', errors);
     validateDurationArray(files.Bunker.BUNKER_DURATIONS, 'Bunker -> BUNKER_DURATIONS', errors);
-    validateStringArray(files.Bunker.FOOD_SUPPLIES, 'Bunker -> FOOD_SUPPLIES', errors);
+    validateFoodSupplies(files.Bunker.FOOD_SUPPLIES, 'Bunker -> FOOD_SUPPLIES', errors);
     validateStringArray(files.Bunker.BUNKER_ITEMS, 'Bunker -> BUNKER_ITEMS', errors);
 
     if (!Array.isArray(files.Bunker.ROOM_COUNTS) || files.Bunker.ROOM_COUNTS.length === 0) {

@@ -47,10 +47,20 @@ function SurvivalBar({ chance }: { chance: number }) {
   );
 }
 
-function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths: number }) {
-  const pct = totalMonths > 0
-    ? Math.min(100, Math.round((foodMonths / totalMonths) * 100))
-    : foodMonths > 0 ? 100 : 0;
+function FoodBar({
+  food,
+  foodMax,
+  activePlayersCount,
+  foodConsumptionPerPlayer,
+}: {
+  food: number;
+  foodMax: number;
+  activePlayersCount: number;
+  foodConsumptionPerPlayer: number;
+}) {
+  const pct = foodMax > 0 ? Math.min(100, Math.round((food / foodMax) * 100)) : 0;
+  const monthlyConsumption = Math.max(1, activePlayersCount * foodConsumptionPerPlayer);
+  const monthsLeft = Math.floor(food / monthlyConsumption);
   const color =
     pct >= 60 ? 'bg-green-500' :
     pct >= 30 ? 'bg-yellow-500' :
@@ -68,7 +78,7 @@ function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths:
         </span>
         <span className={`font-mono font-bold ${
           pct >= 60 ? 'text-green-400' : pct >= 30 ? 'text-yellow-400' : pct >= 10 ? 'text-orange-400' : 'text-red-400'
-        }`}>{foodMonths} мес. — {label}</span>
+        }`}>{food} еды · ~{monthsLeft} мес. — {label}</span>
       </div>
       <div className="relative w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
         <div
@@ -94,6 +104,7 @@ function MonthProgressBar({ progress }: { progress: number }) {
 export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
+  const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
   const [monthProgress, setMonthProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
   const showPrimaryOutcome = eventOutcome && (
@@ -141,15 +152,15 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
             : 'border-red-900/40 bg-red-950/20 text-red-300',
       content: eventOutcome.event_id === 'food_replenish' ? (
         eventOutcome.outcome === 'success' ? (
-          <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
+          <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} еды</>
         ) : (
           <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
         )
       ) : eventOutcome.food_change !== undefined ? (
         eventOutcome.food_change > 0 ? (
-          <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
+          <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}</>
         ) : eventOutcome.food_change < 0 ? (
-          <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
+          <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}</>
         ) : (
           <><Utensils size={14} /> Запасы еды не изменились</>
         )
@@ -303,7 +314,12 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
               chance={roomState.survival_chance}
             />
             <div className="w-full h-px bg-zinc-800" />
-            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
+            <FoodBar
+              food={roomState.food}
+              foodMax={roomState.food_max}
+              activePlayersCount={activePlayers.length}
+              foodConsumptionPerPlayer={foodConsumptionPerPlayer}
+            />
           </div>
         </div>
 

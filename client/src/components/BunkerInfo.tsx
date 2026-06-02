@@ -42,7 +42,7 @@ export default function BunkerInfo({ bunker }: Props) {
             <div className="grid grid-cols-3 gap-3">
               <Stat icon={<Ruler size={11} />} label="Размер"           value={bunker.size.label} />
               <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration.label} />
-              <Stat icon={<Wheat size={11} />} label="Еда"              value={bunker.food.label} />
+              <Stat icon={<Wheat size={11} />} label="Еда"              value={`${bunker.food.label} (${bunker.food.amount} на человека)`} />
             </div>
             <div>
               <p className="text-zinc-600 text-xs mb-1 flex items-center gap-1">

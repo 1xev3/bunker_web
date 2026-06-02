@@ -3,6 +3,7 @@ const DEFAULT_PACK_SETTINGS = {
     initial_survival_chance: 100,
     max_survival_chance: 150,
     month_duration_ms: 750,
+    food_consumption_per_player: 90,
   },
   events: {
     bunker_event_chance: 0.10,
@@ -12,7 +13,7 @@ const DEFAULT_PACK_SETTINGS = {
       three_plus_resources: 1.0,
     },
     food_replenish: {
-      ratio_per_resource: 0.25,
+      food_per_resource: 450,
     },
   },
   characters: {

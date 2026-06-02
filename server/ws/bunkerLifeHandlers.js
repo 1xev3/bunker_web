@@ -2,13 +2,37 @@ const { rooms, wsManager } = require('../state');
 const { Player } = require('../game/entities/player');
 const {
   parseDurationMonths,
-  parseFoodMonths,
   pickRandomEvent,
   materializeEvent,
   materializeEventParticipants,
   materializeScheduledEvent,
   resolveEventParticipants,
 } = require('./eventHelpers');
+
+function updateFood(room, delta) {
+  const before = room.food;
+  room.food = Math.max(0, room.food + delta);
+  if (room.food > room.foodMax) room.foodMax = room.food;
+  if (room.food > 0) room.starvationPending = false;
+  return room.food - before;
+}
+
+function getGenderLabel(player) {
+  return player?.config?.GENDERS.find(entry => entry.value.id === player.gender?.genderId)?.value?.label ?? null;
+}
+
+function resolveScheduledParticipant(participants, participantRef, contextKey, effect) {
+  if (effect?.event_id === 'birth' && (contextKey === 'mother' || contextKey === 'father')) {
+    const female = participants.find(player => getGenderLabel(player) === 'Женщина') ?? null;
+    const male = participants.find(player => getGenderLabel(player) === 'Мужчина') ?? null;
+    if (contextKey === 'mother' && female) return female;
+    if (contextKey === 'father' && male) return male;
+  }
+
+  const match = String(participantRef).match(/^participant(\d+)$/);
+  if (!match) return null;
+  return participants[Number(match[1]) - 1] ?? null;
+}
 
 function normalizeEffectsArray(event, succeeded) {
   const arrKey = succeeded ? 'success_effects' : 'failure_effects';
@@ -34,16 +58,7 @@ function applyBunkerEventEffect(room, effect, context) {
   }
 
   if (effect.type === 'food_change') {
-    const before = room.foodMonths;
-    if (before <= 0) { result.foodChange = 0; return result; }
-
-    const rawDelta = before * (effect.value / 100);
-    let delta = Math.round(rawDelta);
-    if (delta === 0 && effect.value !== 0) delta = effect.value > 0 ? 1 : -1;
-
-    room.foodMonths = Math.max(0, Math.min(room.foodMaxPersonMonths, room.foodMonths + delta));
-    room.starvationPending = room.foodMonths <= 0 ? room.starvationPending : false;
-    result.foodChange = Math.round(((room.foodMonths - before) / before) * 100);
+    result.foodChange = updateFood(room, effect.value ?? 0);
     return result;
   }
 
@@ -102,8 +117,9 @@ function applyBunkerEventEffect(room, effect, context) {
     const isChild = effect.character_type === 'child';
     let name = 'Незнакомец';
     if (effect.name_template) {
-      name = effect.name_template.replace(/\{context\.(\w+)\}/g, (_, k) => context_[k] ?? `{${k}}`);
+      name = effect.name_template.replace(/\{context\.(\w+)\}/g, (_, k) => String(context_[k] ?? '')).replace(/\s+/g, ' ').trim();
     }
+    if (!name || name === 'Ребёнок') name = isChild ? 'Ребёнок' : 'Незнакомец';
     const newPlayer = new Player(name);
     if (isChild) {
       newPlayer.generateMinimalCharacter(room.config, { raceId: context_[effect.race_from_context] });
@@ -122,9 +138,7 @@ function applyBunkerEventEffect(room, effect, context) {
       const participantIds = context?.participantIds ?? [];
       const participants = participantIds.map(id => room.getPlayer(id)).filter(Boolean);
       for (const [contextKey, participantRef] of Object.entries(effect.context_from_participants)) {
-        const m = String(participantRef).match(/^participant(\d+)$/);
-        if (!m) continue;
-        const p = participants[Number(m[1]) - 1];
+        const p = resolveScheduledParticipant(participants, participantRef, contextKey, effect);
         if (!p) continue;
         scheduledContext[`${contextKey}_name`] = p.name;
         scheduledContext[`${contextKey}_id`] = p.id;
@@ -327,7 +341,8 @@ function startNextMonth(roomCode) {
   }
 
   const activePlayers = room.getActivePlayers();
-  room.foodMonths = Math.max(0, room.foodMonths - activePlayers.length);
+  const consumptionPerPlayer = room.config.packSettings.bunker_life.food_consumption_per_player;
+  updateFood(room, -(activePlayers.length * consumptionPerPlayer));
 
   if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
     room.status = 'finished';
@@ -343,7 +358,7 @@ function startNextMonth(roomCode) {
     return;
   }
 
-  if (room.foodMonths <= 0) {
+  if (room.food <= 0) {
     if (room.starvationPending) {
       room.status = 'finished';
       room.revealAllPlayers();
@@ -438,12 +453,9 @@ function resolveFoodReplenishEvent(roomCode, msg) {
 
   for (const entry of selectedItems) consumeSelectedItem(room, entry);
 
-  const foodBefore = room.foodMonths;
-  const replenish = Math.round(room.config.packSettings.events.food_replenish.ratio_per_resource * room.foodMaxPersonMonths * resourceCount);
-  room.foodMonths = Math.min(room.foodMaxPersonMonths, room.foodMonths + replenish);
-  room.starvationPending = false;
-
-  const foodDisplay = Math.round((room.foodMonths - foodBefore) / Math.max(1, room.getActivePlayers().length));
+  const replenishPerResource = room.config.packSettings.events.food_replenish.food_per_resource;
+  const replenish = replenishPerResource * room.getActivePlayers().length * resourceCount;
+  const foodDisplay = updateFood(room, replenish);
 
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
@@ -475,10 +487,8 @@ function tryStartBunkerLife(roomCode, room) {
   room.survivalChance = room.config.packSettings.bunker_life.initial_survival_chance;
   room.currentMonth = 0;
   room.totalMonths = room.bunker.duration?.months ?? parseDurationMonths(room.bunker.duration?.label);
-  const foodDurationMonths = parseFoodMonths(room.bunker.food?.label);
-  const activeCount = room.getActivePlayers().length;
-  room.foodMonths = foodDurationMonths * activeCount;
-  room.foodMaxPersonMonths = Math.max(foodDurationMonths, room.totalMonths) * activeCount;
+  room.food = (room.bunker.food?.amount ?? 0) * active.length;
+  room.foodMax = room.food;
   room.starvationPending = false;
   room.scheduledEvents = [];
   room.activeEvent = null;
