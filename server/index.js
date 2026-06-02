@@ -4,7 +4,7 @@ const { WebSocketServer } = require('ws');
 const path = require('path');
 
 const GameRoom = require('./game/gameRoom');
-const { Player } = require('./game/player');
+const { Player, publicAttribute } = require('./game/player');
 const { applyProfessionAbility } = require('./game/professionAbilities');
 const SessionManager = require('./sessionManager');
 const WsManager = require('./wsManager');
@@ -286,7 +286,7 @@ function handleRevealAttr(roomCode, playerId, msg) {
       type: 'attribute_revealed',
       player_id: playerId,
       attribute: attr,
-      value: player[attr],
+      value: publicAttribute(attr, player[attr], room.config),
     });
   }
 }
@@ -302,7 +302,7 @@ function handleRevealAll(roomCode, playerId) {
       type: 'attribute_revealed',
       player_id: playerId,
       attribute: attr,
-      value: player[attr],
+      value: publicAttribute(attr, player[attr], room.config),
     });
   }
 }
