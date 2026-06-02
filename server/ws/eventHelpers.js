@@ -145,6 +145,23 @@ function canBeCouple(p1, p2) {
   return compatible(affix1) && compatible(affix2);
 }
 
+function getGenderLabel(player) {
+  return player?.config?.GENDERS.find(entry => entry.value.id === player.gender?.genderId)?.value?.label ?? null;
+}
+
+function orderCoupleParticipants(event, pair) {
+  if (!Array.isArray(pair) || pair.length !== 2) return pair;
+  if (event?.id !== 'coitus') return pair;
+
+  const [first, second] = pair;
+  const firstGender = getGenderLabel(first);
+  const secondGender = getGenderLabel(second);
+
+  if (firstGender === 'Мужчина' && secondGender === 'Женщина') return pair;
+  if (firstGender === 'Женщина' && secondGender === 'Мужчина') return [second, first];
+  return pair;
+}
+
 function resolveEventParticipants(event, activePlayers) {
   const template = event.participants_template;
   if (!template || activePlayers.length === 0) return [];
@@ -163,7 +180,7 @@ function resolveEventParticipants(event, activePlayers) {
       }
     }
     if (pairs.length === 0) return [];
-    return pairs[Math.floor(Math.random() * pairs.length)];
+    return orderCoupleParticipants(event, pairs[Math.floor(Math.random() * pairs.length)]);
   }
 
   if (template === 'random_one') {

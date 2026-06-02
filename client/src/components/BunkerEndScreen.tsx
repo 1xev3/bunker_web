@@ -10,6 +10,7 @@ interface Props {
 export default function BunkerEndScreen({ survived, roomState, onLeave }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const bunker = roomState.bunker;
+  const displaySurvivalChance = Math.min(100, roomState.survival_chance);
 
   return (
     <div
@@ -88,7 +89,7 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
           <div className="px-4 py-3 flex items-center justify-between">
             <span className="text-zinc-500 text-sm">Шанс выживания</span>
             <span className={`text-sm font-mono font-bold ${roomState.survival_chance > 30 ? 'text-green-400' : 'text-red-400'}`}>
-              {roomState.survival_chance}%
+              {displaySurvivalChance}%
             </span>
           </div>
           {bunker?.food && (

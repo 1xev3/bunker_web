@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown, Utensils, Skull, Baby, DoorOpen } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../types/game';
 import EventModal from './EventModal';
@@ -12,8 +12,9 @@ interface Props {
   eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null;
 }
 
-function SurvivalBar({ chance, maxChance }: { chance: number; maxChance: number }) {
-  const pct = Math.min(100, (chance / Math.max(1, maxChance)) * 100);
+function SurvivalBar({ chance }: { chance: number }) {
+  const displayChance = Math.min(100, chance);
+  const pct = displayChance;
   const color =
     chance > 100 ? 'bg-emerald-400' :
     chance >= 70 ? 'bg-green-500' :
@@ -34,7 +35,7 @@ function SurvivalBar({ chance, maxChance }: { chance: number; maxChance: number 
         </span>
         <span className={`font-mono font-bold ${
           chance > 100 ? 'text-emerald-300' : chance >= 70 ? 'text-green-400' : chance >= 40 ? 'text-yellow-400' : chance >= 20 ? 'text-orange-400' : 'text-red-400'
-        }`}>{chance}% — {label}</span>
+        }`}>{displayChance}% — {label}</span>
       </div>
       <div className="relative w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
         <div
@@ -46,10 +47,9 @@ function SurvivalBar({ chance, maxChance }: { chance: number; maxChance: number 
   );
 }
 
-function FoodBar({ foodMonths, totalMonths, currentMonth }: { foodMonths: number; totalMonths: number; currentMonth: number }) {
-  const remainingMonths = totalMonths > 0 ? totalMonths - currentMonth : 0;
-  const pct = remainingMonths > 0
-    ? Math.min(100, Math.round((foodMonths / remainingMonths) * 100))
+function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths: number }) {
+  const pct = totalMonths > 0
+    ? Math.min(100, Math.round((foodMonths / totalMonths) * 100))
     : foodMonths > 0 ? 100 : 0;
   const color =
     pct >= 60 ? 'bg-green-500' :
@@ -122,6 +122,83 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [roomState.month_start_time, roomState.month_duration, hasEvent]);
+
+  const notifications: Array<{ key: string; className: string; content: ReactNode }> = [];
+
+  if (eventOutcome && showPrimaryOutcome) {
+    notifications.push({
+      key: 'primary',
+      className: eventOutcome.event_id === 'food_replenish'
+        ? eventOutcome.outcome === 'success'
+          ? 'border-green-900/40 bg-green-950/20 text-green-300'
+          : 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+        : eventOutcome.food_change !== undefined
+          ? eventOutcome.food_change < 0
+            ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+            : 'border-green-900/40 bg-green-950/20 text-green-300'
+          : eventOutcome.survival_change > 0
+            ? 'border-green-900/40 bg-green-950/20 text-green-300'
+            : 'border-red-900/40 bg-red-950/20 text-red-300',
+      content: eventOutcome.event_id === 'food_replenish' ? (
+        eventOutcome.outcome === 'success' ? (
+          <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
+        ) : (
+          <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
+        )
+      ) : eventOutcome.food_change !== undefined ? (
+        eventOutcome.food_change > 0 ? (
+          <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
+        ) : eventOutcome.food_change < 0 ? (
+          <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
+        ) : (
+          <><Utensils size={14} /> Запасы еды не изменились</>
+        )
+      ) : eventOutcome.survival_change > 0 ? (
+        <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
+      ) : (
+        <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
+      ),
+    });
+  }
+
+  if (eventOutcome?.players_killed && eventOutcome.players_killed.length > 0) {
+    notifications.push({
+      key: 'killed',
+      className: 'border-red-900/50 bg-red-950/20 text-red-300',
+      content: (
+        <>
+          <Skull size={14} className="shrink-0" />
+          <span>{eventOutcome.players_killed.map(p => p.name).join(', ')} погиб{eventOutcome.players_killed.length > 1 ? 'и' : ''}</span>
+        </>
+      ),
+    });
+  }
+
+  if (eventOutcome?.players_added && eventOutcome.players_added.length > 0) {
+    notifications.push({
+      key: 'added',
+      className: 'border-blue-900/50 bg-blue-950/20 text-blue-300',
+      content: (
+        <>
+          <Baby size={14} className="shrink-0" />
+          <span>{eventOutcome.players_added.map(p => p.name).join(', ')} присоединился{eventOutcome.players_added.length > 1 ? 'ь' : ''} к выжившим</span>
+        </>
+      ),
+    });
+  }
+
+  if (eventOutcome?.room_changed) {
+    notifications.push({
+      key: 'room',
+      className: 'border-amber-900/50 bg-amber-950/20 text-amber-300',
+      content: (
+        <>
+          <DoorOpen size={14} className="shrink-0" />
+          <span>Структура бункера изменилась</span>
+        </>
+      ),
+    });
+  }
 
   return (
     <div
@@ -224,74 +301,11 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
             <SurvivalBar
               chance={roomState.survival_chance}
-              maxChance={roomState.pack_settings.bunker_life.max_survival_chance}
             />
             <div className="w-full h-px bg-zinc-800" />
-            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} currentMonth={roomState.current_month} />
+            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
           </div>
         </div>
-
-        {/* Event outcome notifications */}
-        {eventOutcome && (
-          <div className="flex flex-col gap-2">
-            {showPrimaryOutcome && (
-              <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
-                eventOutcome.event_id === 'food_replenish'
-                  ? eventOutcome.outcome === 'success'
-                    ? 'border-green-900/40 bg-green-950/20 text-green-300'
-                    : 'border-orange-900/40 bg-orange-950/20 text-orange-300'
-                  : eventOutcome.food_change !== undefined
-                    ? eventOutcome.food_change < 0
-                      ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
-                      : 'border-green-900/40 bg-green-950/20 text-green-300'
-                    : eventOutcome.survival_change > 0
-                      ? 'border-green-900/40 bg-green-950/20 text-green-300'
-                      : 'border-red-900/40 bg-red-950/20 text-red-300'
-              }`}>
-                {eventOutcome.event_id === 'food_replenish' ? (
-                  eventOutcome.outcome === 'success' ? (
-                    <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
-                  ) : (
-                    <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
-                  )
-                ) : eventOutcome.food_change !== undefined ? (
-                  eventOutcome.food_change > 0 ? (
-                    <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
-                  ) : eventOutcome.food_change < 0 ? (
-                    <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
-                  ) : (
-                    <><Utensils size={14} /> Запасы еды не изменились</>
-                  )
-                ) : eventOutcome.survival_change > 0 ? (
-                  <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
-                ) : (
-                  <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
-                )}
-              </div>
-            )}
-
-            {eventOutcome.players_killed && eventOutcome.players_killed.length > 0 && (
-              <div className="rounded-xl border border-red-900/50 bg-red-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-red-300">
-                <Skull size={14} className="shrink-0" />
-                <span>{eventOutcome.players_killed.map(p => p.name).join(', ')} погиб{eventOutcome.players_killed.length > 1 ? 'и' : ''}</span>
-              </div>
-            )}
-
-            {eventOutcome.players_added && eventOutcome.players_added.length > 0 && (
-              <div className="rounded-xl border border-blue-900/50 bg-blue-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-blue-300">
-                <Baby size={14} className="shrink-0" />
-                <span>{eventOutcome.players_added.map(p => p.name).join(', ')} присоединился{eventOutcome.players_added.length > 1 ? 'ь' : ''} к выжившим</span>
-              </div>
-            )}
-
-            {eventOutcome.room_changed && (
-              <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 py-3 px-4 text-sm animate-fade-in-up flex items-center gap-2 text-amber-300">
-                <DoorOpen size={14} className="shrink-0" />
-                <span>Структура бункера изменилась</span>
-              </div>
-            )}
-          </div>
-        )}
 
         <StatusTable
           players={roomState.players}
@@ -312,6 +326,21 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           myPlayerId={myPlayerId}
           send={send}
         />
+      )}
+
+      {notifications.length > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="flex w-full max-w-2xl flex-col-reverse gap-2">
+            {notifications.map(notification => (
+              <div
+                key={notification.key}
+                className={`pointer-events-auto rounded-xl border px-4 py-3 text-sm animate-fade-in-up flex items-center justify-center gap-2 text-center shadow-2xl backdrop-blur-sm ${notification.className}`}
+              >
+                {notification.content}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

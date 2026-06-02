@@ -237,7 +237,7 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult) 
 }
 
 function checkGameOver(roomCode, room) {
-  if (room.survivalChance <= 0) {
+  if (room.getActivePlayers().length === 0 || room.survivalChance <= 0) {
     room.status = 'finished';
     room.revealAllPlayers();
     wsManager.broadcast(roomCode, { type: 'game_ended', winner: null, from_bunker_life: true });
@@ -307,6 +307,8 @@ function startNextMonth(roomCode) {
   room.monthStartTime = Date.now();
   resetEventSelection(room);
   room.pendingChainKills = [];
+
+  if (checkGameOver(roomCode, room)) return;
 
   // Check scheduled events due this month
   const due = room.scheduledEvents.filter(se => se.trigger_month <= room.currentMonth);
@@ -623,12 +625,19 @@ function handleResolveEvent(roomCode, playerId, msg) {
   room.activeEvent = null;
   resetEventSelection(room);
 
+  const chainId = succeeded ? event.chain_success : event.chain_failure;
+  const chainDef = chainId ? room.config.EVENTS.find(e => e.id === chainId) : null;
+  if (chainDef?.event_type === 'narrative' && effectResult.playersKilled.length > 0) {
+    room.pendingChainKills = effectResult.playersKilled;
+    effectResult.playersKilled = [];
+  }
+
   broadcastEventResolved(roomCode, room, event.id, succeeded ? 'success' : 'failure', effectResult);
 
   if (checkGameOver(roomCode, room)) return;
 
   wsManager.broadcastState(roomCode, room);
-  maybeChainOrNextMonth(roomCode, succeeded ? event.chain_success : event.chain_failure);
+  maybeChainOrNextMonth(roomCode, chainId);
 }
 
 module.exports = {
