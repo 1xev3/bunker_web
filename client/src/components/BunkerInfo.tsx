@@ -55,7 +55,7 @@ export default function BunkerInfo({ bunker }: Props) {
                 <p className="text-zinc-600 text-xs mb-2 flex items-center gap-1">
                   <Map size={11} className="text-zinc-600" /> Карта бункера
                 </p>
-                <div className="max-w-[420px]">
+                <div className="max-w-105">
                   <BunkerMap grid={bunker.grid} compact />
                 </div>
               </div>

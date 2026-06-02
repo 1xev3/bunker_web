@@ -35,7 +35,7 @@ export default function BunkerMap({ grid, compact = false }: Props) {
                   <span>Вход</span>
                 </>
               ) : cell ? (
-                <span className="line-clamp-3 w-full whitespace-pre-line break-words">{label}</span>
+                <span className="line-clamp-3 w-full whitespace-pre-line wrap-break-word">{label}</span>
               ) : null}
             </div>
           );
