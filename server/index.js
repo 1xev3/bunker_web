@@ -30,6 +30,8 @@ const DEV_BOT_NAMES = [
 const BUNKER_EVENT_CHANCE = 0.10;
 const FOOD_REPLENISH_RATIO = 0.25;
 const MAX_SURVIVAL_CHANCE = 150;
+const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
+const EVENT_PARTICIPANT_TEMPLATE_RE = /^participant(\d+)$/;
 
 const rooms = new Map();   // roomCode -> GameRoom
 const sessions = new SessionManager();
@@ -488,7 +490,88 @@ function parseFoodMonths(label) {
 
 function pickRandomEvent(config) {
   const events = config.EVENTS;
-  return events[Math.floor(Math.random() * events.length)];
+  return materializeEvent(events[Math.floor(Math.random() * events.length)]);
+}
+
+function pickRandomValue(values) {
+  return values[Math.floor(Math.random() * values.length)];
+}
+
+function pickEventTextValue(value) {
+  return Array.isArray(value) ? pickRandomValue(value) : value;
+}
+
+function resolveEventTemplateValue(context, key, cache) {
+  if (cache.has(key)) return cache.get(key);
+  const isAltKey = key.startsWith('alt.');
+  const sourceKey = isAltKey ? key.slice(4) : key;
+  const source = isAltKey ? context.alt : context.event;
+  if (!source || !(sourceKey in source)) {
+    return undefined;
+  }
+  const rawValue = source[sourceKey];
+  const resolvedValue = Array.isArray(rawValue) ? pickRandomValue(rawValue) : rawValue;
+  cache.set(key, resolvedValue);
+  return resolvedValue;
+}
+
+function renderEventText(template, context, cache) {
+  if (typeof template !== 'string') return template;
+  return template.replace(EVENT_TEMPLATE_RE, (_, key) => {
+    const value = resolveEventTemplateValue(context, key, cache);
+    if (typeof value !== 'string') {
+      return `{${key}}`;
+    }
+    return value;
+  });
+}
+
+function resolveEventText(sourceValue, context, cache) {
+  return renderEventText(pickEventTextValue(sourceValue), context, cache);
+}
+
+function materializeEvent(event) {
+  const altText = Array.isArray(event.alt) && event.alt.length > 0
+    ? pickRandomValue([null, ...event.alt])
+    : null;
+  const context = { event, alt: altText };
+  const cache = new Map();
+  return {
+    ...event,
+    title: resolveEventText(altText?.title ?? event.title, context, cache),
+    description: resolveEventText(altText?.description ?? event.description, context, cache),
+  };
+}
+
+function formatParticipantList(names) {
+  if (names.length <= 1) return names[0] ?? '';
+  if (names.length === 2) return `${names[0]} и ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`;
+}
+
+function renderParticipantText(template, participants) {
+  if (typeof template !== 'string') return template;
+  const names = participants.map(player => player.name);
+  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
+    if (key === 'participants') {
+      return formatParticipantList(names);
+    }
+    const participantMatch = key.match(EVENT_PARTICIPANT_TEMPLATE_RE);
+    if (!participantMatch) {
+      return match;
+    }
+    const index = Number.parseInt(participantMatch[1], 10) - 1;
+    return names[index] ?? match;
+  });
+}
+
+function materializeEventParticipants(event, participants) {
+  return {
+    ...event,
+    title: renderParticipantText(event.title, participants),
+    description: renderParticipantText(event.description, participants),
+    participants: participants.map(player => player.name),
+  };
 }
 
 function canBeCouple(p1, p2) {
@@ -614,7 +697,7 @@ function startNextMonth(roomCode) {
         setTimeout(() => startNextMonth(roomCode), room.monthDuration);
         return;
       }
-      room.activeEvent = { ...event, participants: participants.map(p => p.name) };
+      room.activeEvent = materializeEventParticipants(event, participants);
     } else {
       const participants = resolveEventParticipants(event, room.getActivePlayers());
       if (event.participants_template && participants.length === 0) {
@@ -623,7 +706,7 @@ function startNextMonth(roomCode) {
         setTimeout(() => startNextMonth(roomCode), room.monthDuration);
         return;
       }
-      room.activeEvent = { ...event, participants: participants.map(p => p.name) };
+      room.activeEvent = materializeEventParticipants(event, participants);
     }
 
     wsManager.broadcastState(roomCode, room);

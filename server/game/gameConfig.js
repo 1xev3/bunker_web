@@ -8,6 +8,8 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
+const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
+const EVENT_PARTICIPANT_TEMPLATE_RE = /^participant\d+$/;
 const lastReportedIssues = new Map();
 
 function getPackDir(packName) {
@@ -33,6 +35,100 @@ function validateStringArray(value, scope, errors) {
       addError(errors, `${scope}[${index}]`, 'ожидается непустая строка');
     }
   });
+}
+
+function extractTemplateKeys(value) {
+  if (typeof value !== 'string') return [];
+  return [...value.matchAll(EVENT_TEMPLATE_RE)].map(match => match[1]);
+}
+
+function isParticipantTemplateKey(key) {
+  return key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key);
+}
+
+function validateEventText(value, scope, errors) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    addError(errors, scope, 'ожидается непустая строка');
+  }
+}
+
+function validateEventTextValue(value, scope, errors) {
+  if (typeof value === 'string') {
+    validateEventText(value, scope, errors);
+    return;
+  }
+  if (!Array.isArray(value) || value.length === 0) {
+    addError(errors, scope, 'ожидается непустая строка или непустой массив строк');
+    return;
+  }
+
+  value.forEach((item, index) => {
+    if (typeof item !== 'string' || item.trim() === '') {
+      addError(errors, `${scope}[${index}]`, 'ожидается непустая строка');
+    }
+  });
+}
+
+function resolveTemplateSource(event, altText, key) {
+  if (key.startsWith('alt.')) {
+    const rawKey = key.slice(4);
+    if (!altText) return { exists: false, value: undefined, rawKey };
+    return { exists: rawKey in altText, value: altText[rawKey], rawKey };
+  }
+  return { exists: key in event, value: event[key], rawKey: key };
+}
+
+function validateEventTemplateSource(event, altText, scope, key, errors) {
+  if (isParticipantTemplateKey(key)) {
+    return;
+  }
+  const source = resolveTemplateSource(event, altText, key);
+  if (!source.exists) {
+    addError(errors, scope, `плейсхолдер "{${key}}" ссылается на отсутствующий ключ "${source.rawKey}"`);
+    return;
+  }
+
+  const value = source.value;
+  if (typeof value === 'string') {
+    if (value.trim() === '') addError(errors, `${scope} -> ${key}`, 'ключ подстановки не должен быть пустой строкой');
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      addError(errors, `${scope} -> ${key}`, 'ключ подстановки должен содержать непустой массив строк');
+      return;
+    }
+    value.forEach((item, index) => {
+      if (typeof item !== 'string' || item.trim() === '') {
+        addError(errors, `${scope} -> ${key}[${index}]`, 'ожидается непустая строка');
+      }
+    });
+    return;
+  }
+
+  addError(errors, `${scope} -> ${key}`, 'ключ подстановки должен быть строкой или массивом строк');
+}
+
+function validateEventTemplateReferences(event, altText, scope, fieldName, value, errors) {
+  const entries = Array.isArray(value) ? value : [value];
+  for (const entry of entries) {
+    for (const key of extractTemplateKeys(entry)) {
+      validateEventTemplateSource(event, altText, `${scope}.${fieldName}`, key, errors);
+    }
+  }
+}
+
+function mergeAltTextSources(altTexts) {
+  if (!Array.isArray(altTexts) || altTexts.length === 0) return null;
+  const merged = {};
+  for (const altText of altTexts) {
+    if (!isPlainObject(altText)) continue;
+    for (const [key, value] of Object.entries(altText)) {
+      if (!(key in merged)) merged[key] = value;
+    }
+  }
+  return merged;
 }
 
 function validateWeightedTable(value, scope, errors, valueValidator = () => {}) {
@@ -316,8 +412,48 @@ function validatePackContent(packName, files) {
       const scope = `Event -> EVENTS[${index}]`;
       if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
-      if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
-      if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
+      if (event.title == null) addError(errors, `${scope}.title`, 'ожидается поле title');
+      else validateEventTextValue(event.title, `${scope}.title`, errors);
+      if (event.description == null) addError(errors, `${scope}.description`, 'ожидается поле description');
+      else validateEventTextValue(event.description, `${scope}.description`, errors);
+      const mergedAltText = mergeAltTextSources(event.alt);
+      if (event.title != null) validateEventTemplateReferences(event, mergedAltText, scope, 'title', event.title, errors);
+      if (event.description != null) validateEventTemplateReferences(event, mergedAltText, scope, 'description', event.description, errors);
+      if (event.alt != null) {
+        if (!Array.isArray(event.alt) || event.alt.length === 0) {
+          addError(errors, `${scope}.alt`, 'ожидается непустой массив объектов');
+        } else {
+          event.alt.forEach((altText, altIndex) => {
+            const altScope = `${scope}.alt[${altIndex}]`;
+            if (!isPlainObject(altText)) {
+              addError(errors, altScope, 'ожидается объект');
+              return;
+            }
+            if ('title' in altText || 'description' in altText) {
+              addError(errors, altScope, 'alt должен содержать только данные для подстановок, без title/description');
+            }
+            for (const [key, value] of Object.entries(altText)) {
+              if (typeof value === 'string') {
+                if (value.trim() === '') addError(errors, `${altScope}.${key}`, 'ожидается непустая строка');
+                continue;
+              }
+              if (Array.isArray(value)) {
+                if (value.length === 0) {
+                  addError(errors, `${altScope}.${key}`, 'ожидается непустой массив строк');
+                  continue;
+                }
+                value.forEach((item, itemIndex) => {
+                  if (typeof item !== 'string' || item.trim() === '') {
+                    addError(errors, `${altScope}.${key}[${itemIndex}]`, 'ожидается непустая строка');
+                  }
+                });
+                continue;
+              }
+              addError(errors, `${altScope}.${key}`, 'ожидается строка или массив строк');
+            }
+          });
+        }
+      }
       if (event.participants_template != null && !['couple', 'random_one', 'random_group'].includes(event.participants_template)) {
         addError(errors, `${scope}.participants_template`, 'expected one of: couple, random_one, random_group');
       }
