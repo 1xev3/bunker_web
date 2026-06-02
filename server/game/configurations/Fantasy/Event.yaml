@@ -1,3 +1,8 @@
+# Активное событие: есть base_chance, success_effect и failure_effect.
+# Пассивное событие: без base_chance, только success_effect.
+# participants_template: couple | random_one | random_group.
+# Для random_group можно задать participants_min / participants_max.
+# effect.type здесь обычно survival_change или food_change, value - число.
 EVENTS:
   # --- Активные события (требуют решения игроков) ---
 

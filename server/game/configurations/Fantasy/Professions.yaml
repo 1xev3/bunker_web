@@ -1,3 +1,11 @@
+# Ключ верхнего уровня: название профессии, как оно показывается в игре.
+# targetType: none | self | other | pair.
+# effect.type: add_to_backpack | set_attribute | randomize_attribute | swap_attribute |
+#   steal_attribute | strip_attribute | inspect_attribute | reveal_attribute | adjust_food.
+# attribute: gender | race | body | health | hobby | phobia | inventory | additional.
+# set_attribute.value: healthy | worse.
+# add_to_backpack.item должен совпадать с предметом из Inventory/BACKPACK_ITEMS.
+# variants используется вместо effect, если у способности есть выбор режима.
 PROFESSION_ABILITIES:
   Целитель:
     title: Исцеляющий свет

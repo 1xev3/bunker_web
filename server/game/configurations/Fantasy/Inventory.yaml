@@ -1,3 +1,5 @@
+# INVENTORY: обычный список строк.
+# BACKPACK_ITEMS: либо строка, либо [название, min, max].
 INVENTORY:
   - Аптечка
   - Медицинское оборудование
@@ -56,6 +58,7 @@ INVENTORY:
 
 BACKPACK_ITEMS_COUNT_MAX: 4
 
+# min/max должны быть целыми числами >= 1.
 BACKPACK_ITEMS:
   - Мультитул
   - Топор
