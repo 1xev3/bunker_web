@@ -45,6 +45,9 @@
       "title": "Внутренний конфликт",
       "description": "Среди обитателей бункера вспыхнула серьёзная ссора. Напряжение нарастает — дело может дойти до драки. Нужно срочно разрядить обстановку.",
       "base_chance": 0.20,
+      "participants_template": "random_group",
+      "participants_min": 2,
+      "participants_max": 4,
       "success_effect": { "type": "survival_change", "value": 10 },
       "failure_effect": { "type": "survival_change", "value": -20 }
     },

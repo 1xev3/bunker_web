@@ -28,6 +28,8 @@ const DEV_BOT_NAMES = [
   'Вектор',
 ];
 const BUNKER_EVENT_CHANCE = 0.10;
+const FOOD_REPLENISH_RATIO = 0.25;
+const MAX_SURVIVAL_CHANCE = 150;
 
 const rooms = new Map();   // roomCode -> GameRoom
 const sessions = new SessionManager();
@@ -499,9 +501,17 @@ function canBeCouple(p1, p2) {
   return compatible(affix1) && compatible(affix2);
 }
 
-function resolvePassiveParticipants(event, activePlayers) {
+function resolveEventParticipants(event, activePlayers) {
   const template = event.participants_template;
   if (!template || activePlayers.length === 0) return [];
+  const hasConfiguredMin = Number.isInteger(event.participants_min);
+  const defaultMin = template === 'random_group' ? Math.min(2, activePlayers.length) : 1;
+  const minParticipants = Math.max(1, hasConfiguredMin ? event.participants_min : defaultMin);
+  const maxParticipants = Math.max(minParticipants, Number.isInteger(event.participants_max) ? event.participants_max : activePlayers.length);
+
+  if (hasConfiguredMin && activePlayers.length < minParticipants) {
+    return [];
+  }
 
   if (template === 'couple') {
     const pairs = [];
@@ -513,21 +523,21 @@ function resolvePassiveParticipants(event, activePlayers) {
       }
     }
     if (pairs.length === 0) {
-      // fallback: any random pair
-      const shuffled = [...activePlayers].sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, 2);
+      return [];
     }
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
     return pair;
   }
 
   if (template === 'random_one') {
+    if (minParticipants > 1) return [];
     const idx = Math.floor(Math.random() * activePlayers.length);
     return [activePlayers[idx]];
   }
 
   if (template === 'random_group') {
-    const count = Math.min(activePlayers.length, 2 + Math.floor(Math.random() * 3));
+    const maxCount = Math.min(activePlayers.length, maxParticipants);
+    const count = minParticipants + Math.floor(Math.random() * (maxCount - minParticipants + 1));
     const shuffled = [...activePlayers].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
   }
@@ -545,6 +555,20 @@ function startNextMonth(roomCode) {
   // Food consumption: each player eats 1 unit per month
   const activePlayers = room.getActivePlayers();
   room.foodMonths = Math.max(0, room.foodMonths - activePlayers.length);
+
+  // Duration check wins over starvation on the final required month.
+  if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
+    room.status = 'finished';
+    room.revealAllPlayers();
+    wsManager.broadcast(roomCode, {
+      type: 'game_ended',
+      winner: null,
+      from_bunker_life: true,
+      survived: true,
+    });
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
 
   // Starvation check
   if (room.foodMonths <= 0) {
@@ -571,29 +595,28 @@ function startNextMonth(roomCode) {
   // Reset starvation flag once food is back
   room.starvationPending = false;
 
-  // Duration check — bunker survived!
-  if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
-    room.status = 'finished';
-    room.revealAllPlayers();
-    wsManager.broadcast(roomCode, {
-      type: 'game_ended',
-      winner: null,
-      from_bunker_life: true,
-      survived: true,
-    });
-    wsManager.broadcastState(roomCode, room);
-    return;
-  }
-
   if (Math.random() < BUNKER_EVENT_CHANCE) {
     const event = pickRandomEvent(room.config);
     const isPassive = event.event_type === 'passive';
 
     if (isPassive) {
-      const participants = resolvePassiveParticipants(event, room.getActivePlayers());
+      const participants = resolveEventParticipants(event, room.getActivePlayers());
+      if (event.participants_template && participants.length === 0) {
+        room.activeEvent = null;
+        wsManager.broadcastState(roomCode, room);
+        setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+        return;
+      }
       room.activeEvent = { ...event, participants: participants.map(p => p.name) };
     } else {
-      room.activeEvent = event;
+      const participants = resolveEventParticipants(event, room.getActivePlayers());
+      if (event.participants_template && participants.length === 0) {
+        room.activeEvent = null;
+        wsManager.broadcastState(roomCode, room);
+        setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+        return;
+      }
+      room.activeEvent = { ...event, participants: participants.map(p => p.name) };
     }
 
     wsManager.broadcastState(roomCode, room);
@@ -642,7 +665,7 @@ function applyBunkerEventEffect(room, effect) {
 
   if (effect.type === 'survival_change') {
     result.survivalChange = effect.value;
-    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
+    room.survivalChance = Math.max(0, Math.min(MAX_SURVIVAL_CHANCE, room.survivalChance + effect.value));
     return result;
   }
 
@@ -683,7 +706,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
     return;
   }
 
-  // Resources provided — consume them and replenish 40% of max food per resource
+  // Resources provided — consume them and replenish part of the required stay per resource.
   for (const entry of selectedItems) {
     const owner = room.getPlayer(entry.player_id);
     if (!owner) continue;
@@ -699,7 +722,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   }
 
   const foodBefore = room.foodMonths;
-  const replenish = Math.round(0.4 * room.foodMaxPersonMonths * resourceCount);
+  const replenish = Math.round(FOOD_REPLENISH_RATIO * room.foodMaxPersonMonths * resourceCount);
   room.foodMonths = Math.min(room.foodMaxPersonMonths, room.foodMonths + replenish);
   room.starvationPending = false;
 
@@ -748,8 +771,9 @@ function tryStartBunkerLife(roomCode, room) {
   room.currentMonth = 0;
   room.totalMonths = parseDurationMonths(room.bunker.duration?.label);
   const foodDurationMonths = parseFoodMonths(room.bunker.food?.label);
-  room.foodMonths = foodDurationMonths * room.getActivePlayers().length;
-  room.foodMaxPersonMonths = room.foodMonths;
+  const activeCount = room.getActivePlayers().length;
+  room.foodMonths = foodDurationMonths * activeCount;
+  room.foodMaxPersonMonths = Math.max(foodDurationMonths, room.totalMonths) * activeCount;
   room.starvationPending = false;
   room.activeEvent = null;
   room.monthStartTime = Date.now();

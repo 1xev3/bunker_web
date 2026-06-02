@@ -13,12 +13,15 @@ interface Props {
 }
 
 function SurvivalBar({ chance }: { chance: number }) {
+  const pct = Math.min(100, (chance / 150) * 100);
   const color =
+    chance > 100 ? 'bg-emerald-400' :
     chance >= 70 ? 'bg-green-500' :
     chance >= 40 ? 'bg-yellow-500' :
     chance >= 20 ? 'bg-orange-500' : 'bg-red-500';
 
   const label =
+    chance > 100 ? 'Отлично' :
     chance >= 70 ? 'Хорошо' :
     chance >= 40 ? 'Тяжело' :
     chance >= 20 ? 'Критично' : 'Катастрофа';
@@ -30,13 +33,13 @@ function SurvivalBar({ chance }: { chance: number }) {
           <Heart size={11} className="text-red-400" /> Шанс выживания
         </span>
         <span className={`font-mono font-bold ${
-          chance >= 70 ? 'text-green-400' : chance >= 40 ? 'text-yellow-400' : chance >= 20 ? 'text-orange-400' : 'text-red-400'
+          chance > 100 ? 'text-emerald-300' : chance >= 70 ? 'text-green-400' : chance >= 40 ? 'text-yellow-400' : chance >= 20 ? 'text-orange-400' : 'text-red-400'
         }`}>{chance}% — {label}</span>
       </div>
       <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${color}`}
-          style={{ width: `${chance}%` }}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>

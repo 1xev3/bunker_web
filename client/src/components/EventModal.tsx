@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { AlertTriangle, Send, Sparkles, Users, Utensils } from 'lucide-react';
 import type { GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
 
+const FOOD_REPLENISH_PERCENT_PER_RESOURCE = 25;
+
 interface Props {
   event: GameEvent;
   activePlayers: Player[];
@@ -193,7 +195,7 @@ function FoodReplenishCard({ event, activePlayers, send }: Props) {
           )}
           {resourceCount > 0 && (
             <p className="text-green-400/70 text-xs text-center">
-              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{Math.round(40 * resourceCount)}% запасов
+              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{Math.round(FOOD_REPLENISH_PERCENT_PER_RESOURCE * resourceCount)}% срока
             </p>
           )}
           <button
@@ -256,6 +258,12 @@ export default function EventModal({ event, activePlayers, send }: Props) {
               <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
             </div>
           </div>
+          {event.participants && event.participants.length > 0 && (
+            <div className="flex items-center gap-2 mt-4 px-3 py-2 rounded-lg bg-zinc-800/60">
+              <Users size={13} className="text-zinc-500 shrink-0" />
+              <span className="text-zinc-400 text-sm">{event.participants.join(', ')}</span>
+            </div>
+          )}
         </div>
 
         <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[55vh]">

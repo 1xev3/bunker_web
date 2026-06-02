@@ -319,6 +319,17 @@ function validatePackContent(packName, files) {
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
       if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
       if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
+      if (event.participants_template != null && !['couple', 'random_one', 'random_group'].includes(event.participants_template)) {
+        addError(errors, `${scope}.participants_template`, 'expected one of: couple, random_one, random_group');
+      }
+      for (const key of ['participants_min', 'participants_max']) {
+        if (event[key] != null && (!Number.isInteger(event[key]) || event[key] < 1)) {
+          addError(errors, `${scope}.${key}`, 'expected a positive integer');
+        }
+      }
+      if (Number.isInteger(event.participants_min) && Number.isInteger(event.participants_max) && event.participants_max < event.participants_min) {
+        addError(errors, `${scope}.participants_max`, 'must be greater than or equal to participants_min');
+      }
       const isPassive = event.event_type === 'passive';
       if (!isPassive) {
         if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');

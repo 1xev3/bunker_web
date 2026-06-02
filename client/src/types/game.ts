@@ -98,6 +98,9 @@ export interface GameEvent {
   description: string;
   base_chance?: number;
   event_type?: 'passive' | 'interactive' | 'food_replenish';
+  participants_template?: 'couple' | 'random_one' | 'random_group' | null;
+  participants_min?: number;
+  participants_max?: number;
   participants?: string[];
   success_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
   failure_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
