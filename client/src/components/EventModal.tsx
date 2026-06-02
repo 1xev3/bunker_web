@@ -93,10 +93,10 @@ function SelectableItemList({
         const key = getItemKey(entry);
         const sourceLabel = entry.source === 'inventory' ? 'инвентарь' : entry.source === 'backpack' ? 'рюкзак' : 'бункер';
         return (
-          <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-            selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+          <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
+            selected ? 'event-selected' : 'bg-zinc-800/50 border-transparent hover:bg-zinc-800'
           }`}>
-            <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleItem(entry)} />
+            <input type="checkbox" className="accent-[var(--accent)]" checked={selected} onChange={() => toggleItem(entry)} />
             <span className="text-zinc-300 text-sm flex-1">{label}</span>
             <span className="text-zinc-500 text-xs">{owner} · {sourceLabel}</span>
           </label>
@@ -117,16 +117,16 @@ function PassiveEventCard({ event, send }: { event: GameEvent; send: (msg: Clien
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in-up">
       <div className={`bg-zinc-900 border rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 flex flex-col gap-4 ${
-        isPositive ? 'border-amber-700/40' : 'border-zinc-700/40'
+        isPositive ? 'ready-modal-border' : 'border-zinc-700/40'
       }`}>
         <div className="flex items-start gap-3">
           {isFoodEffect ? (
-            <Utensils size={20} className={isPositive ? 'text-amber-400 shrink-0 mt-0.5' : 'text-orange-400 shrink-0 mt-0.5'} />
+            <Utensils size={20} className={isPositive ? 'event-icon-positive shrink-0 mt-0.5' : 'text-orange-400 shrink-0 mt-0.5'} />
           ) : (
-            <Sparkles size={20} className={isPositive ? 'text-amber-400 shrink-0 mt-0.5' : 'text-zinc-500 shrink-0 mt-0.5'} />
+            <Sparkles size={20} className={isPositive ? 'event-icon-positive shrink-0 mt-0.5' : 'text-zinc-500 shrink-0 mt-0.5'} />
           )}
           <div>
-            <h2 className={`font-bold text-lg ${isPositive ? 'text-amber-300' : 'text-zinc-300'}`}>{event.title}</h2>
+            <h2 className={`font-bold text-lg ${isPositive ? 'event-title-positive' : 'text-zinc-300'}`}>{event.title}</h2>
             <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
           </div>
         </div>
@@ -213,10 +213,10 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
                 const profId = String(p.attributes.profession.value.id);
                 const selected = selectedProfessions.includes(profId);
                 return (
-                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
+                    selected ? 'event-selected' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'
                   }`}>
-                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleProfession(profId)} />
+                    <input type="checkbox" className="accent-[var(--accent)]" checked={selected} onChange={() => toggleProfession(profId)} />
                     <span className="text-zinc-300 text-sm flex-1">{p.attributes.profession.display}</span>
                     <span className="text-zinc-500 text-xs">{p.name}</span>
                   </label>
@@ -333,10 +333,10 @@ export default function EventModal({ event, activePlayers, bunker, send }: Props
                 const profId = String(p.attributes.profession.value.id);
                 const selected = selectedProfessions.includes(profId);
                 return (
-                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
+                    selected ? 'event-selected' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'
                   }`}>
-                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleProfession(profId)} />
+                    <input type="checkbox" className="accent-[var(--accent)]" checked={selected} onChange={() => toggleProfession(profId)} />
                     <span className="text-zinc-300 text-sm flex-1">{p.attributes.profession.display}</span>
                     <span className="text-zinc-500 text-xs">{p.name}</span>
                   </label>

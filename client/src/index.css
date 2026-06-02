@@ -12,6 +12,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root {
+  --accent: #f59e0b;
+  --accent-rgb: 245, 158, 11;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -41,18 +46,18 @@ td, th {
 }
 
 @keyframes emergency-flash {
-  0%, 100% { opacity: 1; text-shadow: 0 0 16px rgba(251,191,36,0.6), 0 0 32px rgba(251,191,36,0.25); }
+  0%, 100% { opacity: 1; text-shadow: 0 0 16px rgba(var(--accent-rgb),0.6), 0 0 32px rgba(var(--accent-rgb),0.25); }
   50% { opacity: 0.35; text-shadow: none; }
 }
 
 .animate-emergency-flash {
   animation: emergency-flash 0.9s ease-in-out infinite;
-  color: #fbbf24;
+  color: var(--accent);
 }
 
 @keyframes radiation-pulse {
-  0%, 100% { opacity: 0.6; text-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
-  50% { opacity: 1; text-shadow: 0 0 16px rgba(251, 191, 36, 0.7), 0 0 32px rgba(251, 191, 36, 0.3); }
+  0%, 100% { opacity: 0.6; text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3); }
+  50% { opacity: 1; text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.7), 0 0 32px rgba(var(--accent-rgb), 0.3); }
 }
 
 @keyframes fade-in-up {
@@ -69,22 +74,22 @@ td, th {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #b45309, #c2410c);
-  border: 1px solid rgba(251, 191, 36, 0.15);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, #000), color-mix(in srgb, var(--accent) 40%, #000));
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
   transition: all 0.2s ease;
-  box-shadow: 0 2px 12px rgba(180, 83, 9, 0.25);
+  box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.25);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  border-color: rgba(251, 191, 36, 0.35);
-  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #f97316));
+  border-color: rgba(var(--accent-rgb), 0.35);
+  box-shadow: 0 4px 24px rgba(var(--accent-rgb), 0.4);
   transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
-  background: linear-gradient(135deg, #d97706, #ea580c);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #000), color-mix(in srgb, var(--accent) 50%, #f97316));
 }
 
 .btn-primary:disabled {
@@ -115,6 +120,125 @@ td, th {
   backdrop-filter: blur(8px);
 }
 
-.glow-amber {
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.1), inset 0 1px 0 rgba(251, 191, 36, 0.05);
+.glow-accent {
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
 }
+
+.glow-amber {
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
+}
+
+/* Accent utility classes — controlled by --accent CSS variable */
+.text-accent { color: var(--accent); }
+.border-accent { border-color: var(--accent); }
+.bg-accent { background-color: var(--accent); }
+.ring-accent { --tw-ring-color: var(--accent); }
+
+.accent-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
+  --tw-ring-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+
+.tab-active {
+  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent) 20%, transparent));
+  color: #f4f4f5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.badge-waiting {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.room-code-hover:hover {
+  color: var(--accent);
+}
+
+.progress-bar-accent {
+  background-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+/* Player row highlights */
+.player-row-me {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.player-avatar-me {
+  background-color: color-mix(in srgb, var(--accent) 40%, #18181b);
+  color: color-mix(in srgb, var(--accent) 90%, #fff);
+}
+.player-name-me { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+
+.admin-badge {
+  color: color-mix(in srgb, var(--accent) 60%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.ready-badge { color: var(--accent); }
+.ready-dot { background-color: var(--accent); }
+
+/* Glow card */
+.glow-card {
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.1), inset 0 1px 0 rgba(var(--accent-rgb), 0.05);
+}
+
+/* Voting / game room states */
+.phase-banner-voting {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+}
+.phase-banner-winner {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: linear-gradient(to right, color-mix(in srgb, var(--accent) 8%, transparent), color-mix(in srgb, #f97316 8%, transparent));
+}
+.winner-trophy { color: var(--accent); }
+.winner-name { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+
+/* Flash / notification */
+.flash-info {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Ready modal */
+.ready-modal-border { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.ready-modal-title { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.ready-modal-count { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.ready-modal-icon { color: var(--accent); }
+
+/* Bunker map entrance */
+.bunker-entrance {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+}
+
+/* Event modal */
+.event-selected {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.event-title-positive { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.event-icon-positive { color: var(--accent); }
+
+/* StatusTable */
+.status-row-me {
+  background-color: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.status-avatar-me {
+  background-color: color-mix(in srgb, var(--accent) 50%, #18181b);
+  color: color-mix(in srgb, var(--accent) 90%, #fff);
+}
+.status-name-me { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.status-link:hover { color: color-mix(in srgb, var(--accent) 80%, #fff); }
+.status-ctrl-row { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
+.status-ctrl-btn:hover { color: var(--accent); }
+
+/* Bunker intro */
+.intro-cursor { background-color: var(--accent); }
+.intro-label { color: color-mix(in srgb, var(--accent) 60%, transparent); }

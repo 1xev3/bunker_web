@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package } from 'lucide-react';
-import type { ClientMessage, RoomListing } from '../types/game';
+import type { ClientMessage, RoomListing, PackListing } from '../types/game';
 
 interface Props {
   onConnect: (msg: ClientMessage) => void;
@@ -11,10 +11,23 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
   const [nickname, setNickname] = useState(() => localStorage.getItem('bunker_nickname') ?? '');
   const [roomCode, setRoomCode] = useState('');
   const [rooms, setRooms] = useState<RoomListing[]>([]);
-  const [packs, setPacks] = useState<string[]>([]);
+  const [packs, setPacks] = useState<PackListing[]>([]);
   const [selectedPack, setSelectedPack] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
+
+  const selectedPackMeta = packs.find((p) => p.id === selectedPack)?.meta;
+
+  useEffect(() => {
+    if (selectedPackMeta?.color) {
+      const hex = selectedPackMeta.color;
+      document.documentElement.style.setProperty('--accent', hex);
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      document.documentElement.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+    }
+  }, [selectedPackMeta?.color]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -24,10 +37,11 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
       setTab('join');
     }
 
-    fetch('/api/packs').then(r => r.json()).then((list: string[]) => {
+    fetch('/api/packs').then(r => r.json()).then((list: PackListing[]) => {
       setPacks(list);
       if (list.length > 0) {
-        setSelectedPack(currentPack => (currentPack && list.includes(currentPack) ? currentPack : list[0]));
+        const ids = list.map((p) => p.id);
+        setSelectedPack(currentPack => (currentPack && ids.includes(currentPack) ? currentPack : list[0].id));
       }
     }).catch(() => {});
 
@@ -69,7 +83,7 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
       style={{
         backgroundImage: `
           linear-gradient(rgba(9, 9, 11, 0.82), rgba(9, 9, 11, 0.88)),
-          radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.08) 0%, transparent 60%),
+          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.08) 0%, transparent 60%),
           url('/images/bunker-hero.png')
         `,
         backgroundSize: 'cover',
@@ -79,19 +93,19 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
       <div className="w-full max-w-sm space-y-5 animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="radiation-icon text-amber-400 text-4xl mb-3 select-none">☢</div>
+          <div className="radiation-icon text-accent text-4xl mb-3 select-none">☢</div>
           <h1 className="text-4xl font-bold text-zinc-100 tracking-tight">Бункер</h1>
           <p className="text-zinc-500 text-sm mt-1.5">Выжить могут не все</p>
         </div>
 
         {/* Form */}
-        <div className="card glow-amber p-5 space-y-4">
+        <div className="card glow-card p-5 space-y-4">
           <div>
             <label className="block text-zinc-500 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
               <User size={12} className="text-zinc-500" /> Никнейм
             </label>
             <input
-              className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-amber-600/50 focus:ring-1 focus:ring-amber-600/20 transition-all"
+              className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none transition-all accent-input"
               placeholder="Введи никнейм"
               value={nickname}
               onChange={e => { setNickname(e.target.value); localStorage.setItem('bunker_nickname', e.target.value); }}
@@ -116,17 +130,30 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
                 <label className="block text-zinc-500 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                   <Package size={12} className="text-zinc-500" /> Пак
                 </label>
-                <select
-                  className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 text-sm focus:outline-none focus:border-amber-600/50 focus:ring-1 focus:ring-amber-600/20 transition-all"
-                  value={selectedPack}
-                  onChange={e => setSelectedPack(e.target.value)}
-                >
+                <div className="space-y-1.5">
                   {packs.map(pack => (
-                    <option key={pack} value={pack}>
-                      {pack}
-                    </option>
+                    <button
+                      key={pack.id}
+                      type="button"
+                      onClick={() => setSelectedPack(pack.id)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-sm transition-all text-left ${
+                        selectedPack === pack.id
+                          ? 'border-accent bg-zinc-800/80 text-zinc-100'
+                          : 'border-zinc-700 bg-zinc-800/40 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                      }`}
+                      style={selectedPack === pack.id ? { borderColor: `color-mix(in srgb, ${pack.meta.color} 50%, transparent)` } : {}}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: pack.meta.color }}
+                      />
+                      <span className="font-medium">{pack.meta.name}</span>
+                      {pack.meta.author && (
+                        <span className="text-zinc-600 text-xs ml-auto">{pack.meta.author}</span>
+                      )}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
               <button
                 className="btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"
@@ -138,7 +165,7 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
           ) : (
             <div className="space-y-2">
               <input
-                className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-amber-600/50 focus:ring-1 focus:ring-amber-600/20 transition-all uppercase tracking-[0.2em] font-mono text-center"
+                className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none transition-all accent-input uppercase tracking-[0.2em] font-mono text-center"
                 placeholder="ABCD12"
                 value={roomCode}
                 onChange={e => setRoomCode(e.target.value.toUpperCase())}
@@ -176,14 +203,14 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
                 onClick={() => { setRoomCode(room.room_code); setTab('join'); }}
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-mono font-bold text-zinc-200 tracking-widest group-hover:text-amber-300 transition-colors">{room.room_code}</span>
+                  <span className="font-mono font-bold text-zinc-200 tracking-widest group-hover:text-accent transition-colors room-code-hover">{room.room_code}</span>
                   <span className="text-zinc-500 text-xs flex items-center gap-1">
                     <Users size={11} className="text-zinc-500" /> {room.player_count}
                   </span>
                 </div>
                 <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium flex items-center gap-1 ${
                   room.status === 'waiting'
-                    ? 'border-amber-800/50 text-amber-600 bg-amber-950/30'
+                    ? 'badge-waiting'
                     : 'border-zinc-700 text-zinc-500 bg-zinc-900/50'
                 }`}>
                   {room.status === 'waiting'
@@ -204,9 +231,7 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
   return (
     <button
       className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-        active
-          ? 'bg-gradient-to-r from-amber-700/80 to-orange-700/80 text-zinc-100 shadow-sm'
-          : 'text-zinc-500 hover:text-zinc-300'
+        active ? 'tab-active' : 'text-zinc-500 hover:text-zinc-300'
       }`}
       onClick={onClick}
     >

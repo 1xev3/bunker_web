@@ -89,7 +89,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   eliminated
                     ? 'opacity-35'
                     : isMe
-                    ? 'bg-amber-950/15 border-l-2 border-l-amber-700/40'
+                    ? 'status-row-me'
                     : 'hover:bg-zinc-900/40'
                 }`}
               >
@@ -97,13 +97,13 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                 <td className="px-3 py-3 align-top">
                   <div className="flex items-start gap-2">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
-                      eliminated ? 'bg-zinc-800 text-zinc-600' : isMe ? 'bg-amber-900/60 text-amber-300' : 'bg-zinc-800 text-zinc-400'
+                      eliminated ? 'bg-zinc-800 text-zinc-600' : isMe ? 'status-avatar-me' : 'bg-zinc-800 text-zinc-400'
                     }`}>
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <span className={`font-semibold break-words leading-snug text-sm ${
-                        eliminated ? 'line-through text-zinc-600' : isMe ? 'text-amber-300' : 'text-zinc-100'
+                        eliminated ? 'line-through text-zinc-600' : isMe ? 'status-name-me' : 'text-zinc-100'
                       }`}>
                         {player.name}
                       </span>
@@ -122,7 +122,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                           <AttrValue attrKey={key} value={val} className="text-emerald-400 text-sm leading-relaxed break-words" />
                         ) : (
                           <span
-                            className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer hover:text-amber-300 transition-colors underline decoration-dotted underline-offset-2"
+                            className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer status-link transition-colors underline decoration-dotted underline-offset-2"
                             title="Нажми, чтобы открыть"
                             onClick={() => send({ type: 'reveal_attribute', attribute: key as AttributeKey })}
                           >
@@ -145,11 +145,11 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
               </tr>,
 
               isMe && !eliminated && hasAnyUnrevealed && (
-                <tr key={player.id + '_ctrl'} className="border-b border-zinc-800/30 bg-amber-950/10">
+                <tr key={player.id + '_ctrl'} className="border-b border-zinc-800/30 status-ctrl-row">
                   <td className="px-3 py-1.5" />
                   <td className="px-3 py-1.5" colSpan={1}>
                     <span
-                      className="text-xs text-zinc-600 hover:text-amber-400 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
+                      className="text-xs text-zinc-600 status-ctrl-btn transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
                       onClick={() => send({ type: 'reveal_all' })}
                     >
                       <Eye size={11} className="text-zinc-600" /> открыть всё

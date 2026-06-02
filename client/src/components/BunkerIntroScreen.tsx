@@ -94,7 +94,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
     }
   }, [stage]);
 
-  const cursor = <span className="inline-block w-0.5 h-4 bg-amber-400 ml-0.5 align-middle animate-pulse" />;
+  const cursor = <span className="inline-block w-0.5 h-4 intro-cursor ml-0.5 align-middle animate-pulse" />;
   const hasMap = bunker.grid?.length > 0;
 
   return (
@@ -103,7 +103,7 @@ export default function BunkerIntroScreen({ bunker, players, onContinue, onLeave
         className="border-b border-zinc-900/80 px-4 py-3 flex items-center justify-between shrink-0 bg-zinc-950/95 sticky top-0 z-10"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2.5 text-amber-500/60 text-xs tracking-[0.25em] uppercase">
+        <div className="flex items-center gap-2.5 intro-label text-xs tracking-[0.25em] uppercase">
           <span className="radiation-icon text-base">☢</span>
           <span>Экстренное уведомление</span>
           <span className="radiation-icon text-base">☢</span>

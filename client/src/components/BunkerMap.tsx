@@ -24,7 +24,7 @@ export default function BunkerMap({ grid, compact = false }: Props) {
                 compact ? 'p-0.5 text-[8px]' : 'p-1 text-[10px]',
                 cell
                   ? cell.isEntrance
-                    ? 'border border-amber-600/70 bg-amber-950/40 text-amber-300/90'
+                    ? 'bunker-entrance'
                     : 'border border-zinc-700 bg-zinc-800/60 text-zinc-300'
                   : 'border border-transparent',
               ].join(' ')}

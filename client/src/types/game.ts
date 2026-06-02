@@ -106,9 +106,22 @@ export interface GameEvent {
   failure_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
 }
 
+export interface PackMeta {
+  name: string;
+  author: string;
+  color: string;
+}
+
+export interface PackListing {
+  id: string;
+  meta: PackMeta;
+}
+
 export interface RoomState {
   room_code: string;
   admin_id: string;
+  pack: string;
+  pack_meta: PackMeta;
   status: GameStatus;
   is_voting: boolean;
   round: number;

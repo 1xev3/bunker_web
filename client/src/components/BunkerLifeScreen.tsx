@@ -111,7 +111,7 @@ function MonthProgressBar({ monthStartTime, monthDuration, hasEvent }: {
   return (
     <div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
       <div
-        className="h-full rounded-full bg-amber-600/60 transition-none"
+        className="h-full rounded-full progress-bar-accent transition-none"
         style={{ width: `${progress}%` }}
       />
     </div>
@@ -128,7 +128,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
       style={{
         backgroundImage: `
           linear-gradient(rgba(9, 9, 11, 0.88), rgba(9, 9, 11, 0.92)),
-          radial-gradient(circle at top, rgba(245, 158, 11, 0.04), transparent 35%),
+          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.04), transparent 35%),
           url('/images/bunker-control-room.png')
         `,
         backgroundSize: 'cover',

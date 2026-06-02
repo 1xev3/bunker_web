@@ -59,6 +59,13 @@ app.get('/api/packs', (req, res) => {
   res.json(listPacks());
 });
 
+app.get('/api/packs/:id/meta', (req, res) => {
+  const { listPacks } = require('./game/gameConfig');
+  const pack = listPacks().find((p) => p.id === req.params.id);
+  if (!pack) return res.status(404).json({ error: 'Pack not found' });
+  res.json(pack.meta);
+});
+
 app.get('/api/rooms', (req, res) => {
   const list = [];
   for (const [code, room] of rooms) {

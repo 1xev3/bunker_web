@@ -36,7 +36,7 @@ export default function GameRoom({
       style={{
         backgroundImage: `
           linear-gradient(rgba(9, 9, 11, 0.88), rgba(9, 9, 11, 0.92)),
-          radial-gradient(circle at top, rgba(245, 158, 11, 0.04), transparent 35%),
+          radial-gradient(circle at top, rgba(var(--accent-rgb), 0.04), transparent 35%),
           url('/images/bunker-control-room.png')
         `,
         backgroundSize: 'cover',
@@ -62,7 +62,7 @@ export default function GameRoom({
               <span className="text-zinc-700">·</span>
               <span className={`text-xs px-2 py-0.5 rounded-full border ${
                 roomState.players.filter(p => p.is_active).length <= roomState.bunker_capacity
-                  ? 'text-amber-300 border-amber-700/50 bg-amber-950/20'
+                  ? 'phase-banner-voting'
                   : 'text-zinc-400 border-zinc-800 bg-zinc-900'
               }`}>
                 {roomState.players.filter(p => p.is_active).length}/{roomState.bunker_capacity} в бункере
@@ -87,13 +87,13 @@ export default function GameRoom({
         {isFinished && gameWinner !== undefined && (
           <div className={`rounded-xl border p-4 text-center animate-fade-in-up ${
             gameWinner
-              ? 'border-amber-700/40 bg-gradient-to-r from-amber-950/40 to-orange-950/30'
+              ? 'phase-banner-winner'
               : 'border-zinc-800 bg-zinc-900/60'
           }`}>
             {gameWinner ? (
               <>
-                <Trophy size={28} className="text-amber-400 mx-auto mb-2" />
-                <p className="text-amber-300 font-bold text-lg">Победитель: {gameWinner.name}</p>
+                <Trophy size={28} className="winner-trophy mx-auto mb-2" />
+                <p className="winner-name font-bold text-lg">Победитель: {gameWinner.name}</p>
                 <p className="text-zinc-500 text-sm mt-0.5">Занял место в бункере</p>
               </>
             ) : (
@@ -133,7 +133,7 @@ export default function GameRoom({
           <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up ${
             flashMessage.kind === 'error'
               ? 'border-red-900/40 bg-red-950/20 text-red-300'
-              : 'border-amber-900/40 bg-amber-950/20 text-amber-200'
+              : 'flash-info'
           }`}>
             {flashMessage.text}
           </div>

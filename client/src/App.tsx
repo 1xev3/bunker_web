@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `${r}, ${g}, ${b}`;
+}
 import type { ServerMessage, ClientMessage, Player } from './types/game';
 import { useGameState } from './hooks/useGameState';
 import WelcomeScreen from './components/WelcomeScreen';
@@ -163,6 +170,12 @@ export default function App() {
       sessionStorage.setItem(`bunker_intro_seen_${roomState.room_code}`, '1');
     }
   }, [roomState?.room_code]);
+
+  useEffect(() => {
+    const color = roomState?.pack_meta?.color ?? '#f59e0b';
+    document.documentElement.style.setProperty('--accent', color);
+    document.documentElement.style.setProperty('--accent-rgb', hexToRgb(color));
+  }, [roomState?.pack_meta?.color]);
 
   const myPlayerId = myPlayerIdRef.current;
 

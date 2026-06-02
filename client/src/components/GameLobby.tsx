@@ -32,7 +32,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
       style={{
         backgroundImage: `
           linear-gradient(rgba(9, 9, 11, 0.86), rgba(9, 9, 11, 0.9)),
-          radial-gradient(ellipse at 50% 0%, rgba(217,119,6,0.06) 0%, transparent 50%),
+          radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.06) 0%, transparent 50%),
           url('/images/nuclear-apocalypse-poster.png')
         `,
         backgroundSize: 'cover',
@@ -55,12 +55,12 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4 animate-fade-in-up">
           {/* Room code */}
-          <div className="card glow-amber p-6">
+          <div className="card glow-card p-6">
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <Copy size={11} className="text-zinc-500" /> Код комнаты
             </p>
             <div className="text-center mb-5">
-              <span className="text-5xl font-mono font-bold tracking-[0.25em] text-zinc-100 select-all" style={{ textShadow: '0 0 30px rgba(251,191,36,0.1)' }}>
+              <span className="text-5xl font-mono font-bold tracking-[0.25em] text-zinc-100 select-all" style={{ textShadow: '0 0 30px rgba(var(--accent-rgb),0.1)' }}>
                 {roomState.room_code}
               </span>
             </div>
@@ -99,22 +99,22 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 <div
                   key={p.id}
                   className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
-                    p.id === myPlayerId ? 'bg-amber-950/20 border border-amber-800/20' : 'hover:bg-zinc-800/30'
+                    p.id === myPlayerId ? 'player-row-me' : 'hover:bg-zinc-800/30'
                   }`}
                 >
                   <span className="text-zinc-700 text-xs w-4 text-right shrink-0 font-mono">{i + 1}</span>
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    p.id === myPlayerId ? 'bg-amber-900/50 text-amber-300' : 'bg-zinc-800 text-zinc-400'
+                    p.id === myPlayerId ? 'player-avatar-me' : 'bg-zinc-800 text-zinc-400'
                   }`}>
                     {p.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className={`text-sm flex-1 font-medium ${p.id === myPlayerId ? 'text-amber-300' : 'text-zinc-200'}`}>
+                  <span className={`text-sm flex-1 font-medium ${p.id === myPlayerId ? 'player-name-me' : 'text-zinc-200'}`}>
                     {p.name}
                   </span>
                   <div className="flex gap-1.5 items-center">
                     {p.id === roomState.admin_id && (
-                      <span className="text-xs text-amber-600/80 border border-amber-800/40 bg-amber-950/30 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                        <Crown size={10} className="text-amber-600" /> ведущий
+                      <span className="admin-badge text-xs border px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                        <Crown size={10} /> ведущий
                       </span>
                     )}
                     {p.id === myPlayerId && p.id !== roomState.admin_id && (
@@ -145,7 +145,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
           ) : (
             <div className="text-center py-3">
               <p className="text-zinc-500 text-sm flex items-center justify-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full ready-dot animate-pulse"></span>
                 Ожидаем ведущего…
               </p>
             </div>

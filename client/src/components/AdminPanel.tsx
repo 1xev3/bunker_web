@@ -70,7 +70,7 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
               ability.hasAbility
                 ? ability.used
                   ? 'border-zinc-700 text-zinc-500'
-                  : 'border-amber-700/50 text-amber-300 bg-amber-950/20'
+                  : 'phase-banner-voting'
                 : 'border-zinc-800 text-zinc-600'
             }`}>
               {!ability.hasAbility ? 'нет способности' : ability.used ? 'использовано' : 'доступно'}

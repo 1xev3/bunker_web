@@ -3,6 +3,7 @@ const path = require('path');
 const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
 
 const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'Event'];
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
@@ -350,6 +351,22 @@ function validatePackContent(packName, files) {
     });
   }
 
+  if (files.Pack !== undefined) {
+    if (!isPlainObject(files.Pack)) {
+      addError(errors, 'Pack.json', 'корневой JSON должен быть объектом');
+    } else {
+      if (typeof files.Pack.name !== 'string' || files.Pack.name.trim() === '') {
+        addError(errors, 'Pack.json -> name', 'ожидается непустая строка');
+      }
+      if (typeof files.Pack.author !== 'string' || files.Pack.author.trim() === '') {
+        addError(errors, 'Pack.json -> author', 'ожидается непустая строка');
+      }
+      if (typeof files.Pack.color !== 'string' || !HEX_COLOR_RE.test(files.Pack.color)) {
+        addError(errors, 'Pack.json -> color', 'ожидается hex-цвет в формате #rrggbb');
+      }
+    }
+  }
+
   const normalizedErrors = errors.length === 0
     ? validateStructuredConfig(normalizeConfig({
       ...files.People,
@@ -391,6 +408,15 @@ function readPackFiles(packName) {
     }
   }
 
+  const packMetaPath = path.join(dir, 'Pack.json');
+  if (fs.existsSync(packMetaPath)) {
+    try {
+      files.Pack = JSON.parse(fs.readFileSync(packMetaPath, 'utf8'));
+    } catch (error) {
+      addError(errors, `${packName}/Pack.json`, `не удалось распарсить JSON: ${error.message}`);
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -418,6 +444,21 @@ function formatPackError(packName, errors) {
   return `Пак "${packName}" содержит ошибки конфигурации:\n- ${errors.join('\n- ')}`;
 }
 
+function readPackMeta(packName) {
+  const metaPath = path.join(getPackDir(packName), 'Pack.json');
+  if (!fs.existsSync(metaPath)) return { name: packName, author: '', color: '#f59e0b' };
+  try {
+    const raw = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    return {
+      name: typeof raw.name === 'string' ? raw.name : packName,
+      author: typeof raw.author === 'string' ? raw.author : '',
+      color: typeof raw.color === 'string' && HEX_COLOR_RE.test(raw.color) ? raw.color : '#f59e0b',
+    };
+  } catch {
+    return { name: packName, author: '', color: '#f59e0b' };
+  }
+}
+
 function listPacks() {
   return fs.readdirSync(CONFIGS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -427,8 +468,8 @@ function listPacks() {
       return result;
     })
     .filter((result) => result.valid)
-    .map((result) => result.packName)
-    .sort((a, b) => a.localeCompare(b));
+    .map((result) => ({ id: result.packName, meta: readPackMeta(result.packName) }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function getDefaultPackName() {
@@ -436,7 +477,8 @@ function getDefaultPackName() {
   if (packs.length === 0) {
     throw new Error('No valid configuration packs found');
   }
-  return packs.includes('DefaultPack') ? 'DefaultPack' : packs[0];
+  const ids = packs.map((p) => p.id);
+  return ids.includes('DefaultPack') ? 'DefaultPack' : ids[0];
 }
 
 function loadPack(packName = getDefaultPackName()) {
@@ -451,7 +493,9 @@ function loadPack(packName = getDefaultPackName()) {
     ...cfg,
     ...JSON.parse(fs.readFileSync(path.join(dir, `${file}.json`), 'utf8')),
   }), {});
-  return normalizeConfig(rawConfig);
+  const config = normalizeConfig(rawConfig);
+  config.packMeta = readPackMeta(packName);
+  return config;
 }
 
 const defaultConfig = loadPack();

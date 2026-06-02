@@ -14,12 +14,12 @@ export default function ReadyModal({ capacity, activePlayers, confirmedIds, myPl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in-up">
-      <div className="bg-zinc-900 border border-amber-700/40 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+      <div className="bg-zinc-900 ready-modal-border border rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
         <div className="text-center mb-5">
-          <Shield size={36} className="text-amber-400 mx-auto mb-3" />
-          <h2 className="text-amber-300 font-bold text-xl mb-2">Бункер заполнен</h2>
+          <Shield size={36} className="ready-modal-icon mx-auto mb-3" />
+          <h2 className="ready-modal-title font-bold text-xl mb-2">Бункер заполнен</h2>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            Место в убежище нашлось для <span className="text-amber-300 font-semibold">{capacity}</span> выживших.
+            Место в убежище нашлось для <span className="ready-modal-count font-semibold">{capacity}</span> выживших.
             Лишние изгнаны. Пора начинать совместную жизнь в бункере.
           </p>
         </div>

@@ -92,6 +92,7 @@ class GameRoom {
       room_code: this.roomCode,
       admin_id: this.adminId,
       pack: this.packName,
+      pack_meta: this.config.packMeta ?? { name: this.packName, author: '', color: '#f59e0b' },
       status: this.status,
       is_voting: this.isVoting,
       round: this.round,
