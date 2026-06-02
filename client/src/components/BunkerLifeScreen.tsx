@@ -36,9 +36,9 @@ function SurvivalBar({ chance }: { chance: number }) {
           chance > 100 ? 'text-emerald-300' : chance >= 70 ? 'text-green-400' : chance >= 40 ? 'text-yellow-400' : chance >= 20 ? 'text-orange-400' : 'text-red-400'
         }`}>{chance}% — {label}</span>
       </div>
-      <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+      <div className="relative w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-700 ${color}`}
+          className={`h-full rounded-full transition-all duration-700 ${color} stat-bar-fill`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -69,9 +69,9 @@ function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths:
           pct >= 60 ? 'text-green-400' : pct >= 30 ? 'text-yellow-400' : pct >= 10 ? 'text-orange-400' : 'text-red-400'
         }`}>{foodMonths} мес. — {label}</span>
       </div>
-      <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+      <div className="relative w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-700 ${color}`}
+          className={`h-full rounded-full transition-all duration-700 ${color} stat-bar-fill`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -79,39 +79,11 @@ function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths:
   );
 }
 
-function MonthProgressBar({ monthStartTime, monthDuration, hasEvent }: {
-  monthStartTime: number | null;
-  monthDuration: number;
-  hasEvent: boolean;
-}) {
-  const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (hasEvent || !monthStartTime) {
-      setProgress(hasEvent ? 100 : 0);
-      return;
-    }
-
-    const tick = () => {
-      const elapsed = Date.now() - monthStartTime;
-      const pct = Math.min(100, (elapsed / monthDuration) * 100);
-      setProgress(pct);
-      if (pct < 100) {
-        rafRef.current = requestAnimationFrame(tick);
-      }
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [monthStartTime, monthDuration, hasEvent]);
-
+function MonthProgressBar({ progress }: { progress: number }) {
   return (
-    <div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
+    <div className="relative w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
       <div
-        className="h-full rounded-full progress-bar-accent transition-none"
+        className="h-full rounded-full progress-bar-accent transition-none month-progress-fill"
         style={{ width: `${progress}%` }}
       />
     </div>
@@ -121,6 +93,29 @@ function MonthProgressBar({ monthStartTime, monthDuration, hasEvent }: {
 export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
+  const [monthProgress, setMonthProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (hasEvent || !roomState.month_start_time) {
+      setMonthProgress(hasEvent ? 100 : 0);
+      return;
+    }
+
+    const tick = () => {
+      const elapsed = Date.now() - roomState.month_start_time!;
+      const pct = Math.min(100, (elapsed / roomState.month_duration) * 100);
+      setMonthProgress(pct);
+      if (pct < 100) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [roomState.month_start_time, roomState.month_duration, hasEvent]);
 
   return (
     <div
@@ -171,11 +166,60 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
       </header>
 
       <div className="relative z-10 flex-1 flex flex-col p-4 gap-4 w-full">
-        {/* Survival + food bars */}
-        <div className="card px-4 py-3 flex flex-col gap-3">
-          <SurvivalBar chance={roomState.survival_chance} />
-          <div className="w-full h-px bg-zinc-800" />
-          <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
+        <div className="card px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-stretch bunker-status-panel">
+          <div className="month-status-card relative overflow-hidden rounded-2xl border border-zinc-800/90 bg-zinc-950/80 px-4 py-4 lg:w-[260px]">
+            <div className="absolute inset-0 month-status-glow pointer-events-none" />
+            <div className="relative z-10 flex h-full flex-col justify-between gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">Текущие месяцы</p>
+                  <div className="mt-2 text-4xl font-mono font-bold text-zinc-200 tabular-nums">
+                    {String(roomState.current_month).padStart(2, '0')}
+                    {roomState.total_months > 0 && (
+                      <span className="text-zinc-600"> / {roomState.total_months}</span>
+                    )}
+                  </div>
+                  <p className="text-zinc-600 text-sm">ход жизни внутри бункера</p>
+                </div>
+                <Calendar size={18} className="mt-1 text-zinc-700" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <span>Прогресс месяца</span>
+                  <span className="text-zinc-600">
+                    {roomState.total_months > 0 && roomState.current_month < roomState.total_months
+                      ? `Осталось ${roomState.total_months - roomState.current_month} мес.`
+                      : hasEvent
+                        ? 'Событие активно'
+                        : 'Финальные месяцы'}
+                  </span>
+                </div>
+                <MonthProgressBar progress={monthProgress} />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <div className="flex gap-1">
+                  {[0, 1, 2].map(i => (
+                    <span
+                      key={i}
+                      className="inline-block h-1.5 w-1.5 rounded-full bg-zinc-700 animate-pulse"
+                      style={{ animationDelay: `${i * 0.2}s` }}
+                    />
+                  ))}
+                </div>
+                <p className="text-zinc-600">{hasEvent ? 'Время остановилось на событии' : 'Идёт время…'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:block w-px bg-zinc-800/90" />
+
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
+            <SurvivalBar chance={roomState.survival_chance} />
+            <div className="w-full h-px bg-zinc-800" />
+            <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
+          </div>
         </div>
 
         {/* Event outcome notification */}
@@ -208,33 +252,6 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
             ) : (
               <><TrendingDown size={14} /> Не повезло. Шанс выживания: {eventOutcome.survival_change}%</>
             )}
-          </div>
-        )}
-
-        {/* Month animation — shown when no event */}
-        {!hasEvent && (
-          <div className="card px-4 py-8 text-center">
-            <div className="text-5xl font-mono font-bold text-zinc-700 mb-2 tabular-nums">
-              {String(roomState.current_month).padStart(2, '0')}
-            </div>
-            <p className="text-zinc-600 text-sm">месяц в бункере</p>
-            <div className="mt-4 px-4">
-              <MonthProgressBar
-                monthStartTime={roomState.month_start_time}
-                monthDuration={roomState.month_duration}
-                hasEvent={hasEvent}
-              />
-            </div>
-            <div className="flex justify-center gap-1 mt-3">
-              {[0, 1, 2].map(i => (
-                <span
-                  key={i}
-                  className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-700 animate-pulse"
-                  style={{ animationDelay: `${i * 0.2}s` }}
-                />
-              ))}
-            </div>
-            <p className="text-zinc-700 text-xs mt-2">Идёт время…</p>
           </div>
         )}
 

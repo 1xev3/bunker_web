@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
 
 const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'Event'];
@@ -173,9 +174,6 @@ function validateProfessionDefinition(value, scope, errors) {
     return;
   }
 
-  if (typeof value.key !== 'string' || value.key.trim() === '') {
-    addError(errors, `${scope}.key`, 'ожидается непустая строка');
-  }
   if (typeof value.title !== 'string' || value.title.trim() === '') {
     addError(errors, `${scope}.title`, 'ожидается непустая строка');
   }
@@ -226,61 +224,61 @@ function validatePackContent(packName, files) {
   const errors = [];
 
   if (!isPlainObject(files.People)) {
-    addError(errors, 'People.json', 'корневой JSON должен быть объектом');
+    addError(errors, 'People', 'корневой объект не найден');
   } else {
-    validateWeightedTable(files.People.GENDERS, 'People.json -> GENDERS', errors, (v, s, e) => {
+    validateWeightedTable(files.People.GENDERS, 'People -> GENDERS', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateWeightedTable(files.People.RACES, 'People.json -> RACES', errors, (v, s, e) => {
+    validateWeightedTable(files.People.RACES, 'People -> RACES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateWeightedTable(files.People.GENDER_AFFIXES, 'People.json -> GENDER_AFFIXES', errors, (v, s, e) => {
+    validateWeightedTable(files.People.GENDER_AFFIXES, 'People -> GENDER_AFFIXES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateWeightedTable(files.People.AGES, 'People.json -> AGES', errors, validateRange);
-    validateWeightedTable(files.People.BODY_TYPES, 'People.json -> BODY_TYPES', errors, (v, s, e) => {
+    validateWeightedTable(files.People.AGES, 'People -> AGES', errors, validateRange);
+    validateWeightedTable(files.People.BODY_TYPES, 'People -> BODY_TYPES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateWeightedTable(files.People.SKILL_LEVELS, 'People.json -> SKILL_LEVELS', errors, (v, s, e) => {
+    validateWeightedTable(files.People.SKILL_LEVELS, 'People -> SKILL_LEVELS', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateStringArray(files.People.TRAITS, 'People.json -> TRAITS', errors);
-    validateWeightedTable(files.People.HEALTH_STATES, 'People.json -> HEALTH_STATES', errors, (v, s, e) => {
+    validateStringArray(files.People.TRAITS, 'People -> TRAITS', errors);
+    validateWeightedTable(files.People.HEALTH_STATES, 'People -> HEALTH_STATES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateWeightedTable(files.People.HEALTH_STAGES, 'People.json -> HEALTH_STAGES', errors, (v, s, e) => {
+    validateWeightedTable(files.People.HEALTH_STAGES, 'People -> HEALTH_STAGES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
-    validateStringArray(files.People.HOBBIES, 'People.json -> HOBBIES', errors);
-    validateStringArray(files.People.PHOBIAS, 'People.json -> PHOBIAS', errors);
-    validateStringArray(files.People.ADDITIONAL_INFO, 'People.json -> ADDITIONAL_INFO', errors);
+    validateStringArray(files.People.HOBBIES, 'People -> HOBBIES', errors);
+    validateStringArray(files.People.PHOBIAS, 'People -> PHOBIAS', errors);
+    validateStringArray(files.People.ADDITIONAL_INFO, 'People -> ADDITIONAL_INFO', errors);
   }
 
   if (!isPlainObject(files.Inventory)) {
-    addError(errors, 'Inventory.json', 'корневой JSON должен быть объектом');
+    addError(errors, 'Inventory', 'корневой объект не найден');
   } else {
-    validateStringArray(files.Inventory.INVENTORY, 'Inventory.json -> INVENTORY', errors);
+    validateStringArray(files.Inventory.INVENTORY, 'Inventory -> INVENTORY', errors);
     if (!Number.isInteger(files.Inventory.BACKPACK_ITEMS_COUNT_MAX) || files.Inventory.BACKPACK_ITEMS_COUNT_MAX < 1) {
-      addError(errors, 'Inventory.json -> BACKPACK_ITEMS_COUNT_MAX', 'ожидается целое число не меньше 1');
+      addError(errors, 'Inventory -> BACKPACK_ITEMS_COUNT_MAX', 'ожидается целое число не меньше 1');
     }
-    validateBackpackItems(files.Inventory.BACKPACK_ITEMS, 'Inventory.json -> BACKPACK_ITEMS', errors);
+    validateBackpackItems(files.Inventory.BACKPACK_ITEMS, 'Inventory -> BACKPACK_ITEMS', errors);
   }
 
   if (!isPlainObject(files.Bunker)) {
-    addError(errors, 'Bunker.json', 'корневой JSON должен быть объектом');
+    addError(errors, 'Bunker', 'корневой объект не найден');
   } else {
-    validateNamedObjectArray(files.Bunker.BUNKER_THEMES, 'Bunker.json -> BUNKER_THEMES', errors);
-    validateNamedObjectArray(files.Bunker.BUNKER_SIZES, 'Bunker.json -> BUNKER_SIZES', errors);
-    validateStringArray(files.Bunker.BUNKER_DURATIONS, 'Bunker.json -> BUNKER_DURATIONS', errors);
-    validateStringArray(files.Bunker.FOOD_SUPPLIES, 'Bunker.json -> FOOD_SUPPLIES', errors);
-    validateStringArray(files.Bunker.BUNKER_ITEMS, 'Bunker.json -> BUNKER_ITEMS', errors);
+    validateNamedObjectArray(files.Bunker.BUNKER_THEMES, 'Bunker -> BUNKER_THEMES', errors);
+    validateNamedObjectArray(files.Bunker.BUNKER_SIZES, 'Bunker -> BUNKER_SIZES', errors);
+    validateStringArray(files.Bunker.BUNKER_DURATIONS, 'Bunker -> BUNKER_DURATIONS', errors);
+    validateStringArray(files.Bunker.FOOD_SUPPLIES, 'Bunker -> FOOD_SUPPLIES', errors);
+    validateStringArray(files.Bunker.BUNKER_ITEMS, 'Bunker -> BUNKER_ITEMS', errors);
 
     if (!Array.isArray(files.Bunker.ROOM_COUNTS) || files.Bunker.ROOM_COUNTS.length === 0) {
-      addError(errors, 'Bunker.json -> ROOM_COUNTS', 'ожидается непустой массив целых чисел');
+      addError(errors, 'Bunker -> ROOM_COUNTS', 'ожидается непустой массив целых чисел');
     } else {
       files.Bunker.ROOM_COUNTS.forEach((count, index) => {
         if (!Number.isInteger(count) || count < 1 || count > 25) {
-          addError(errors, `Bunker.json -> ROOM_COUNTS[${index}]`, 'значение должно быть целым числом от 1 до 25');
+          addError(errors, `Bunker -> ROOM_COUNTS[${index}]`, 'значение должно быть целым числом от 1 до 25');
         }
       });
     }
@@ -289,33 +287,33 @@ function validatePackContent(packName, files) {
       && files.Bunker.BUNKER_SIZES.length !== files.Bunker.ROOM_COUNTS.length) {
       addError(
         errors,
-        'Bunker.json -> ROOM_COUNTS',
+        'Bunker -> ROOM_COUNTS',
         `длина массива (${files.Bunker.ROOM_COUNTS.length}) должна совпадать с количеством BUNKER_SIZES (${files.Bunker.BUNKER_SIZES.length})`,
       );
     }
   }
 
   if (!isPlainObject(files.Professions)) {
-    addError(errors, 'Professions.json', 'корневой JSON должен быть объектом');
+    addError(errors, 'Professions', 'корневой объект не найден');
   } else if (!isPlainObject(files.Professions.PROFESSION_ABILITIES) || Object.keys(files.Professions.PROFESSION_ABILITIES).length === 0) {
-    addError(errors, 'Professions.json -> PROFESSION_ABILITIES', 'ожидается непустой объект');
+    addError(errors, 'Professions -> PROFESSION_ABILITIES', 'ожидается непустой объект');
   } else {
     Object.entries(files.Professions.PROFESSION_ABILITIES).forEach(([professionName, definition]) => {
       if (typeof professionName !== 'string' || professionName.trim() === '') {
-        addError(errors, 'Professions.json -> PROFESSION_ABILITIES', 'название профессии не должно быть пустым');
+        addError(errors, 'Professions -> PROFESSION_ABILITIES', 'название профессии не должно быть пустым');
         return;
       }
-      validateProfessionDefinition(definition, `Professions.json -> PROFESSION_ABILITIES["${professionName}"]`, errors);
+      validateProfessionDefinition(definition, `Professions -> PROFESSION_ABILITIES["${professionName}"]`, errors);
     });
   }
 
   if (!isPlainObject(files.Event)) {
-    addError(errors, 'Event.json', 'корневой JSON должен быть объектом');
+    addError(errors, 'Event', 'корневой объект не найден');
   } else if (!Array.isArray(files.Event.EVENTS) || files.Event.EVENTS.length === 0) {
-    addError(errors, 'Event.json -> EVENTS', 'ожидается непустой массив событий');
+    addError(errors, 'Event -> EVENTS', 'ожидается непустой массив событий');
   } else {
     files.Event.EVENTS.forEach((event, index) => {
-      const scope = `Event.json -> EVENTS[${index}]`;
+      const scope = `Event -> EVENTS[${index}]`;
       if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
       if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
@@ -331,7 +329,8 @@ function validatePackContent(packName, files) {
       if (Number.isInteger(event.participants_min) && Number.isInteger(event.participants_max) && event.participants_max < event.participants_min) {
         addError(errors, `${scope}.participants_max`, 'must be greater than or equal to participants_min');
       }
-      const isPassive = event.event_type === 'passive';
+      // Passive events are inferred by the absence of base_chance
+      const isPassive = event.base_chance == null;
       if (!isPassive) {
         if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
         for (const effectKey of ['success_effect', 'failure_effect']) {
@@ -353,16 +352,16 @@ function validatePackContent(packName, files) {
 
   if (files.Pack !== undefined) {
     if (!isPlainObject(files.Pack)) {
-      addError(errors, 'Pack.json', 'корневой JSON должен быть объектом');
+      addError(errors, 'Pack', 'корневой объект не найден');
     } else {
       if (typeof files.Pack.name !== 'string' || files.Pack.name.trim() === '') {
-        addError(errors, 'Pack.json -> name', 'ожидается непустая строка');
+        addError(errors, 'Pack -> name', 'ожидается непустая строка');
       }
       if (typeof files.Pack.author !== 'string' || files.Pack.author.trim() === '') {
-        addError(errors, 'Pack.json -> author', 'ожидается непустая строка');
+        addError(errors, 'Pack -> author', 'ожидается непустая строка');
       }
       if (typeof files.Pack.color !== 'string' || !HEX_COLOR_RE.test(files.Pack.color)) {
-        addError(errors, 'Pack.json -> color', 'ожидается hex-цвет в формате #rrggbb');
+        addError(errors, 'Pack -> color', 'ожидается hex-цвет в формате #rrggbb');
       }
     }
   }
@@ -384,6 +383,19 @@ function validatePackContent(packName, files) {
   };
 }
 
+function readConfigFile(dir, baseName) {
+  const yamlPath = path.join(dir, `${baseName}.yaml`);
+  const jsonPath = path.join(dir, `${baseName}.json`);
+
+  if (fs.existsSync(yamlPath)) {
+    return yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+  }
+  if (fs.existsSync(jsonPath)) {
+    return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  }
+  return null;
+}
+
 function readPackFiles(packName) {
   const dir = getPackDir(packName);
   const files = {};
@@ -395,26 +407,23 @@ function readPackFiles(packName) {
   }
 
   for (const file of PACK_FILES) {
-    const filePath = path.join(dir, `${file}.json`);
-    if (!fs.existsSync(filePath)) {
-      addError(errors, `${packName}/${file}.json`, 'файл отсутствует');
-      continue;
-    }
-
     try {
-      files[file] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const content = readConfigFile(dir, file);
+      if (content === null) {
+        addError(errors, `${packName}/${file}`, 'файл отсутствует (ожидается .yaml или .json)');
+        continue;
+      }
+      files[file] = content;
     } catch (error) {
-      addError(errors, `${packName}/${file}.json`, `не удалось распарсить JSON: ${error.message}`);
+      addError(errors, `${packName}/${file}`, `не удалось распарсить файл: ${error.message}`);
     }
   }
 
-  const packMetaPath = path.join(dir, 'Pack.json');
-  if (fs.existsSync(packMetaPath)) {
-    try {
-      files.Pack = JSON.parse(fs.readFileSync(packMetaPath, 'utf8'));
-    } catch (error) {
-      addError(errors, `${packName}/Pack.json`, `не удалось распарсить JSON: ${error.message}`);
-    }
+  try {
+    const packMeta = readConfigFile(dir, 'Pack');
+    if (packMeta !== null) files.Pack = packMeta;
+  } catch (error) {
+    addError(errors, `${packName}/Pack`, `не удалось распарсить файл: ${error.message}`);
   }
 
   return {
@@ -445,10 +454,10 @@ function formatPackError(packName, errors) {
 }
 
 function readPackMeta(packName) {
-  const metaPath = path.join(getPackDir(packName), 'Pack.json');
-  if (!fs.existsSync(metaPath)) return { name: packName, author: '', color: '#f59e0b' };
+  const dir = getPackDir(packName);
   try {
-    const raw = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const raw = readConfigFile(dir, 'Pack');
+    if (!raw) return { name: packName, author: '', color: '#f59e0b' };
     return {
       name: typeof raw.name === 'string' ? raw.name : packName,
       author: typeof raw.author === 'string' ? raw.author : '',
@@ -491,7 +500,7 @@ function loadPack(packName = getDefaultPackName()) {
   const dir = getPackDir(packName);
   const rawConfig = PACK_FILES.reduce((cfg, file) => ({
     ...cfg,
-    ...JSON.parse(fs.readFileSync(path.join(dir, `${file}.json`), 'utf8')),
+    ...readConfigFile(dir, file),
   }), {});
   const config = normalizeConfig(rawConfig);
   config.packMeta = readPackMeta(packName);

@@ -1,0 +1,376 @@
+EVENTS:
+  # --- Активные события (требуют решения игроков) ---
+
+  - id: water_leak
+    title: Протечка воды
+    description: >-
+      В одной из комнат начала капать вода сквозь трещины в стене.
+      Если не принять меры — вода постепенно затопит нижние отсеки бункера.
+    base_chance: 0.15
+    success_effect:
+      type: survival_change
+      value: 10
+    failure_effect:
+      type: survival_change
+      value: -20
+
+  - id: food_spoilage
+    title: Порча запасов еды
+    description: >-
+      Часть продовольственных запасов покрылась плесенью — видимо, нарушилась система хранения.
+      Если не спасти съестное, голод станет реальной угрозой.
+    base_chance: 0.10
+    success_effect:
+      type: food_change
+      value: -1
+    failure_effect:
+      type: food_change
+      value: -4
+
+  - id: illness_outbreak
+    title: Вспышка болезни
+    description: >-
+      Несколько обитателей бункера слегли с жаром и кашлем.
+      Болезнь быстро распространяется в замкнутом пространстве. Нужно срочно взяться за лечение.
+    base_chance: 0.10
+    participants_template: random_group
+    participants_min: 2
+    participants_max: 4
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -30
+
+  - id: generator_failure
+    title: Отказ рунного генератора
+    description: >-
+      Рунный генератор, питающий освещение и вентиляцию, начал давать сбои.
+      Без света и свежего воздуха жизнь в бункере превратится в кошмар.
+    base_chance: 0.10
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -25
+
+  - id: rodent_infestation
+    title: Нашествие крыс
+    description: >-
+      В бункер проникли крысы. Они грызут провода, портят еду и разносят заразу.
+      Нужно срочно избавиться от вредителей.
+    base_chance: 0.20
+    success_effect:
+      type: food_change
+      value: -1
+    failure_effect:
+      type: food_change
+      value: -3
+
+  - id: conflict_erupts
+    title: Внутренний конфликт
+    description: >-
+      Среди обитателей бункера вспыхнула серьёзная ссора. Напряжение нарастает — дело может дойти до драки.
+      Нужно срочно разрядить обстановку.
+    base_chance: 0.20
+    participants_template: random_group
+    participants_min: 2
+    participants_max: 4
+    success_effect:
+      type: survival_change
+      value: 10
+    failure_effect:
+      type: survival_change
+      value: -20
+
+  - id: air_filter_clog
+    title: Засорение воздушного фильтра
+    description: >-
+      Система вентиляции начала давать сбои — воздух в бункере становится спёртым и тяжёлым.
+      Фильтры забились и требуют замены или чистки.
+    base_chance: 0.15
+    success_effect:
+      type: survival_change
+      value: 10
+    failure_effect:
+      type: survival_change
+      value: -20
+
+  - id: magic_anomaly
+    title: Магическая аномалия
+    description: >-
+      В одном из отсеков бункера возникла нестабильная магическая аномалия.
+      Она искажает пространство и вызывает галлюцинации у обитателей. Срочно нужна нейтрализация.
+    base_chance: 0.05
+    participants_template: random_group
+    participants_min: 2
+    participants_max: 4
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -25
+
+  - id: water_shortage
+    title: Нехватка питьевой воды
+    description: >-
+      Запасы питьевой воды подходят к концу быстрее, чем ожидалось.
+      Нужно наладить систему добычи или очистки воды, иначе жажда станет смертельной угрозой.
+    base_chance: 0.10
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -30
+
+  - id: structural_damage
+    title: Трещины в стенах
+    description: >-
+      После серии подземных толчков в нескольких стенах бункера появились глубокие трещины.
+      Если их не укрепить — свод может обрушиться.
+    base_chance: 0.10
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -30
+
+  - id: crop_failure
+    title: Гибель урожая
+    description: >-
+      Растения в гидропонном отсеке начали чахнуть — что-то нарушило баланс питательных веществ.
+      Без урожая запасы еды иссякнут гораздо быстрее.
+    base_chance: 0.20
+    success_effect:
+      type: food_change
+      value: -1
+    failure_effect:
+      type: food_change
+      value: -4
+
+  - id: fire_hazard
+    title: Возгорание в бункере
+    description: >-
+      В складском отсеке вспыхнул небольшой пожар. В замкнутом пространстве огонь и дым крайне опасны.
+      Нужно немедленно потушить огонь.
+    base_chance: 0.05
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -35
+
+  - id: morale_crisis
+    title: Кризис боевого духа
+    description: >-
+      Долгое заключение в бункере сломило дух обитателей. Депрессия и апатия охватили всех —
+      люди теряют волю к выживанию. Нужно поднять моральный дух.
+    base_chance: 0.20
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -20
+
+  - id: theft_incident
+    title: Кража запасов
+    description: >-
+      Кто-то тайно похищает еду и ресурсы из общих запасов. Доверие в группе подорвано.
+      Вора нужно найти и восстановить порядок.
+    base_chance: 0.20
+    participants_template: random_one
+    success_effect:
+      type: food_change
+      value: 0
+    failure_effect:
+      type: food_change
+      value: -2
+
+  - id: medical_emergency
+    title: Тяжёлое ранение
+    description: >-
+      Один из обитателей бункера получил серьёзную травму во время работ — сломаны рёбра и сильное кровотечение.
+      Без немедленной медицинской помощи он может погибнуть.
+    base_chance: 0.10
+    participants_template: random_one
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -25
+
+  - id: tunnel_collapse
+    title: Обвал запасного тоннеля
+    description: >-
+      Запасной выход из бункера завален в результате обвала.
+      Без расчистки тоннеля у вас не будет пути к отступлению в случае опасности.
+    base_chance: 0.20
+    success_effect:
+      type: survival_change
+      value: 10
+    failure_effect:
+      type: survival_change
+      value: -15
+
+  - id: communication_lost
+    title: Потеря связи с внешним миром
+    description: >-
+      Магические переговорные камни перестали работать. Вы отрезаны от внешнего мира
+      и не можете узнать, что происходит снаружи. Без информации выживать значительно сложнее.
+    base_chance: 0.25
+    success_effect:
+      type: survival_change
+      value: 10
+    failure_effect:
+      type: survival_change
+      value: -15
+
+  - id: poisoning
+    title: Отравление воды
+    description: >-
+      Анализ показал: в питьевой воде обнаружены следы яда или токсичных веществ.
+      Несколько человек уже чувствуют недомогание. Нужно срочно очистить воду и помочь пострадавшим.
+    base_chance: 0.05
+    participants_template: random_group
+    participants_min: 2
+    participants_max: 4
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -30
+
+  - id: parasite_bloom
+    title: Заражение паразитами
+    description: >-
+      В продовольственных запасах завелись паразиты, проникшие в тело нескольких жителей бункера.
+      Болезнь медленно, но верно подтачивает силы.
+    base_chance: 0.10
+    participants_template: random_group
+    participants_min: 2
+    participants_max: 4
+    success_effect:
+      type: survival_change
+      value: 15
+    failure_effect:
+      type: survival_change
+      value: -25
+
+  # --- Пассивные события (происходят сами по себе) ---
+
+  - id: lucky_find
+    title: Находка в запасниках
+    description: >-
+      При проверке дальних отсеков обнаружен тайник с ресурсами, о котором никто не знал.
+      Медикаменты, еда, инструменты — настоящее сокровище! Нужно грамотно распределить находки.
+    success_effect:
+      type: food_change
+      value: 3
+
+  - id: coitus
+    title: Секс
+    description: >-
+      Среди монотонных будней бункера двое выживших нашли утешение друг в друге.
+      Тепло человеческой близости подняло дух..
+    participants_template: couple
+    success_effect:
+      type: survival_change
+      value: 5
+
+  - id: birthday_celebration
+    title: День рождения
+    description: >-
+      Сегодня у одного из обитателей бункера день рождения! Несмотря на тяжёлые обстоятельства,
+      группа решила устроить небольшое торжество. Немного радости в этой тьме.
+    participants_template: random_one
+    success_effect:
+      type: survival_change
+      value: 3
+
+  - id: dream_sharing
+    title: Общие сны
+    description: >-
+      Несколько обитателей бункера рассказали друг другу сны, которые им снятся.
+      Оказалось, что у многих — похожие видения. Это странным образом сблизило людей.
+    participants_template: random_group
+    success_effect:
+      type: survival_change
+      value: 2
+
+  - id: improvised_concert
+    title: Самодеятельный концерт
+    description: >-
+      Кто-то откопал старую гитару в кладовке. Вечер импровизированного концерта собрал всех обитателей бункера —
+      люди пели, смеялись и на миг забыли о страхе.
+    participants_template: random_one
+    success_effect:
+      type: survival_change
+      value: 4
+
+  - id: old_photo
+    title: Старая фотография
+    description: >-
+      Один из выживших нашёл в кармане фотографию своей семьи. Когда он показал её остальным,
+      все почувствовали — за что именно они борются. Воля к выживанию окрепла.
+    participants_template: random_one
+    success_effect:
+      type: survival_change
+      value: 3
+
+  - id: nightmare_wave
+    title: Волна кошмаров
+    description: >-
+      Несколько ночей подряд почти все в бункере мучаются ночными кошмарами.
+      Никто толком не высыпается — усталость и тревога нарастают.
+    participants_template: random_group
+    success_effect:
+      type: survival_change
+      value: -5
+
+  - id: argument_forgotten
+    title: Примирение
+    description: >-
+      Два человека, которые давно не разговаривали после ссоры, неожиданно помирились.
+      Атмосфера в бункере заметно потеплела.
+    participants_template: couple
+    success_effect:
+      type: survival_change
+      value: 4
+
+  - id: ration_discovery
+    title: Забытые рационы
+    description: >-
+      При уборке одного из дальних отсеков нашли несколько забытых упаковок с сухпайками.
+      Немного, но приятно.
+    participants_template: random_one
+    success_effect:
+      type: food_change
+      value: 2
+
+  - id: skill_training
+    title: Занятие по выживанию
+    description: >-
+      Один из обитателей провёл импровизированное занятие — учил остальных базовым навыкам
+      первой помощи и ориентирования. Группа стала немного более подготовленной.
+    participants_template: random_one
+    success_effect:
+      type: survival_change
+      value: 3
+
+  - id: supplies_decay
+    title: Порча части запасов
+    description: >-
+      Из-за влажности часть запасённых материалов пришла в негодность.
+      Потери небольшие, но неприятные.
+    success_effect:
+      type: food_change
+      value: -1

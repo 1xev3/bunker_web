@@ -71,12 +71,56 @@ td, th {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes panel-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01), 0 0 0 rgba(var(--accent-rgb), 0); }
+  50% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 0 22px rgba(var(--accent-rgb), 0.08); }
+}
+
+@keyframes bar-sheen {
+  0% { transform: translateX(-140%); }
+  100% { transform: translateX(220%); }
+}
+
+@keyframes status-glow {
+  0%, 100% { opacity: 0.22; transform: scale(1); }
+  50% { opacity: 0.38; transform: scale(1.04); }
+}
+
 .radiation-icon {
   animation: radiation-pulse 3s ease-in-out infinite;
 }
 
 .animate-fade-in-up {
   animation: fade-in-up 0.3s ease-out forwards;
+}
+
+.bunker-status-panel {
+  animation: panel-breathe 4.2s ease-in-out infinite;
+}
+
+.month-status-card {
+  backdrop-filter: blur(10px);
+}
+
+.month-status-glow {
+  background:
+    radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent 48%);
+  animation: status-glow 4.5s ease-in-out infinite;
+}
+
+.stat-bar-fill,
+.month-progress-fill {
+  position: relative;
+}
+
+.stat-bar-fill::after,
+.month-progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.12) 55%, transparent 100%);
+  animation: bar-sheen 2.6s linear infinite;
 }
 
 .btn-primary {
