@@ -1,4 +1,5 @@
 const { isPlainObject } = require('./settings');
+const { validateVariantString } = require('./itemVariants');
 const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -19,6 +20,12 @@ function validateStringArray(value, scope, errors) {
   value.forEach((item, index) => {
     if (typeof item !== 'string' || item.trim() === '') {
       addError(errors, `${scope}[${index}]`, 'ожидается непустая строка');
+      return;
+    }
+    try {
+      validateVariantString(item);
+    } catch (error) {
+      addError(errors, `${scope}[${index}]`, error.message);
     }
   });
 }
@@ -226,7 +233,15 @@ function validateBackpackItems(value, scope, errors) {
   }
   value.forEach((item, index) => {
     if (typeof item === 'string') {
-      if (item.trim() === '') addError(errors, `${scope}[${index}]`, 'строка не должна быть пустой');
+      if (item.trim() === '') {
+        addError(errors, `${scope}[${index}]`, 'строка не должна быть пустой');
+        return;
+      }
+      try {
+        validateVariantString(item);
+      } catch (error) {
+        addError(errors, `${scope}[${index}]`, error.message);
+      }
       return;
     }
     if (!Array.isArray(item) || item.length !== 3) {
@@ -235,6 +250,13 @@ function validateBackpackItems(value, scope, errors) {
     }
     const [name, min, max] = item;
     if (typeof name !== 'string' || name.trim() === '') addError(errors, `${scope}[${index}][0]`, 'ожидается непустая строка');
+    else {
+      try {
+        validateVariantString(name);
+      } catch (error) {
+        addError(errors, `${scope}[${index}][0]`, error.message);
+      }
+    }
     if (!Number.isInteger(min) || !Number.isInteger(max)) {
       addError(errors, `${scope}[${index}]`, 'min и max должны быть целыми числами');
       return;

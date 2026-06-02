@@ -1,3 +1,5 @@
+const { expandVariantString, expandBackpackItemVariants } = require('./itemVariants');
+
 function slugify(input, fallback) {
   const ascii = String(input ?? '')
     .normalize('NFKD')
@@ -91,8 +93,10 @@ function normalizeConfig(config) {
   next.HOBBIES = plainEntities(config.HOBBIES ?? [], 'hobby');
   next.PHOBIAS = plainEntities(config.PHOBIAS ?? [], 'phobia');
   next.ADDITIONAL_INFO = plainEntities(config.ADDITIONAL_INFO ?? [], 'additional');
-  next.INVENTORY = plainEntities(config.INVENTORY ?? [], 'inventory');
-  next.BACKPACK_ITEMS = (config.BACKPACK_ITEMS ?? []).map((item, index) => normalizeBackpackItem(item, index));
+  next.INVENTORY = plainEntities((config.INVENTORY ?? []).flatMap(item => expandVariantString(item)), 'inventory');
+  next.BACKPACK_ITEMS = (config.BACKPACK_ITEMS ?? [])
+    .flatMap(item => expandBackpackItemVariants(item))
+    .map((item, index) => normalizeBackpackItem(item, index));
 
   next.BUNKER_THEMES = normalizeNamedObjects(config.BUNKER_THEMES ?? [], 'bunker_theme');
   next.BUNKER_SIZES = normalizeNamedObjects(config.BUNKER_SIZES ?? [], 'bunker_size');
