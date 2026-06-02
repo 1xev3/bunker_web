@@ -4,7 +4,7 @@ const path = require('path');
 const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'events'];
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
-const ATTRIBUTE_KEYS = new Set(['gender', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
+const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
 const lastReportedIssues = new Map();
 
 function getPackDir(packName) {
@@ -229,6 +229,9 @@ function validatePackContent(packName, files) {
     validateWeightedTable(files.People.GENDERS, 'People.json -> GENDERS', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
+    validateWeightedTable(files.People.RACES, 'People.json -> RACES', errors, (v, s, e) => {
+      if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
+    });
     validateWeightedTable(files.People.GENDER_AFFIXES, 'People.json -> GENDER_AFFIXES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
@@ -315,9 +318,8 @@ function validatePackContent(packName, files) {
       if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
       if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
       if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
-      if (!Array.isArray(event.helpful_professions)) addError(errors, `${scope}.helpful_professions`, 'ожидается массив строк');
-      if (!Array.isArray(event.helpful_items)) addError(errors, `${scope}.helpful_items`, 'ожидается массив строк');
-      for (const effectKey of ['success_effect', 'failure_effect', 'nothing_effect']) {
+      if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
+      for (const effectKey of ['success_effect', 'failure_effect']) {
         const eff = event[effectKey];
         if (!isPlainObject(eff)) { addError(errors, `${scope}.${effectKey}`, 'ожидается объект эффекта'); continue; }
         if (typeof eff.type !== 'string' || eff.type.trim() === '') addError(errors, `${scope}.${effectKey}.type`, 'ожидается непустая строка');

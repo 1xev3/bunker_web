@@ -1,5 +1,6 @@
 const ATTRIBUTE_LABELS = {
   gender: 'Пол',
+  race: 'Раса',
   body: 'Телосложение',
   trait: 'Черта',
   profession: 'Профессия',
@@ -51,6 +52,10 @@ function generateGender(config) {
   return `${gender} ${affix} (${randomInt(min, max)} лет)`;
 }
 
+function generateRace(config) {
+  return randomWeightedValue(config.RACES);
+}
+
 function generateBody(config) {
   return `${randomWeightedValue(config.BODY_TYPES)} (${randomInt(150, 210)} см)`;
 }
@@ -74,6 +79,7 @@ function generateWorseHealth(current, config) {
 function randomizeAttribute(attribute, target, config) {
   switch (attribute) {
     case 'gender':     return generateGender(config);
+    case 'race':       return generateRace(config);
     case 'body':       return generateBody(config);
     case 'health':     return pickDifferent(target.health, [generateHealth(config), generateWorseHealth(target.health, config)]);
     case 'hobby':      return pickDifferent(target.hobby, config.HOBBIES.map(h => `${h} (${randomWeightedValue(config.SKILL_LEVELS)})`));

@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const { getProfessionAbilityInfo } = require('./professionAbilities');
 
-const ATTRIBUTE_KEYS = ['gender', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
+const ATTRIBUTE_KEYS = ['gender', 'race', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
 
 function weightedRandom(table) {
   const total = table.reduce((sum, [, w]) => sum + w, 0);
@@ -28,12 +28,14 @@ function sample(arr, k) {
 }
 
 class Player {
-  constructor(name) {
+  constructor(name, options = {}) {
     this.id = randomUUID();
     this.name = name;
     this.is_active = true;
+    this.is_bot = Boolean(options.isBot);
 
     this.gender = '';
+    this.race = '';
     this.body = '';
     this.trait = '';
     this.profession = '';
@@ -58,6 +60,7 @@ class Player {
     const ageRange = weightedRandom(config.AGES);
     const age = randInt(ageRange[0], ageRange[1]);
     this.gender = `${gender} ${affix} (${age} лет)`;
+    this.race = weightedRandom(config.RACES);
 
     const bodyType = weightedRandom(config.BODY_TYPES);
     let height;

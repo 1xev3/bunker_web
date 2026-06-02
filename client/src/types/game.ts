@@ -1,11 +1,12 @@
 export type GameStatus = 'waiting' | 'running' | 'bunker_life' | 'finished';
 
 export type AttributeKey =
-  | 'gender' | 'body' | 'trait' | 'profession' | 'health'
+  | 'gender' | 'race' | 'body' | 'trait' | 'profession' | 'health'
   | 'hobby' | 'phobia' | 'inventory' | 'backpack' | 'additional';
 
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   gender: 'Пол',
+  race: 'Раса',
   body: 'Телосложение',
   trait: 'Черта',
   profession: 'Профессия',
@@ -18,12 +19,13 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
 };
 
 export const ATTRIBUTE_KEYS: AttributeKey[] = [
-  'gender', 'body', 'trait', 'profession', 'health',
+  'gender', 'race', 'body', 'trait', 'profession', 'health',
   'hobby', 'phobia', 'inventory', 'backpack', 'additional',
 ];
 
 export interface PlayerAttributes {
   gender: string | null;
+  race: string | null;
   body: string | null;
   trait: string | null;
   profession: string | null;
@@ -75,8 +77,7 @@ export interface GameEvent {
   id: string;
   title: string;
   description: string;
-  helpful_professions: string[];
-  helpful_items: string[];
+  base_chance: number;
 }
 
 export interface RoomState {
@@ -121,7 +122,7 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure' | 'nothing'; survival_change: number; survival_chance: number };
+  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number };
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }

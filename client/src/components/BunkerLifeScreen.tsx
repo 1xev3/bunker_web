@@ -4,7 +4,6 @@ import EventModal from './EventModal';
 
 interface Props {
   roomState: RoomState;
-  myPlayerId: string;
   send: (msg: ClientMessage) => void;
   onLeave: () => void;
   eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number } | null;
@@ -41,7 +40,7 @@ function SurvivalBar({ chance }: { chance: number }) {
   );
 }
 
-export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome }: Props) {
+export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcome }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
 
@@ -96,16 +95,12 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
             eventOutcome.outcome === 'success'
               ? 'border-green-900/40 bg-green-950/20 text-green-300'
-              : eventOutcome.outcome === 'failure'
-              ? 'border-red-900/40 bg-red-950/20 text-red-300'
-              : 'border-zinc-700 bg-zinc-900/60 text-zinc-400'
+              : 'border-red-900/40 bg-red-950/20 text-red-300'
           }`}>
             {eventOutcome.outcome === 'success' ? (
-              <><TrendingUp size={14} /> Правильный выбор! Шанс выживания: {eventOutcome.survival_change > 0 ? '+' : ''}{eventOutcome.survival_change}%</>
-            ) : eventOutcome.outcome === 'failure' ? (
-              <><TrendingDown size={14} /> Неподходящие ресурсы. Шанс выживания: {eventOutcome.survival_change}%</>
+              <><TrendingUp size={14} /> Вам повезло! Шанс выживания: {eventOutcome.survival_change > 0 ? '+' : ''}{eventOutcome.survival_change}%</>
             ) : (
-              <><TrendingDown size={14} /> Без помощи всё стало хуже. Шанс выживания: {eventOutcome.survival_change}%</>
+              <><TrendingDown size={14} /> Не повезло. Шанс выживания: {eventOutcome.survival_change}%</>
             )}
           </div>
         )}

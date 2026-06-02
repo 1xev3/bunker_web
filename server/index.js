@@ -16,7 +16,7 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
-const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '2', 10);
+const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '4', 10);
 const DEV_BOT_NAMES = [
   'Сокол',
   'Механик',
@@ -261,7 +261,7 @@ function fillRoomWithDevBots(room) {
     } while (takenNames.has(botName));
 
     takenNames.add(botName);
-    room.addPlayer(new Player(botName));
+    room.addPlayer(new Player(botName, { isBot: true }));
   }
 }
 
@@ -303,6 +303,11 @@ function handleStartVoting(roomCode, playerId) {
   if (room.getActivePlayers().length < 2) return;
   room.resetVotes();
   room.isVoting = true;
+  addBotSelfVotes(room);
+  if (room.votedPlayers.size >= room.getActivePlayers().length) {
+    finalizeVoting(roomCode);
+    return;
+  }
   wsManager.broadcastState(roomCode, room);
 }
 
@@ -311,7 +316,9 @@ function handleVote(roomCode, playerId, msg) {
   if (!room || !room.isVoting) return;
   const voter = room.getPlayer(playerId);
   if (!voter || !voter.is_active) return;
-  if (msg.target_id === playerId) return;
+  const target = room.getPlayer(msg.target_id);
+  if (!target || !target.is_active) return;
+  if (msg.target_id === playerId && !voter.is_bot) return;
 
   if (room.addVote(playerId, msg.target_id)) {
     wsManager.send(roomCode, playerId, { type: 'vote_confirmed' });
@@ -321,6 +328,14 @@ function handleVote(roomCode, playerId, msg) {
       finalizeVoting(roomCode);
     } else {
       wsManager.broadcastState(roomCode, room);
+    }
+  }
+}
+
+function addBotSelfVotes(room) {
+  for (const player of room.getActivePlayers()) {
+    if (player.is_bot) {
+      room.addVote(player.id, player.id);
     }
   }
 }
@@ -365,6 +380,9 @@ function finalizeVoting(roomCode) {
   }
 
   if (room.bunkerCapacity !== null && active.length <= room.bunkerCapacity) {
+    confirmBotsForBunkerLife(room);
+    if (tryStartBunkerLife(roomCode, room)) return;
+
     wsManager.broadcast(roomCode, {
       type: 'ready_for_bunker_life',
       capacity: room.bunkerCapacity,
@@ -463,17 +481,31 @@ function handleConfirmBunkerLife(roomCode, playerId) {
   if (!player || !player.is_active) return;
 
   room.confirmedBunkerLife.add(playerId);
+  confirmBotsForBunkerLife(room);
   wsManager.broadcastState(roomCode, room);
 
-  const active = room.getActivePlayers();
-  if (room.confirmedBunkerLife.size >= active.length) {
-    room.status = 'bunker_life';
-    room.survivalChance = 100;
-    room.currentMonth = 0;
-    room.activeEvent = null;
-    wsManager.broadcastState(roomCode, room);
-    setTimeout(() => startNextMonth(roomCode), 2000);
+  tryStartBunkerLife(roomCode, room);
+}
+
+function confirmBotsForBunkerLife(room) {
+  for (const player of room.getActivePlayers()) {
+    if (player.is_bot) {
+      room.confirmedBunkerLife.add(player.id);
+    }
   }
+}
+
+function tryStartBunkerLife(roomCode, room) {
+  const active = room.getActivePlayers();
+  if (room.confirmedBunkerLife.size < active.length) return false;
+
+  room.status = 'bunker_life';
+  room.survivalChance = 100;
+  room.currentMonth = 0;
+  room.activeEvent = null;
+  wsManager.broadcastState(roomCode, room);
+  setTimeout(() => startNextMonth(roomCode), 2000);
+  return true;
 }
 
 function handleResolveEvent(roomCode, playerId, msg) {
@@ -486,18 +518,21 @@ function handleResolveEvent(roomCode, playerId, msg) {
   const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
   const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
 
-  const hasHelpfulProfession = selectedProfessions.some(p => event.helpful_professions.includes(p));
-  const hasHelpfulItem = selectedItems.some(i => event.helpful_items.includes(i.item));
-  const nothingSelected = selectedProfessions.length === 0 && selectedItems.length === 0;
-
-  let effect;
-  if (nothingSelected) {
-    effect = event.nothing_effect;
-  } else if (hasHelpfulProfession || hasHelpfulItem) {
-    effect = event.success_effect;
+  // 0 resources → base_chance, 1 → 75%, 2 → 90%, 3+ → 100%
+  const resourceCount = selectedProfessions.length + selectedItems.length;
+  let successChance;
+  if (resourceCount === 0) {
+    successChance = event.base_chance;
+  } else if (resourceCount === 1) {
+    successChance = 0.75;
+  } else if (resourceCount === 2) {
+    successChance = 0.90;
   } else {
-    effect = event.failure_effect;
+    successChance = 1.0;
   }
+
+  const succeeded = Math.random() < successChance;
+  const effect = succeeded ? event.success_effect : event.failure_effect;
 
   // Remove consumed items from players' inventories
   for (const entry of selectedItems) {
@@ -530,8 +565,7 @@ function handleResolveEvent(roomCode, playerId, msg) {
     room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
   }
 
-  const isSuccess = !nothingSelected && (hasHelpfulProfession || hasHelpfulItem);
-  const outcomeType = nothingSelected ? 'nothing' : isSuccess ? 'success' : 'failure';
+  const outcomeType = succeeded ? 'success' : 'failure';
 
   room.activeEvent = null;
 

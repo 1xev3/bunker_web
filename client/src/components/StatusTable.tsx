@@ -3,7 +3,7 @@ import { Eye } from 'lucide-react';
 import type { Player, ClientMessage, AttributeKey } from '../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
 import { getProfessionIcon } from '../config/professions';
-import { getGenderIcons } from '../config/genders';
+import { getGenderIcons, getRaceIcon } from '../config/genders';
 
 interface Props {
   players: Player[];
@@ -35,6 +35,16 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
     );
   }
 
+  if (attrKey === 'race') {
+    const Icon = getRaceIcon(value);
+    return (
+      <span className={className}>
+        {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
+        {value}
+      </span>
+    );
+  }
+
   return <span className={className}>{value}</span>;
 }
 
@@ -46,7 +56,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
 
   return (
     <div className="rounded-xl border border-zinc-800 overflow-x-auto bg-zinc-950/46 shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
-      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1100px' }}>
+      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1200px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
           <col style={{ width: '130px' }} />

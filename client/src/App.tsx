@@ -22,7 +22,7 @@ export default function App() {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure' | 'nothing'; survival_change: number } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number } | null>(null);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
     setFlashMessage({ kind, text });
@@ -194,7 +194,6 @@ export default function App() {
     return (
       <BunkerLifeScreen
         roomState={roomState}
-        myPlayerId={myPlayerId}
         send={send}
         onLeave={handleLeave}
         eventOutcome={eventOutcome}

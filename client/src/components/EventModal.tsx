@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Send, XCircle } from 'lucide-react';
+import { AlertTriangle, Send } from 'lucide-react';
 import type { GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
 
 interface Props {
@@ -14,6 +14,27 @@ function parseBackpackItems(backpack: string | null): string[] {
     const match = part.match(/^(.+)\s+\(\d+ шт\)$/);
     return match ? match[1] : part;
   }).filter(Boolean);
+}
+
+function getSuccessChance(resourceCount: number, baseChance: number): number {
+  if (resourceCount === 0) return Math.round(baseChance * 100);
+  if (resourceCount === 1) return 75;
+  if (resourceCount === 2) return 90;
+  return 100;
+}
+
+function ChanceBar({ chance }: { chance: number }) {
+  const color = chance >= 90 ? 'bg-green-500' : chance >= 75 ? 'bg-yellow-500' : chance >= 30 ? 'bg-orange-500' : 'bg-red-500';
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-300 ${color}`} style={{ width: `${chance}%` }} />
+      </div>
+      <span className={`text-xs font-mono font-bold w-10 text-right ${
+        chance >= 90 ? 'text-green-400' : chance >= 75 ? 'text-yellow-400' : chance >= 30 ? 'text-orange-400' : 'text-red-400'
+      }`}>{chance}%</span>
+    </div>
+  );
 }
 
 export default function EventModal({ event, activePlayers, send }: Props) {
@@ -37,29 +58,28 @@ export default function EventModal({ event, activePlayers, send }: Props) {
   const isItemSelected = (entry: SelectedItem) =>
     selectedItems.some(i => i.player_id === entry.player_id && i.source === entry.source && i.item === entry.item);
 
+  const resourceCount = selectedProfessions.length + selectedItems.length;
+  const successChance = getSuccessChance(resourceCount, event.base_chance);
+
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
   };
 
-  const handleNothing = () => {
-    send({ type: 'resolve_event', selected_professions: [], selected_items: [] });
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm animate-fade-in-up overflow-y-auto py-6">
-      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl shadow-2xl max-w-lg w-full mx-4 flex flex-col gap-0">
+      <div className="bg-zinc-900 border border-red-900/40 rounded-2xl shadow-2xl max-w-lg w-full mx-4 flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start gap-3">
             <AlertTriangle size={22} className="text-red-400 shrink-0 mt-0.5" />
-            <div>
+            <div className="flex-1">
               <h2 className="text-red-300 font-bold text-lg">{event.title}</h2>
               <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{event.description}</p>
             </div>
           </div>
         </div>
 
-        <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
+        <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[55vh]">
           {/* Professions */}
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Профессии выживших</p>
@@ -72,12 +92,7 @@ export default function EventModal({ event, activePlayers, send }: Props) {
                   <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                     selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
                   }`}>
-                    <input
-                      type="checkbox"
-                      className="accent-amber-500"
-                      checked={selected}
-                      onChange={() => toggleProfession(profName)}
-                    />
+                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleProfession(profName)} />
                     <span className="text-zinc-300 text-sm flex-1">{p.attributes.profession}</span>
                     <span className="text-zinc-500 text-xs">{p.name}</span>
                   </label>
@@ -114,12 +129,7 @@ export default function EventModal({ event, activePlayers, send }: Props) {
                   <label key={key} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                     selected ? 'bg-amber-950/30 border border-amber-700/40' : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
                   }`}>
-                    <input
-                      type="checkbox"
-                      className="accent-amber-500"
-                      checked={selected}
-                      onChange={() => toggleItem(entry)}
-                    />
+                    <input type="checkbox" className="accent-amber-500" checked={selected} onChange={() => toggleItem(entry)} />
                     <span className="text-zinc-300 text-sm flex-1">{label}</span>
                     <span className="text-zinc-500 text-xs">{owner} · {entry.source === 'inventory' ? 'инвентарь' : 'рюкзак'}</span>
                   </label>
@@ -129,19 +139,22 @@ export default function EventModal({ event, activePlayers, send }: Props) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="p-5 border-t border-zinc-800 flex gap-3">
+        {/* Footer with chance bar + button */}
+        <div className="p-5 border-t border-zinc-800 flex flex-col gap-3">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-zinc-500 text-xs uppercase tracking-widest">Шанс успеха</span>
+              {resourceCount > 0 && (
+                <span className="text-zinc-600 text-xs">{resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} выбрано</span>
+              )}
+            </div>
+            <ChanceBar chance={successChance} />
+          </div>
           <button
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
             onClick={handleSend}
           >
-            <Send size={14} /> Применить выбранное
-          </button>
-          <button
-            className="px-4 py-2.5 rounded-xl text-sm border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all flex items-center gap-2"
-            onClick={handleNothing}
-          >
-            <XCircle size={14} /> Ничего подходящего
+            <Send size={14} /> Принять решение
           </button>
         </div>
       </div>
