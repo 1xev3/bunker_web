@@ -76,6 +76,22 @@ function normalizeNamedObjects(values, prefix) {
   });
 }
 
+function normalizeDuration(value, index) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value.id && value.label && Number.isInteger(value.months) && value.months > 0) return value;
+    return {
+      ...value,
+      id: value.id ?? `bunker_duration_${index + 1}`,
+      label: value.label ?? value.name,
+    };
+  }
+  if (Array.isArray(value)) {
+    const [label, months] = value;
+    return { id: `bunker_duration_${index + 1}`, label, months };
+  }
+  return entity(value, 'bunker_duration', index);
+}
+
 function normalizeConfig(config) {
   const next = { ...config };
 
@@ -100,7 +116,7 @@ function normalizeConfig(config) {
 
   next.BUNKER_THEMES = normalizeNamedObjects(config.BUNKER_THEMES ?? [], 'bunker_theme');
   next.BUNKER_SIZES = normalizeNamedObjects(config.BUNKER_SIZES ?? [], 'bunker_size');
-  next.BUNKER_DURATIONS = plainEntities(config.BUNKER_DURATIONS ?? [], 'bunker_duration');
+  next.BUNKER_DURATIONS = (config.BUNKER_DURATIONS ?? []).map((value, index) => normalizeDuration(value, index));
   next.FOOD_SUPPLIES = plainEntities(config.FOOD_SUPPLIES ?? [], 'food_supply').map((item, order) => ({ ...item, order }));
   next.BUNKER_ITEMS = plainEntities(config.BUNKER_ITEMS ?? [], 'bunker_item');
 

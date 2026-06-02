@@ -79,12 +79,16 @@ export interface ConfigEntity {
   description?: string;
 }
 
+export interface BunkerDurationEntity extends ConfigEntity {
+  months: number;
+}
+
 export type BunkerCell = { items: ConfigEntity[]; isEntrance?: boolean } | null;
 
 export interface BunkerInfo {
   theme: ConfigEntity;
   size: ConfigEntity;
-  duration: ConfigEntity;
+  duration: BunkerDurationEntity;
   food: ConfigEntity;
   items: ConfigEntity[];
   disaster_info: string;

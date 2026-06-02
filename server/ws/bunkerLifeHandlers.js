@@ -474,7 +474,7 @@ function tryStartBunkerLife(roomCode, room) {
   room.status = 'bunker_life';
   room.survivalChance = room.config.packSettings.bunker_life.initial_survival_chance;
   room.currentMonth = 0;
-  room.totalMonths = parseDurationMonths(room.bunker.duration?.label);
+  room.totalMonths = room.bunker.duration?.months ?? parseDurationMonths(room.bunker.duration?.label);
   const foodDurationMonths = parseFoodMonths(room.bunker.food?.label);
   const activeCount = room.getActivePlayers().length;
   room.foodMonths = foodDurationMonths * activeCount;

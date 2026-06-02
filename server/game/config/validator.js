@@ -226,6 +226,26 @@ function validateNamedObjectArray(value, scope, errors) {
   });
 }
 
+function validateDurationArray(value, scope, errors) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addError(errors, scope, 'ожидается непустой массив длительностей');
+    return;
+  }
+  value.forEach((item, index) => {
+    if (!Array.isArray(item) || item.length !== 2) {
+      addError(errors, `${scope}[${index}]`, 'ожидается массив [name, months]');
+      return;
+    }
+    const [name, months] = item;
+    if (typeof name !== 'string' || name.trim() === '') {
+      addError(errors, `${scope}[${index}][0]`, 'ожидается непустая строка');
+    }
+    if (!Number.isInteger(months) || months < 1) {
+      addError(errors, `${scope}[${index}][1]`, 'ожидается положительное целое число месяцев');
+    }
+  });
+}
+
 function validateBackpackItems(value, scope, errors) {
   if (!Array.isArray(value) || value.length === 0) {
     addError(errors, scope, 'ожидается непустой массив предметов');
@@ -376,7 +396,7 @@ function validatePackContent(packName, files) {
   } else {
     validateNamedObjectArray(files.Bunker.BUNKER_THEMES, 'Bunker -> BUNKER_THEMES', errors);
     validateNamedObjectArray(files.Bunker.BUNKER_SIZES, 'Bunker -> BUNKER_SIZES', errors);
-    validateStringArray(files.Bunker.BUNKER_DURATIONS, 'Bunker -> BUNKER_DURATIONS', errors);
+    validateDurationArray(files.Bunker.BUNKER_DURATIONS, 'Bunker -> BUNKER_DURATIONS', errors);
     validateStringArray(files.Bunker.FOOD_SUPPLIES, 'Bunker -> FOOD_SUPPLIES', errors);
     validateStringArray(files.Bunker.BUNKER_ITEMS, 'Bunker -> BUNKER_ITEMS', errors);
 
