@@ -43,7 +43,6 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
 
   const needsTarget = ability?.targetType === 'other';
   const needsPair = ability?.targetType === 'pair';
-  const needsVariant = Boolean(ability?.variants?.length);
 
   const activePlayers = roomState.players.filter(p => p.is_active);
   const canVote = !roomState.is_voting && activePlayers.length >= 2;
@@ -96,10 +95,9 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
                   <p className="text-sm leading-relaxed text-zinc-200/90 mb-4">{ability.description}</p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {needsVariant && <AbilityChip label="Выбор эффекта" />}
                     {needsTarget && <AbilityChip label="Выбор цели" />}
                     {needsPair && <AbilityChip label="Две цели" />}
-                    {!needsVariant && !needsTarget && !needsPair && <AbilityChip label="Без выбора цели" />}
+                    {!needsTarget && !needsPair && <AbilityChip label="Без выбора цели" />}
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
@@ -494,20 +492,17 @@ function UseAbilityModal({
   activeTargets: Player[];
   myPlayerId: string;
   onClose: () => void;
-  onConfirm: (payload: { target_id?: string; second_target_id?: string; variant?: string }) => void;
+  onConfirm: (payload: { target_id?: string; second_target_id?: string }) => void;
 }) {
   const needsTarget = ability.targetType === 'other';
   const needsPair = ability.targetType === 'pair';
-  const needsVariant = Boolean(ability.variants?.length);
 
-  const [variant, setVariant] = useState('');
   const [targetId, setTargetId] = useState('');
   const [secondTargetId, setSecondTargetId] = useState('');
 
   const secondTargetOptions = activeTargets.filter(player => player.id !== targetId);
   const canConfirm =
-    (!needsVariant || Boolean(variant))
-    && (!needsTarget || Boolean(targetId))
+    (!needsTarget || Boolean(targetId))
     && (!needsPair || (Boolean(targetId) && Boolean(secondTargetId)));
 
   return (
@@ -517,24 +512,10 @@ function UseAbilityModal({
       onClose={onClose}
     >
       <div className="space-y-4">
-        {needsVariant && (
-          <div>
-            <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Эффект</p>
-            <div className="space-y-1.5">
-              {ability.variants?.map(option => (
-                <button
-                  key={option.key}
-                  className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
-                    variant === option.key
-                      ? 'border-amber-500/70 bg-amber-950/30 text-amber-100'
-                      : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800/70'
-                  }`}
-                  onClick={() => setVariant(option.key)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+        {ability.lockedVariant && (
+          <div className="rounded-xl border border-zinc-700/70 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-300">
+            <span className="text-zinc-500 text-xs uppercase tracking-widest mr-2">Эффект:</span>
+            {ability.lockedVariant.label}
           </div>
         )}
 
@@ -552,7 +533,7 @@ function UseAbilityModal({
           </div>
         )}
 
-        {!needsVariant && !needsTarget && !needsPair && (
+        {!needsTarget && !needsPair && (
           <div className="rounded-xl border border-amber-400/20 bg-amber-500/8 px-4 py-3 text-sm text-amber-100/80">
             Способность не требует выбора цели. Применение сработает сразу.
           </div>
@@ -594,7 +575,6 @@ function UseAbilityModal({
           onClick={() => onConfirm({
             target_id: needsTarget || needsPair ? targetId : undefined,
             second_target_id: needsPair ? secondTargetId : undefined,
-            variant: needsVariant ? variant : undefined,
           })}
         >
           Активировать

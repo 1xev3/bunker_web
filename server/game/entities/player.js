@@ -102,6 +102,7 @@ class Player {
     this.description = '';
     this.config = null;
     this.profession_ability_used = false;
+    this.profession_ability_variant = null;
 
     this.revealed_attributes = Object.fromEntries(ATTRIBUTE_KEYS.map(k => [k, false]));
   }
@@ -130,6 +131,12 @@ class Player {
     const professionId = professions[Math.floor(Math.random() * professions.length)];
     const level = weightedRandom(config.SKILL_LEVELS);
     this.profession = { id: professionId, levelId: level.id };
+
+    const abilityDef = config.PROFESSION_ABILITIES[professionId];
+    if (abilityDef?.variants?.length) {
+      const variants = abilityDef.variants;
+      this.profession_ability_variant = variants[Math.floor(Math.random() * variants.length)].key;
+    }
 
     const healthState = weightedRandom(config.HEALTH_STATES);
     const healthyId = config.HEALTH_STATES[0]?.value.id;

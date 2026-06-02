@@ -238,13 +238,16 @@ function getProfessionAbilityInfo(player, viewerId) {
   const def = getDefinition(player.profession, config);
   if (!def) return emptyAbility(player.profession_ability_used);
 
+  const lockedVariantKey = player.profession_ability_variant;
+  const lockedVariantDef = def.variants?.find(v => v.key === lockedVariantKey);
+
   return {
     key: def.key,
     title: def.title,
     description: def.description,
     targetType: def.targetType,
     allowSelf: def.allowSelf !== false,
-    variants: def.variants?.map(v => ({ key: v.key, label: v.label })),
+    lockedVariant: lockedVariantDef ? { key: lockedVariantDef.key, label: lockedVariantDef.label } : undefined,
     hasAbility: true,
     used: player.profession_ability_used,
   };
@@ -257,11 +260,12 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
   if (actor.profession_ability_used) return { ok: false, error: 'Способность этой профессии уже использована.' };
 
   const hasVariants = Boolean(def.variants?.length);
-  if (hasVariants && !def.variants.some(v => v.key === variant)) {
-    return { ok: false, error: 'Нужно выбрать вариант применения способности.' };
+  const lockedVariant = actor.profession_ability_variant;
+  if (hasVariants && (!lockedVariant || !def.variants.some(v => v.key === lockedVariant))) {
+    return { ok: false, error: 'Вариант способности не определён.' };
   }
 
-  const effect = hasVariants ? def.variants.find(v => v.key === variant).effect : def.effect;
+  const effect = hasVariants ? def.variants.find(v => v.key === lockedVariant).effect : def.effect;
   const allowSelf = def.allowSelf !== false;
   let target = null;
   let target2 = null;
@@ -276,7 +280,7 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
   }
 
   const effectResult = executeEffect(effect, { room, actor, target, target2, config });
-  const variantDef = def.variants?.find(v => v.key === variant);
+  const variantDef = def.variants?.find(v => v.key === lockedVariant);
   const publicMessage = formatMessage(def.publicMessage, {
     actor: actor.name,
     target: target?.name,

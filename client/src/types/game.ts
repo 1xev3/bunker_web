@@ -70,7 +70,7 @@ export interface ProfessionAbilityInfo {
   allowSelf: boolean;
   hasAbility: boolean;
   used: boolean;
-  variants?: { key: string; label: string }[];
+  lockedVariant?: { key: string; label: string };
 }
 
 export interface ConfigEntity {
@@ -232,7 +232,7 @@ export type ClientMessage =
   | { type: 'admin_reveal_player_all'; player_id: string }
   | { type: 'admin_reveal_all_players' }
   | { type: 'force_start_bunker_life' }
-  | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string; variant?: string }
+  | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string }
   | { type: 'confirm_bunker_life' }
   | { type: 'update_event_selection'; selected_professions: string[]; selected_items: SelectedItem[] }
   | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[] };
