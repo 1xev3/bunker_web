@@ -1,6 +1,6 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
-import type { Player, ClientMessage, AttributeKey } from '../types/game';
+import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
 import { getProfessionIcon } from '../config/professions';
 import { getGenderIcons, getRaceIcon } from '../config/genders';
@@ -13,39 +13,39 @@ interface Props {
 
 const INLINE_ICON_STYLE: React.CSSProperties = { display: 'inline', verticalAlign: '-3px', marginRight: '4px', opacity: 0.75 };
 
-function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: string; className: string }) {
+function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: AttributeValue; className: string }) {
   if (attrKey === 'profession') {
-    const Icon = getProfessionIcon(value);
+    const Icon = getProfessionIcon(value.value);
     return (
       <span className={className}>
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
-        {value}
+        {value.display}
       </span>
     );
   }
 
   if (attrKey === 'gender') {
-    const { genderIcon: GIcon, affixIcon: AIcon } = getGenderIcons(value);
+    const { genderIcon: GIcon, affixIcon: AIcon } = getGenderIcons(value.value);
     return (
       <span className={className}>
         {GIcon && <GIcon size={15} style={INLINE_ICON_STYLE} />}
         {AIcon && <AIcon size={15} style={{ ...INLINE_ICON_STYLE, marginRight: '4px' }} />}
-        {value}
+        {value.display}
       </span>
     );
   }
 
   if (attrKey === 'race') {
-    const Icon = getRaceIcon(value);
+    const Icon = getRaceIcon(value.value);
     return (
       <span className={className}>
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
-        {value}
+        {value.display}
       </span>
     );
   }
 
-  return <span className={className}>{value}</span>;
+  return <span className={className}>{value.display}</span>;
 }
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {

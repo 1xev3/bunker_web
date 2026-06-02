@@ -13,8 +13,8 @@
       "title": "Порча запасов еды",
       "description": "Часть продовольственных запасов покрылась плесенью — видимо, нарушилась система хранения. Если не спасти съестное, голод станет реальной угрозой.",
       "base_chance": 0.10,
-      "success_effect": { "type": "survival_change", "value": 10 },
-      "failure_effect": { "type": "survival_change", "value": -25 }
+      "success_effect": { "type": "food_change", "value": -1 },
+      "failure_effect": { "type": "food_change", "value": -4 }
     },
     {
       "id": "illness_outbreak",
@@ -37,8 +37,8 @@
       "title": "Нашествие крыс",
       "description": "В бункер проникли крысы. Они грызут провода, портят еду и разносят заразу. Нужно срочно избавиться от вредителей.",
       "base_chance": 0.20,
-      "success_effect": { "type": "survival_change", "value": 10 },
-      "failure_effect": { "type": "survival_change", "value": -15 }
+      "success_effect": { "type": "food_change", "value": -1 },
+      "failure_effect": { "type": "food_change", "value": -3 }
     },
     {
       "id": "conflict_erupts",
@@ -85,8 +85,8 @@
       "title": "Гибель урожая",
       "description": "Растения в гидропонном отсеке начали чахнуть — что-то нарушило баланс питательных веществ. Без урожая запасы еды иссякнут гораздо быстрее.",
       "base_chance": 0.20,
-      "success_effect": { "type": "survival_change", "value": 10 },
-      "failure_effect": { "type": "survival_change", "value": -20 }
+      "success_effect": { "type": "food_change", "value": -1 },
+      "failure_effect": { "type": "food_change", "value": -4 }
     },
     {
       "id": "fire_hazard",
@@ -109,8 +109,8 @@
       "title": "Кража запасов",
       "description": "Кто-то тайно похищает еду и ресурсы из общих запасов. Доверие в группе подорвано. Вора нужно найти и восстановить порядок.",
       "base_chance": 0.20,
-      "success_effect": { "type": "survival_change", "value": 10 },
-      "failure_effect": { "type": "survival_change", "value": -20 }
+      "success_effect": { "type": "food_change", "value": 0 },
+      "failure_effect": { "type": "food_change", "value": -2 }
     },
     {
       "id": "medical_emergency",
@@ -148,9 +148,9 @@
       "id": "lucky_find",
       "title": "Находка в запасниках",
       "description": "При проверке дальних отсеков обнаружен тайник с ресурсами, о котором никто не знал. Медикаменты, еда, инструменты — настоящее сокровище! Нужно грамотно распределить находки.",
-      "base_chance": 0.80,
-      "success_effect": { "type": "survival_change", "value": 25 },
-      "failure_effect": { "type": "survival_change", "value": 5 }
+      "event_type": "passive",
+      "participants_template": null,
+      "success_effect": { "type": "food_change", "value": 3 }
     },
     {
       "id": "parasite_bloom",
@@ -162,8 +162,8 @@
     },
     {
       "id": "coitus",
-      "title": "Соитие",
-      "description": "Среди монотонных будней бункера двое выживших нашли утешение друг в друге. Тепло человеческой близости подняло дух всей группы.",
+      "title": "Секс",
+      "description": "Среди монотонных будней бункера двое выживших нашли утешение друг в друге. Тепло человеческой близости подняло дух..",
       "event_type": "passive",
       "participants_template": "couple",
       "success_effect": { "type": "survival_change", "value": 5 }
@@ -222,7 +222,7 @@
       "description": "При уборке одного из дальних отсеков нашли несколько забытых упаковок с сухпайками. Немного, но приятно.",
       "event_type": "passive",
       "participants_template": "random_one",
-      "success_effect": { "type": "survival_change", "value": 6 }
+      "success_effect": { "type": "food_change", "value": 2 }
     },
     {
       "id": "skill_training",
@@ -238,7 +238,7 @@
       "description": "Из-за влажности часть запасённых материалов пришла в негодность. Потери небольшие, но неприятные.",
       "event_type": "passive",
       "participants_template": null,
-      "success_effect": { "type": "survival_change", "value": -4 }
+      "success_effect": { "type": "food_change", "value": -1 }
     }
   ]
 }

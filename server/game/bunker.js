@@ -1,7 +1,7 @@
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
-function generateGrid(size, itemPool, config) {
-  const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.name === size);
+function generateGrid(sizeId, itemPool, config) {
+  const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.id === sizeId);
   const roomCount = sizeIndex >= 0 ? config.ROOM_COUNTS[sizeIndex] : 5;
   const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
   const rooms = [[2, 2]];
@@ -62,7 +62,7 @@ class Bunker {
     this.theme = '';
     this.size = '';
     this.duration = '';
-    this.food = '';
+    this.food = null;
     this.items = [];
     this.disaster_info = '';
     this.bunker_info = '';
@@ -71,19 +71,19 @@ class Bunker {
 
   generate(theme = null, config) {
     const themeDef = theme
-      ? config.BUNKER_THEMES.find(t => t.name === theme)
+      ? config.BUNKER_THEMES.find(t => t.id === theme || t.label === theme)
       : config.BUNKER_THEMES[Math.floor(Math.random() * config.BUNKER_THEMES.length)];
     const sizeDef = config.BUNKER_SIZES[Math.floor(Math.random() * config.BUNKER_SIZES.length)];
 
-    this.theme = themeDef.name;
-    this.size = sizeDef.name;
+    this.theme = themeDef;
+    this.size = sizeDef;
     this.duration = config.BUNKER_DURATIONS[Math.floor(Math.random() * config.BUNKER_DURATIONS.length)];
     this.food = config.FOOD_SUPPLIES[Math.floor(Math.random() * config.FOOD_SUPPLIES.length)];
 
     this.disaster_info = themeDef.description ?? '';
     this.bunker_info   = sizeDef.description  ?? '';
 
-    this.grid = generateGrid(this.size, config.BUNKER_ITEMS, config);
+    this.grid = generateGrid(this.size.id, config.BUNKER_ITEMS, config);
     this.items = this.grid.flat()
       .filter(cell => cell && !cell.isEntrance)
       .flatMap(cell => cell.items);

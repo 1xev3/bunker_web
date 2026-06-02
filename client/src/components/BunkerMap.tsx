@@ -12,7 +12,7 @@ export default function BunkerMap({ grid, compact = false }: Props) {
       {grid.map((row, r) =>
         row.map((cell, c) => {
           const label = cell && !cell.isEntrance
-            ? cell.items.length ? cell.items.join('\n') : 'Комната'
+            ? cell.items.length ? cell.items.map(item => item.label).join('\n') : 'Комната'
             : '';
 
           return (

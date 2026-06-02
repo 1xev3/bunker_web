@@ -7,6 +7,7 @@ import GameRoom from './components/GameRoom';
 import BunkerIntroScreen from './components/BunkerIntroScreen';
 import BunkerLifeScreen from './components/BunkerLifeScreen';
 import ReadyModal from './components/ReadyModal';
+import BunkerEndScreen from './components/BunkerEndScreen';
 import './index.css';
 
 export default function App() {
@@ -22,7 +23,8 @@ export default function App() {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number; food_change?: number; event_id?: string } | null>(null);
+  const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
     setFlashMessage({ kind, text });
@@ -81,7 +83,12 @@ export default function App() {
         setHasVoted(false);
         setTimeout(() => setVotingResult(null), 5000);
       }
-      if (msg.type === 'game_ended') setGameWinner(msg.winner);
+      if (msg.type === 'game_ended') {
+        setGameWinner(msg.winner);
+        if (msg.from_bunker_life) {
+          setBunkerLifeResult({ survived: msg.survived ?? false });
+        }
+      }
       if (msg.type === 'vote_confirmed') setHasVoted(true);
       if (msg.type === 'profession_ability_used') showFlashMessage('info', msg.message);
 
@@ -91,7 +98,7 @@ export default function App() {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change });
+        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change, food_change: msg.food_change, event_id: msg.event_id });
         setTimeout(() => setEventOutcome(null), 5000);
       }
 
@@ -194,9 +201,20 @@ export default function App() {
     return (
       <BunkerLifeScreen
         roomState={roomState}
+        myPlayerId={myPlayerId}
         send={send}
         onLeave={handleLeave}
         eventOutcome={eventOutcome}
+      />
+    );
+  }
+
+  if (roomState.status === 'finished' && bunkerLifeResult !== null) {
+    return (
+      <BunkerEndScreen
+        survived={bunkerLifeResult.survived}
+        roomState={roomState}
+        onLeave={handleLeave}
       />
     );
   }

@@ -4,13 +4,13 @@ const { getProfessionAbilityInfo } = require('./professionAbilities');
 const ATTRIBUTE_KEYS = ['gender', 'race', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
 
 function weightedRandom(table) {
-  const total = table.reduce((sum, [, w]) => sum + w, 0);
+  const total = table.reduce((sum, entry) => sum + entry.weight, 0);
   let rand = Math.random() * total;
-  for (const [item, weight] of table) {
-    rand -= weight;
-    if (rand <= 0) return item;
+  for (const entry of table) {
+    rand -= entry.weight;
+    if (rand <= 0) return entry.value;
   }
-  return table[table.length - 1][0];
+  return table[table.length - 1].value;
 }
 
 function randInt(min, max) {
@@ -27,6 +27,55 @@ function sample(arr, k) {
   return result;
 }
 
+function labelOf(configItems, id) {
+  return configItems.find(item => item.id === id)?.label ?? id ?? '';
+}
+
+function weightedLabel(configItems, id) {
+  return labelOf(configItems.map(entry => entry.value), id);
+}
+
+function formatBackpackItem(item) {
+  return item.quantity > 1 ? `${item.label} (${item.quantity} шт)` : item.label;
+}
+
+function formatAttribute(attr, value, config) {
+  if (!value) return '';
+  switch (attr) {
+    case 'gender':
+      return `${weightedLabel(config.GENDERS, value.genderId)} ${weightedLabel(config.GENDER_AFFIXES, value.affixId)} (${value.age} лет)`;
+    case 'body':
+      return `${weightedLabel(config.BODY_TYPES, value.bodyTypeId)} (${value.height} см)`;
+    case 'profession':
+      return `${config.PROFESSION_ABILITIES[value.id]?.label ?? value.id} (${weightedLabel(config.SKILL_LEVELS, value.levelId)})`;
+    case 'health': {
+      const state = weightedLabel(config.HEALTH_STATES, value.stateId);
+      const stage = value.stageId ? weightedLabel(config.HEALTH_STAGES, value.stageId) : '';
+      return stage ? `${state} (${stage})` : state;
+    }
+    case 'hobby':
+      return `${labelOf(config.HOBBIES, value.id)} (${weightedLabel(config.SKILL_LEVELS, value.levelId)})`;
+    case 'phobia':
+      return `Страх ${labelOf(config.PHOBIAS, value.id)}`;
+    case 'backpack':
+      return value.map(formatBackpackItem).join(', ');
+    case 'race':
+      return labelOf(config.RACES.map(entry => entry.value), value.id);
+    case 'trait':
+      return labelOf(config.TRAITS, value.id);
+    case 'inventory':
+      return value.label ?? labelOf(config.INVENTORY, value.id);
+    case 'additional':
+      return labelOf(config.ADDITIONAL_INFO, value.id);
+    default:
+      return value.label ?? String(value);
+  }
+}
+
+function publicAttribute(attr, value, config) {
+  return value ? { value, display: formatAttribute(attr, value, config) } : null;
+}
+
 class Player {
   constructor(name, options = {}) {
     this.id = randomUUID();
@@ -34,17 +83,17 @@ class Player {
     this.is_active = true;
     this.is_bot = Boolean(options.isBot);
 
-    this.gender = '';
-    this.race = '';
-    this.body = '';
-    this.trait = '';
-    this.profession = '';
-    this.health = '';
-    this.hobby = '';
-    this.phobia = '';
-    this.inventory = '';
-    this.backpack = '';
-    this.additional = '';
+    this.gender = null;
+    this.race = null;
+    this.body = null;
+    this.trait = null;
+    this.profession = null;
+    this.health = null;
+    this.hobby = null;
+    this.phobia = null;
+    this.inventory = null;
+    this.backpack = [];
+    this.additional = null;
     this.description = '';
     this.config = null;
     this.profession_ability_used = false;
@@ -58,9 +107,9 @@ class Player {
     const gender = weightedRandom(config.GENDERS);
     const affix = weightedRandom(config.GENDER_AFFIXES);
     const ageRange = weightedRandom(config.AGES);
-    const age = randInt(ageRange[0], ageRange[1]);
-    this.gender = `${gender} ${affix} (${age} лет)`;
-    this.race = weightedRandom(config.RACES);
+    const age = randInt(ageRange.min, ageRange.max);
+    this.gender = { genderId: gender.id, affixId: affix.id, age };
+    this.race = { id: weightedRandom(config.RACES).id };
 
     const bodyType = weightedRandom(config.BODY_TYPES);
     let height;
@@ -68,45 +117,41 @@ class Player {
     else if (age < 30) height = Math.round(gaussRandom(180, 15));
     else if (age < 50) height = Math.round(gaussRandom(175, 10));
     else height = Math.round(gaussRandom(170, 8));
-    if (gender === 'Женщина') height -= 10;
+    if (gender.id === 'gender_2') height -= 10;
     height = Math.max(150, Math.min(210, height));
-    this.body = `${bodyType} (${height} см)`;
+    this.body = { bodyTypeId: bodyType.id, height };
 
-    this.trait = config.TRAITS[Math.floor(Math.random() * config.TRAITS.length)];
+    this.trait = { id: config.TRAITS[Math.floor(Math.random() * config.TRAITS.length)].id };
 
     const professions = Object.keys(config.PROFESSION_ABILITIES);
-    const profession = professions[Math.floor(Math.random() * professions.length)];
+    const professionId = professions[Math.floor(Math.random() * professions.length)];
     const level = weightedRandom(config.SKILL_LEVELS);
-    this.profession = `${profession} (${level})`;
+    this.profession = { id: professionId, levelId: level.id };
 
     const healthState = weightedRandom(config.HEALTH_STATES);
-    if (healthState === 'Здоров') {
-      this.health = 'Здоров';
-    } else {
-      const stage = weightedRandom(config.HEALTH_STAGES);
-      this.health = `${healthState} (${stage})`;
-    }
+    const healthyId = config.HEALTH_STATES[0]?.value.id;
+    this.health = {
+      stateId: healthState.id,
+      stageId: healthState.id === healthyId ? null : weightedRandom(config.HEALTH_STAGES).id,
+    };
 
     const hobby = config.HOBBIES[Math.floor(Math.random() * config.HOBBIES.length)];
     const hobbyLevel = weightedRandom(config.SKILL_LEVELS);
-    this.hobby = `${hobby} (${hobbyLevel})`;
+    this.hobby = { id: hobby.id, levelId: hobbyLevel.id };
 
     const phobia = config.PHOBIAS[Math.floor(Math.random() * config.PHOBIAS.length)];
-    this.phobia = `Страх ${phobia}`;
+    this.phobia = { id: phobia.id };
 
-    this.inventory = config.INVENTORY[Math.floor(Math.random() * config.INVENTORY.length)];
+    this.inventory = { ...config.INVENTORY[Math.floor(Math.random() * config.INVENTORY.length)] };
 
     const count = randInt(1, config.BACKPACK_ITEMS_COUNT_MAX);
-    const items = sample(config.BACKPACK_ITEMS, count);
-    this.backpack = items.map(item => {
-      if (Array.isArray(item)) {
-        const [name, min, max] = item;
-        return `${name} (${randInt(min, max)} шт)`;
-      }
-      return item;
-    }).join(', ');
+    this.backpack = sample(config.BACKPACK_ITEMS, count).map(item => ({
+      id: item.id,
+      label: item.label,
+      quantity: randInt(item.min ?? 1, item.max ?? item.min ?? 1),
+    }));
 
-    this.additional = config.ADDITIONAL_INFO[Math.floor(Math.random() * config.ADDITIONAL_INFO.length)];
+    this.additional = { id: config.ADDITIONAL_INFO[Math.floor(Math.random() * config.ADDITIONAL_INFO.length)].id };
   }
 
   revealAttribute(attr) {
@@ -131,7 +176,9 @@ class Player {
   toDict(viewerId = null) {
     const attrs = {};
     for (const key of ATTRIBUTE_KEYS) {
-      attrs[key] = (this.revealed_attributes[key] || viewerId === this.id) ? this[key] : null;
+      attrs[key] = (this.revealed_attributes[key] || viewerId === this.id)
+        ? publicAttribute(key, this[key], this.config)
+        : null;
     }
     return {
       id: this.id,
@@ -145,7 +192,6 @@ class Player {
   }
 }
 
-// Box-Muller for gaussian random
 function gaussRandom(mean, std) {
   const u = 1 - Math.random();
   const v = Math.random();
@@ -153,4 +199,4 @@ function gaussRandom(mean, std) {
   return z * std + mean;
 }
 
-module.exports = { Player, ATTRIBUTE_KEYS };
+module.exports = { Player, ATTRIBUTE_KEYS, formatAttribute, publicAttribute, weightedRandom, randInt };

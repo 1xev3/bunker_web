@@ -1,9 +1,9 @@
 import { useReducer, useRef, useCallback } from 'react';
-import type { RoomState, ServerMessage, Player, AttributeKey } from '../types/game';
+import type { RoomState, ServerMessage, Player, AttributeKey, AttributeValue } from '../types/game';
 
 type Action =
   | { type: 'SET_STATE'; payload: RoomState }
-  | { type: 'ATTR_REVEALED'; player_id: string; attribute: AttributeKey; value: string }
+  | { type: 'ATTR_REVEALED'; player_id: string; attribute: AttributeKey; value: AttributeValue }
   | { type: 'PLAYER_DISCONNECTED'; player_id: string }
   | { type: 'PLAYER_RECONNECTED'; player_id: string }
   | { type: 'ADMIN_CHANGED'; new_admin_id: string }

@@ -27,6 +27,7 @@ const DEV_BOT_NAMES = [
   'Кедр',
   'Вектор',
 ];
+const BUNKER_EVENT_CHANCE = 0.10;
 
 const rooms = new Map();   // roomCode -> GameRoom
 const sessions = new SessionManager();
@@ -380,6 +381,7 @@ function finalizeVoting(roomCode) {
   }
 
   if (room.bunkerCapacity !== null && active.length <= room.bunkerCapacity) {
+    room.revealAllPlayers();
     confirmBotsForBunkerLife(room);
     if (tryStartBunkerLife(roomCode, room)) return;
 
@@ -453,44 +455,48 @@ function handleUseProfessionAbility(roomCode, playerId, msg) {
   });
 }
 
+function parseDurationMonths(label) {
+  if (!label) return 24;
+  const m = label.match(/(\d+(?:[.,]\d+)?)\s*(год|года|лет|месяц|месяца|месяцев)/i);
+  if (!m) return 24;
+  const n = parseFloat(m[1].replace(',', '.'));
+  const unit = m[2].toLowerCase();
+  if (unit.startsWith('месяц')) return Math.round(n);
+  return Math.round(n * 12);
+}
+
+function parseFoodMonths(label) {
+  if (!label) return 12;
+  // handle "пол года" → 6
+  if (/пол\s*года/i.test(label)) return 6;
+  const m = label.match(/(\d+(?:[.,]\d+)?)\s*(год|года|лет|месяц|месяца|месяцев)/i);
+  if (!m) return 12;
+  const n = parseFloat(m[1].replace(',', '.'));
+  const unit = m[2].toLowerCase();
+  if (unit.startsWith('месяц')) return Math.round(n);
+  return Math.round(n * 12);
+}
+
 function pickRandomEvent(config) {
   const events = config.EVENTS;
   return events[Math.floor(Math.random() * events.length)];
 }
 
-function getCompatibleGenders(affix) {
-  const a = affix.toLowerCase();
-  if (a.includes('гетеросексуал')) return null; // handled separately
-  if (a.includes('гомосексуал')) return 'same';
-  if (a.includes('бисексуал')) return 'any';
-  if (a.includes('асексуал')) return 'none';
-  if (a.includes('трансгендер')) return 'any';
-  return null;
-}
-
-function parseGenderAffix(genderStr) {
-  if (!genderStr) return { gender: null, affix: null };
-  // Format: "Мужчина Гетеросексуал (28 лет)"
-  const parts = genderStr.split(' ');
-  return { gender: parts[0] || null, affix: parts[1] || null };
-}
-
 function canBeCouple(p1, p2) {
-  const g1 = parseGenderAffix(p1.gender);
-  const g2 = parseGenderAffix(p2.gender);
-  if (!g1.affix || !g2.affix) return true;
+  const config = p1.config ?? p2.config;
+  const affix1 = config?.GENDER_AFFIXES.find(entry => entry.value.id === p1.gender?.affixId)?.value;
+  const affix2 = config?.GENDER_AFFIXES.find(entry => entry.value.id === p2.gender?.affixId)?.value;
+  if (!affix1 || !affix2) return true;
+  if (affix1.attraction === 'none' || affix2.attraction === 'none') return false;
+  if (affix1.attraction === 'any' || affix2.attraction === 'any') return true;
 
-  const a1 = g1.affix.toLowerCase();
-  const a2 = g2.affix.toLowerCase();
-
-  if (a1.includes('асексуал') || a2.includes('асексуал')) return false;
-  if (a1.includes('бисексуал') || a2.includes('бисексуал')) return true;
-
-  const sameSex = g1.gender === g2.gender;
-  if (a1.includes('гомосексуал') && a2.includes('гомосексуал')) return sameSex;
-  if (a1.includes('гомосексуал') || a2.includes('гомосексуал')) return sameSex;
-  // both hetero
-  return !sameSex;
+  const sameGender = p1.gender?.genderId === p2.gender?.genderId;
+  const compatible = (affix) => {
+    if (affix.attraction === 'same') return sameGender;
+    if (affix.attraction === 'opposite') return !sameGender;
+    return true;
+  };
+  return compatible(affix1) && compatible(affix2);
 }
 
 function resolvePassiveParticipants(event, activePlayers) {
@@ -536,7 +542,50 @@ function startNextMonth(roomCode) {
   room.currentMonth++;
   room.monthStartTime = Date.now();
 
-  if (Math.random() < 0.35) {
+  // Food consumption: each player eats 1 unit per month
+  const activePlayers = room.getActivePlayers();
+  room.foodMonths = Math.max(0, room.foodMonths - activePlayers.length);
+
+  // Starvation check
+  if (room.foodMonths <= 0) {
+    if (room.starvationPending) {
+      // Last chance was ignored — bunker dies
+      room.status = 'finished';
+      room.revealAllPlayers();
+      wsManager.broadcast(roomCode, { type: 'game_ended', winner: null, from_bunker_life: true });
+      wsManager.broadcastState(roomCode, room);
+      return;
+    }
+    // Show food replenishment event — players must choose resources to restock
+    room.starvationPending = true;
+    room.activeEvent = {
+      id: 'food_replenish',
+      event_type: 'food_replenish',
+      title: 'Запасы еды иссякли',
+      description: 'Еда в бункере закончилась. Если есть профессии или предметы, которые помогут восполнить запасы — выберите их. Иначе через месяц бункер погибнет от голода.',
+    };
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
+
+  // Reset starvation flag once food is back
+  room.starvationPending = false;
+
+  // Duration check — bunker survived!
+  if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
+    room.status = 'finished';
+    room.revealAllPlayers();
+    wsManager.broadcast(roomCode, {
+      type: 'game_ended',
+      winner: null,
+      from_bunker_life: true,
+      survived: true,
+    });
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
+
+  if (Math.random() < BUNKER_EVENT_CHANCE) {
     const event = pickRandomEvent(room.config);
     const isPassive = event.event_type === 'passive';
 
@@ -549,14 +598,10 @@ function startNextMonth(roomCode) {
 
     wsManager.broadcastState(roomCode, room);
 
-    if (isPassive) {
-      // Auto-resolve passive events after a short display delay
-      setTimeout(() => resolvePassiveEvent(roomCode), 3500);
-    }
   } else {
     room.activeEvent = null;
     wsManager.broadcastState(roomCode, room);
-    setTimeout(() => startNextMonth(roomCode), 2500);
+    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
   }
 }
 
@@ -566,10 +611,7 @@ function resolvePassiveEvent(roomCode) {
   const event = room.activeEvent;
   if (event.event_type !== 'passive') return;
 
-  const effect = event.success_effect;
-  if (effect && effect.type === 'survival_change') {
-    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
-  }
+  const result = applyBunkerEventEffect(room, event.success_effect);
 
   room.activeEvent = null;
 
@@ -577,20 +619,103 @@ function resolvePassiveEvent(roomCode) {
     type: 'event_resolved',
     event_id: event.id,
     outcome: 'success',
-    survival_change: effect ? effect.value : 0,
+    survival_change: result.survivalChange,
     survival_chance: room.survivalChance,
+    food_change: result.foodChange,
   });
 
   if (room.survivalChance <= 0) {
     room.status = 'finished';
     room.revealAllPlayers();
-    wsManager.broadcast(roomCode, { type: 'game_ended', winner: null });
+    wsManager.broadcast(roomCode, { type: 'game_ended', winner: null, from_bunker_life: true });
     wsManager.broadcastState(roomCode, room);
     return;
   }
 
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), 2500);
+  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+}
+
+function applyBunkerEventEffect(room, effect) {
+  const result = { survivalChange: 0, foodChange: undefined };
+  if (!effect) return result;
+
+  if (effect.type === 'survival_change') {
+    result.survivalChange = effect.value;
+    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
+    return result;
+  }
+
+  if (effect.type === 'food_change') {
+    const activeCount = Math.max(1, room.getActivePlayers().length);
+    const before = room.foodMonths;
+    const delta = effect.value * activeCount;
+    room.foodMonths = Math.max(0, Math.min(room.foodMaxPersonMonths, room.foodMonths + delta));
+    room.starvationPending = room.foodMonths <= 0 ? room.starvationPending : false;
+    result.foodChange = Math.round((room.foodMonths - before) / activeCount);
+  }
+
+  return result;
+}
+
+function resolveFoodReplenishEvent(roomCode, msg) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life') return;
+
+  const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
+  const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
+  const resourceCount = selectedProfessions.length + selectedItems.length;
+
+  room.activeEvent = null;
+
+  if (resourceCount === 0) {
+    // No resources — starvation remains pending, next month will kill the bunker
+    wsManager.broadcast(roomCode, {
+      type: 'event_resolved',
+      event_id: 'food_replenish',
+      outcome: 'failure',
+      survival_change: 0,
+      survival_chance: room.survivalChance,
+      food_change: 0,
+    });
+    wsManager.broadcastState(roomCode, room);
+    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+    return;
+  }
+
+  // Resources provided — consume them and replenish 20% of max food per resource
+  for (const entry of selectedItems) {
+    const owner = room.getPlayer(entry.player_id);
+    if (!owner) continue;
+    if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
+      owner.inventory = null;
+    } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
+      const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
+      if (idx !== -1) {
+        owner.backpack[idx].quantity -= 1;
+        if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
+      }
+    }
+  }
+
+  const foodBefore = room.foodMonths;
+  const replenish = Math.round(0.2 * room.foodMaxPersonMonths * resourceCount);
+  room.foodMonths = Math.min(room.foodMaxPersonMonths, room.foodMonths + replenish);
+  room.starvationPending = false;
+
+  const foodDisplay = Math.round((room.foodMonths - foodBefore) / Math.max(1, room.getActivePlayers().length));
+
+  wsManager.broadcast(roomCode, {
+    type: 'event_resolved',
+    event_id: 'food_replenish',
+    outcome: 'success',
+    survival_change: 0,
+    survival_chance: room.survivalChance,
+    food_change: foodDisplay,
+  });
+
+  wsManager.broadcastState(roomCode, room);
+  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
 }
 
 function handleConfirmBunkerLife(roomCode, playerId) {
@@ -621,10 +746,15 @@ function tryStartBunkerLife(roomCode, room) {
   room.status = 'bunker_life';
   room.survivalChance = 100;
   room.currentMonth = 0;
+  room.totalMonths = parseDurationMonths(room.bunker.duration?.label);
+  const foodDurationMonths = parseFoodMonths(room.bunker.food?.label);
+  room.foodMonths = foodDurationMonths * room.getActivePlayers().length;
+  room.foodMaxPersonMonths = room.foodMonths;
+  room.starvationPending = false;
   room.activeEvent = null;
   room.monthStartTime = Date.now();
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), 2000);
+  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
   return true;
 }
 
@@ -635,6 +765,16 @@ function handleResolveEvent(roomCode, playerId, msg) {
   if (!player || !player.is_active) return;
 
   const event = room.activeEvent;
+  if (event.event_type === 'passive') {
+    resolvePassiveEvent(roomCode);
+    return;
+  }
+
+  if (event.event_type === 'food_replenish') {
+    resolveFoodReplenishEvent(roomCode, msg);
+    return;
+  }
+
   const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
   const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
 
@@ -658,32 +798,18 @@ function handleResolveEvent(roomCode, playerId, msg) {
   for (const entry of selectedItems) {
     const owner = room.getPlayer(entry.player_id);
     if (!owner) continue;
-    if (entry.source === 'inventory' && owner.inventory === entry.item) {
-      owner.inventory = '';
-    } else if (entry.source === 'backpack' && owner.backpack) {
-      // backpack is comma-separated: "Топор, Нож (2 шт), Аптечка"
-      const parts = owner.backpack.split(', ');
-      const idx = parts.findIndex(p => {
-        const name = p.replace(/\s*\(\d+ шт\)$/, '');
-        return name === entry.item;
-      });
+    if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
+      owner.inventory = null;
+    } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
+      const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
       if (idx !== -1) {
-        const match = parts[idx].match(/^(.+)\s+\((\d+) шт\)$/);
-        if (match) {
-          const qty = parseInt(match[2], 10) - 1;
-          if (qty <= 0) parts.splice(idx, 1);
-          else parts[idx] = `${match[1]} (${qty} шт)`;
-        } else {
-          parts.splice(idx, 1);
-        }
-        owner.backpack = parts.join(', ');
+        owner.backpack[idx].quantity -= 1;
+        if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
       }
     }
   }
 
-  if (effect.type === 'survival_change') {
-    room.survivalChance = Math.max(0, Math.min(100, room.survivalChance + effect.value));
-  }
+  const effectResult = applyBunkerEventEffect(room, effect);
 
   const outcomeType = succeeded ? 'success' : 'failure';
 
@@ -693,8 +819,9 @@ function handleResolveEvent(roomCode, playerId, msg) {
     type: 'event_resolved',
     event_id: event.id,
     outcome: outcomeType,
-    survival_change: effect.value,
+    survival_change: effectResult.survivalChange,
     survival_chance: room.survivalChance,
+    food_change: effectResult.foodChange,
   });
 
   if (room.survivalChance <= 0) {
@@ -703,13 +830,14 @@ function handleResolveEvent(roomCode, playerId, msg) {
     wsManager.broadcast(roomCode, {
       type: 'game_ended',
       winner: null,
+      from_bunker_life: true,
     });
     wsManager.broadcastState(roomCode, room);
     return;
   }
 
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), 2500);
+  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
 }
 
 function transferAdmin(roomCode) {

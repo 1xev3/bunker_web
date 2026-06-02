@@ -26,9 +26,13 @@ class GameRoom {
     this.bunkerCapacity = null;
     this.survivalChance = 100;
     this.currentMonth = 0;
+    this.totalMonths = 0;
+    this.foodMonths = 0;
+    this.foodMaxPersonMonths = 0;
+    this.starvationPending = false;
     this.activeEvent = null;
     this.monthStartTime = null;
-    this.monthDuration = 2500; // ms per month (empty months)
+    this.monthDuration = 1500; // ms per month (empty months)
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
@@ -94,6 +98,9 @@ class GameRoom {
       bunker_capacity: this.bunkerCapacity,
       survival_chance: this.survivalChance,
       current_month: this.currentMonth,
+      total_months: this.totalMonths,
+      food_months: this.foodMonths,
+      food_months_display: Math.ceil(this.foodMonths / Math.max(1, this.getActivePlayers().length)),
       active_event: this.activeEvent,
       month_start_time: this.monthStartTime,
       month_duration: this.monthDuration,

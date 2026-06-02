@@ -23,19 +23,32 @@ export const ATTRIBUTE_KEYS: AttributeKey[] = [
   'hobby', 'phobia', 'inventory', 'backpack', 'additional',
 ];
 
-export interface PlayerAttributes {
-  gender: string | null;
-  race: string | null;
-  body: string | null;
-  trait: string | null;
-  profession: string | null;
-  health: string | null;
-  hobby: string | null;
-  phobia: string | null;
-  inventory: string | null;
-  backpack: string | null;
-  additional: string | null;
+export interface AttributeValue<T = unknown> {
+  value: T;
+  display: string;
 }
+
+export interface BackpackItemValue {
+  id: string;
+  label: string;
+  quantity: number;
+}
+
+export interface IdValue {
+  id: string;
+  label?: string;
+}
+
+export interface ProfessionValue {
+  id: string;
+  levelId: string;
+}
+
+export type PlayerAttributes = Record<AttributeKey, AttributeValue | null> & {
+  profession: AttributeValue<ProfessionValue> | null;
+  inventory: AttributeValue<IdValue> | null;
+  backpack: AttributeValue<BackpackItemValue[]> | null;
+};
 
 export interface Player {
   id: string;
@@ -60,14 +73,20 @@ export interface ProfessionAbilityInfo {
   variants?: { key: string; label: string }[];
 }
 
-export type BunkerCell = { items: string[]; isEntrance?: boolean } | null;
+export interface ConfigEntity {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export type BunkerCell = { items: ConfigEntity[]; isEntrance?: boolean } | null;
 
 export interface BunkerInfo {
-  theme: string;
-  size: string;
-  duration: string;
-  food: string;
-  items: string[];
+  theme: ConfigEntity;
+  size: ConfigEntity;
+  duration: ConfigEntity;
+  food: ConfigEntity;
+  items: ConfigEntity[];
   disaster_info: string;
   bunker_info: string;
   grid: BunkerCell[][];
@@ -78,9 +97,10 @@ export interface GameEvent {
   title: string;
   description: string;
   base_chance?: number;
-  event_type?: 'passive' | 'interactive';
+  event_type?: 'passive' | 'interactive' | 'food_replenish';
   participants?: string[];
-  success_effect?: { type: string; value: number };
+  success_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
+  failure_effect?: { type: 'survival_change' | 'food_change' | string; value: number };
 }
 
 export interface RoomState {
@@ -92,6 +112,9 @@ export interface RoomState {
   bunker_capacity: number | null;
   survival_chance: number;
   current_month: number;
+  total_months: number;
+  food_months: number;
+  food_months_display: number;
   active_event: GameEvent | null;
   month_start_time: number | null;
   month_duration: number;
@@ -110,7 +133,7 @@ export interface RoomListing {
 
 export interface SelectedItem {
   player_id: string;
-  item: string;
+  item_id: string;
   source: 'inventory' | 'backpack';
 }
 
@@ -118,16 +141,16 @@ export type ServerMessage =
   | { type: 'room_state'; data: RoomState }
   | { type: 'joined'; token: string; player_id: string; room_code: string }
   | { type: 'error'; message: string }
-  | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: string }
+  | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue }
   | { type: 'vote_confirmed' }
   | { type: 'voting_result'; eliminated: Player | null; is_tie: boolean; votes: Record<string, number> }
-  | { type: 'game_ended'; winner: Player | null }
+  | { type: 'game_ended'; winner: Player | null; from_bunker_life?: boolean; survived?: boolean }
   | { type: 'player_disconnected'; player_id: string }
   | { type: 'player_reconnected'; player_id: string }
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number };
+  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number; food_change?: number };
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }

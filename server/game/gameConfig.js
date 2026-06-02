@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
 
 const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions', 'events'];
 const CONFIGS_DIR = path.join(__dirname, 'configurations');
@@ -338,10 +339,20 @@ function validatePackContent(packName, files) {
     });
   }
 
+  const normalizedErrors = errors.length === 0
+    ? validateStructuredConfig(normalizeConfig({
+      ...files.People,
+      ...files.Inventory,
+      ...files.Bunker,
+      ...files.Professions,
+      ...files.events,
+    }))
+    : [];
+
   return {
     packName,
-    valid: errors.length === 0,
-    errors,
+    valid: errors.length + normalizedErrors.length === 0,
+    errors: [...errors, ...normalizedErrors],
   };
 }
 
@@ -425,10 +436,11 @@ function loadPack(packName = getDefaultPackName()) {
   }
 
   const dir = getPackDir(packName);
-  return PACK_FILES.reduce((cfg, file) => ({
+  const rawConfig = PACK_FILES.reduce((cfg, file) => ({
     ...cfg,
     ...JSON.parse(fs.readFileSync(path.join(dir, `${file}.json`), 'utf8')),
   }), {});
+  return normalizeConfig(rawConfig);
 }
 
 const defaultConfig = loadPack();

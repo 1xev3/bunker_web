@@ -12,89 +12,105 @@ const ATTRIBUTE_LABELS = {
   additional: 'Доп. факт',
 };
 
-// ─── Generators ───────────────────────────────────────────────────────────────
-
 function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function randomWeightedValue(table) {
-  const total = table.reduce((sum, [, w]) => sum + w, 0);
+function weightedRandom(table) {
+  const total = table.reduce((sum, entry) => sum + entry.weight, 0);
   let cursor = Math.random() * total;
-  for (const [value, weight] of table) {
-    cursor -= weight;
-    if (cursor <= 0) return value;
+  for (const entry of table) {
+    cursor -= entry.weight;
+    if (cursor <= 0) return entry.value;
   }
-  return table[table.length - 1][0];
+  return table[table.length - 1].value;
 }
 
-function randomInt(min, max) {
+function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function pickDifferent(current, values) {
+function format(attr, value, config) {
+  return require('./player').formatAttribute(attr, value, config);
+}
+
+function pickDifferent(currentId, values) {
   if (values.length <= 1) return values[0];
-  let next = current;
-  while (next === current) next = randomItem(values);
+  let next = values[0];
+  while (next.id === currentId) next = randomItem(values);
   return next;
 }
 
-function addItemToBackpack(backpackValue, item) {
-  if (!backpackValue) return item;
-  if (backpackValue.split(', ').includes(item)) return backpackValue;
-  return `${backpackValue}, ${item}`;
+function addItemToBackpack(backpack, effect, config) {
+  const itemId = effect.itemId;
+  const existing = backpack.find(item => item.id === itemId);
+  if (existing) {
+    existing.quantity += 1;
+    return backpack;
+  }
+  const configured = config.BACKPACK_ITEMS.find(item => item.id === itemId)
+    ?? config.INVENTORY.find(item => item.id === itemId)
+    ?? { id: itemId, label: effect.itemLabel ?? itemId };
+  backpack.push({ id: configured.id, label: configured.label, quantity: 1 });
+  return backpack;
 }
 
 function generateGender(config) {
-  const gender = randomWeightedValue(config.GENDERS);
-  const affix = randomWeightedValue(config.GENDER_AFFIXES);
-  const [min, max] = randomWeightedValue(config.AGES);
-  return `${gender} ${affix} (${randomInt(min, max)} лет)`;
-}
-
-function generateRace(config) {
-  return randomWeightedValue(config.RACES);
+  const gender = weightedRandom(config.GENDERS);
+  const affix = weightedRandom(config.GENDER_AFFIXES);
+  const range = weightedRandom(config.AGES);
+  return { genderId: gender.id, affixId: affix.id, age: randInt(range.min, range.max) };
 }
 
 function generateBody(config) {
-  return `${randomWeightedValue(config.BODY_TYPES)} (${randomInt(150, 210)} см)`;
+  return { bodyTypeId: weightedRandom(config.BODY_TYPES).id, height: randInt(150, 210) };
 }
 
 function generateHealth(config, forceHealthy = false) {
-  if (forceHealthy) return 'Здоров';
-  const state = randomWeightedValue(config.HEALTH_STATES);
-  if (state === 'Здоров') return 'Здоров';
-  return `${state} (${randomWeightedValue(config.HEALTH_STAGES)})`;
+  const healthyId = config.HEALTH_STATES[0]?.value.id;
+  if (forceHealthy) return { stateId: healthyId, stageId: null };
+  const state = weightedRandom(config.HEALTH_STATES);
+  return {
+    stateId: state.id,
+    stageId: state.id === healthyId ? null : weightedRandom(config.HEALTH_STAGES).id,
+  };
 }
 
 function generateWorseHealth(current, config) {
-  const candidates = [];
-  for (const [state] of config.HEALTH_STATES) {
-    if (state === 'Здоров') continue;
-    for (const [stage] of config.HEALTH_STAGES) candidates.push(`${state} (${stage})`);
-  }
-  return pickDifferent(current, candidates);
+  const healthyId = config.HEALTH_STATES[0]?.value.id;
+  const states = config.HEALTH_STATES.map(entry => entry.value).filter(state => state.id !== healthyId);
+  const state = pickDifferent(current?.stateId, states);
+  return { stateId: state.id, stageId: weightedRandom(config.HEALTH_STAGES).id };
 }
 
 function randomizeAttribute(attribute, target, config) {
   switch (attribute) {
-    case 'gender':     return generateGender(config);
-    case 'race':       return generateRace(config);
-    case 'body':       return generateBody(config);
-    case 'health':     return pickDifferent(target.health, [generateHealth(config), generateWorseHealth(target.health, config)]);
-    case 'hobby':      return pickDifferent(target.hobby, config.HOBBIES.map(h => `${h} (${randomWeightedValue(config.SKILL_LEVELS)})`));
-    case 'phobia':     return pickDifferent(target.phobia, config.PHOBIAS.map(p => `Страх ${p}`));
-    case 'inventory':  return pickDifferent(target.inventory, config.INVENTORY);
-    case 'additional': return pickDifferent(target.additional, config.ADDITIONAL_INFO);
-    default:           return null;
+    case 'gender':
+      return generateGender(config);
+    case 'race':
+      return { id: pickDifferent(target.race?.id, config.RACES.map(entry => entry.value)).id };
+    case 'body':
+      return generateBody(config);
+    case 'health':
+      return Math.random() < 0.5 ? generateHealth(config) : generateWorseHealth(target.health, config);
+    case 'hobby': {
+      const hobby = pickDifferent(target.hobby?.id, config.HOBBIES);
+      return { id: hobby.id, levelId: weightedRandom(config.SKILL_LEVELS).id };
+    }
+    case 'phobia':
+      return { id: pickDifferent(target.phobia?.id, config.PHOBIAS).id };
+    case 'inventory':
+      return { ...pickDifferent(target.inventory?.id, config.INVENTORY) };
+    case 'additional':
+      return { id: pickDifferent(target.additional?.id, config.ADDITIONAL_INFO).id };
+    default:
+      return null;
   }
 }
 
-// ─── Targeting helpers ────────────────────────────────────────────────────────
-
 function adjustFoodSupply(room, delta) {
   const supplies = room.config.FOOD_SUPPLIES;
-  const idx = Math.max(0, supplies.indexOf(room.bunker.food));
+  const idx = Math.max(0, supplies.findIndex(supply => supply.id === room.bunker.food?.id));
   room.bunker.food = supplies[Math.max(0, Math.min(supplies.length - 1, idx + delta))];
 }
 
@@ -120,12 +136,10 @@ function chooseInspectableAttribute(target) {
   return randomItem(hidden.length > 0 ? hidden : Object.keys(ATTRIBUTE_LABELS));
 }
 
-// ─── Effect executor ──────────────────────────────────────────────────────────
-
 function executeEffect(effect, { room, actor, target, target2, config }) {
   switch (effect.type) {
     case 'add_to_backpack':
-      actor.backpack = addItemToBackpack(actor.backpack, effect.item);
+      actor.backpack = addItemToBackpack(actor.backpack, effect, config);
       return {};
 
     case 'set_attribute':
@@ -146,22 +160,29 @@ function executeEffect(effect, { room, actor, target, target2, config }) {
 
     case 'steal_attribute':
       actor[effect.attribute] = target[effect.attribute];
-      target[effect.attribute] = effect.stolenValue ?? 'Украден';
+      target[effect.attribute] = effect.stolenValue
+        ? { id: 'stolen', label: effect.stolenValue }
+        : null;
       return {};
 
     case 'strip_attribute':
-      target[effect.attribute] = effect.value ?? 'Потерян';
+      target[effect.attribute] = effect.value
+        ? { id: 'stripped', label: effect.value }
+        : null;
       return {};
 
     case 'inspect_attribute': {
       const attr = chooseInspectableAttribute(target);
-      return { privateMessage: `${target.name}: ${ATTRIBUTE_LABELS[attr] ?? attr} — ${target[attr]}.` };
+      return { privateMessage: `${target.name}: ${ATTRIBUTE_LABELS[attr] ?? attr} - ${format(attr, target[attr], config)}.` };
     }
 
     case 'reveal_attribute': {
       const attr = chooseInspectableAttribute(target);
       target.revealed_attributes[attr] = true;
-      return { revealedLabel: ATTRIBUTE_LABELS[attr] ?? attr, revealedValue: target[attr] };
+      return {
+        revealedLabel: ATTRIBUTE_LABELS[attr] ?? attr,
+        revealedValue: format(attr, target[attr], config),
+      };
     }
 
     case 'adjust_food':
@@ -173,65 +194,23 @@ function executeEffect(effect, { room, actor, target, target2, config }) {
   }
 }
 
-// ─── Message formatting ───────────────────────────────────────────────────────
-
 function formatMessage(template, vars) {
   return template
-    .replace('{actor}',                vars.actor ?? '')
-    .replace('{target}',               vars.target ?? '')
-    .replace('{target1}',              vars.target1 ?? '')
-    .replace('{target2}',              vars.target2 ?? '')
-    .replace('{attribute_label}',      vars.attributeLabel ?? '')
+    .replace('{actor}', vars.actor ?? '')
+    .replace('{target}', vars.target ?? '')
+    .replace('{target1}', vars.target1 ?? '')
+    .replace('{target2}', vars.target2 ?? '')
+    .replace('{attribute_label}', vars.attributeLabel ?? '')
     .replace('{attribute_label_lower}', (vars.attributeLabel ?? '').toLowerCase())
-    .replace('{revealed_label}',       vars.revealedLabel ?? '')
-    .replace('{revealed_value}',       vars.revealedValue ?? '');
-}
-
-// ─── Definition lookup ────────────────────────────────────────────────────────
-
-function getProfessionBaseName(professionValue) {
-  if (!professionValue) return '';
-  const i = professionValue.indexOf(' (');
-  return i === -1 ? professionValue : professionValue.slice(0, i);
+    .replace('{revealed_label}', vars.revealedLabel ?? '')
+    .replace('{revealed_value}', vars.revealedValue ?? '');
 }
 
 function getDefinition(professionValue, config) {
-  return config.PROFESSION_ABILITIES[getProfessionBaseName(professionValue)] ?? null;
+  return professionValue?.id ? config.PROFESSION_ABILITIES[professionValue.id] ?? null : null;
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
-
-function getProfessionAbilityInfo(player, viewerId) {
-  const canSeeProfession = viewerId === player.id || player.revealed_attributes.profession;
-  if (!canSeeProfession) return null;
-
-  const config = player.config;
-  if (!config) {
-    return {
-      key: 'unknown_ability',
-      title: 'Неизвестная способность',
-      description: 'Для этой профессии не настроена способность.',
-      targetType: 'none',
-      allowSelf: false,
-      hasAbility: false,
-      used: false,
-    };
-  }
-
-  const def = getDefinition(player.profession, config);
-  if (def) {
-    return {
-      key: def.key,
-      title: def.title,
-      description: def.description,
-      targetType: def.targetType,
-      allowSelf: def.allowSelf !== false,
-      variants: def.variants?.map(v => ({ key: v.key, label: v.label })),
-      hasAbility: true,
-      used: player.profession_ability_used,
-    };
-  }
-
+function emptyAbility(used = false) {
   return {
     key: 'unknown_ability',
     title: 'Неизвестная способность',
@@ -239,7 +218,29 @@ function getProfessionAbilityInfo(player, viewerId) {
     targetType: 'none',
     allowSelf: false,
     hasAbility: false,
-    used: false,
+    used,
+  };
+}
+
+function getProfessionAbilityInfo(player, viewerId) {
+  const canSeeProfession = viewerId === player.id || player.revealed_attributes.profession;
+  if (!canSeeProfession) return null;
+
+  const config = player.config;
+  if (!config) return emptyAbility(player.profession_ability_used);
+
+  const def = getDefinition(player.profession, config);
+  if (!def) return emptyAbility(player.profession_ability_used);
+
+  return {
+    key: def.key,
+    title: def.title,
+    description: def.description,
+    targetType: def.targetType,
+    allowSelf: def.allowSelf !== false,
+    variants: def.variants?.map(v => ({ key: v.key, label: v.label })),
+    hasAbility: true,
+    used: player.profession_ability_used,
   };
 }
 
@@ -254,10 +255,7 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
     return { ok: false, error: 'Нужно выбрать вариант применения способности.' };
   }
 
-  const effect = hasVariants
-    ? def.variants.find(v => v.key === variant).effect
-    : def.effect;
-
+  const effect = hasVariants ? def.variants.find(v => v.key === variant).effect : def.effect;
   const allowSelf = def.allowSelf !== false;
   let target = null;
   let target2 = null;
@@ -272,7 +270,6 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
   }
 
   const effectResult = executeEffect(effect, { room, actor, target, target2, config });
-
   const variantDef = def.variants?.find(v => v.key === variant);
   const publicMessage = formatMessage(def.publicMessage, {
     actor: actor.name,

@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, Heart, Calendar, TrendingUp, TrendingDown, Utensils } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../types/game';
 import EventModal from './EventModal';
+import StatusTable from './StatusTable';
 
 interface Props {
   roomState: RoomState;
+  myPlayerId: string;
   send: (msg: ClientMessage) => void;
   onLeave: () => void;
-  eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number } | null;
+  eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string } | null;
 }
 
 function SurvivalBar({ chance }: { chance: number }) {
@@ -35,6 +37,39 @@ function SurvivalBar({ chance }: { chance: number }) {
         <div
           className={`h-full rounded-full transition-all duration-700 ${color}`}
           style={{ width: `${chance}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FoodBar({ foodMonths, totalMonths }: { foodMonths: number; totalMonths: number }) {
+  const pct = totalMonths > 0
+    ? Math.min(100, Math.round((foodMonths / totalMonths) * 100))
+    : 100;
+  const color =
+    pct >= 60 ? 'bg-green-500' :
+    pct >= 30 ? 'bg-yellow-500' :
+    pct >= 10 ? 'bg-orange-500' : 'bg-red-500';
+  const label =
+    pct >= 60 ? 'Достаточно' :
+    pct >= 30 ? 'Мало' :
+    pct >= 10 ? 'Критично' : 'Голод!';
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+          <Utensils size={11} className="text-amber-400" /> Запасы еды
+        </span>
+        <span className={`font-mono font-bold ${
+          pct >= 60 ? 'text-green-400' : pct >= 30 ? 'text-yellow-400' : pct >= 10 ? 'text-orange-400' : 'text-red-400'
+        }`}>{foodMonths} мес. — {label}</span>
+      </div>
+      <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${color}`}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>
@@ -80,7 +115,7 @@ function MonthProgressBar({ monthStartTime, monthDuration, hasEvent }: {
   );
 }
 
-export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcome }: Props) {
+export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
 
@@ -106,12 +141,15 @@ export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcom
           <span className="text-zinc-700">·</span>
           <span className="flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
             <Calendar size={10} /> Месяц {roomState.current_month}
+            {roomState.total_months > 0 && (
+              <span className="text-zinc-600"> / {roomState.total_months}</span>
+            )}
           </span>
-          {roomState.round > 0 && (
+          {roomState.total_months > 0 && roomState.current_month < roomState.total_months && (
             <>
               <span className="text-zinc-700">·</span>
               <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
-                Раунд {roomState.round}
+                Осталось: {roomState.total_months - roomState.current_month} мес.
               </span>
             </>
           )}
@@ -125,19 +163,39 @@ export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcom
       </header>
 
       <div className="flex-1 flex flex-col p-4 gap-4 w-full">
-        {/* Survival bar */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+        {/* Survival + food bars */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 flex flex-col gap-3">
           <SurvivalBar chance={roomState.survival_chance} />
+          <div className="w-full h-px bg-zinc-800" />
+          <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} />
         </div>
 
         {/* Event outcome notification */}
         {eventOutcome && (
           <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
-            eventOutcome.outcome === 'success'
-              ? 'border-green-900/40 bg-green-950/20 text-green-300'
-              : 'border-red-900/40 bg-red-950/20 text-red-300'
+            eventOutcome.food_change !== undefined && eventOutcome.food_change < 0
+              ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+              : eventOutcome.outcome === 'success'
+                ? 'border-green-900/40 bg-green-950/20 text-green-300'
+                : eventOutcome.event_id === 'food_replenish'
+                  ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+                  : 'border-red-900/40 bg-red-950/20 text-red-300'
           }`}>
-            {eventOutcome.outcome === 'success' ? (
+            {eventOutcome.event_id === 'food_replenish' ? (
+              eventOutcome.outcome === 'success' ? (
+                <><Utensils size={14} /> Запасы пополнены! +{eventOutcome.food_change} мес. еды</>
+              ) : (
+                <><TrendingDown size={14} /> Нечем пополнить запасы. Следующий месяц — последний</>
+              )
+            ) : eventOutcome.food_change !== undefined ? (
+              eventOutcome.food_change > 0 ? (
+                <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change} мес.</>
+              ) : eventOutcome.food_change < 0 ? (
+                <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change} мес.</>
+              ) : (
+                <><Utensils size={14} /> Запасы еды не изменились</>
+              )
+            ) : eventOutcome.outcome === 'success' ? (
               <><TrendingUp size={14} /> Вам повезло! Шанс выживания: {eventOutcome.survival_change > 0 ? '+' : ''}{eventOutcome.survival_change}%</>
             ) : (
               <><TrendingDown size={14} /> Не повезло. Шанс выживания: {eventOutcome.survival_change}%</>
@@ -172,25 +230,11 @@ export default function BunkerLifeScreen({ roomState, send, onLeave, eventOutcom
           </div>
         )}
 
-        {/* Players list */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-          <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3">Выжившие в бункере</p>
-          <div className="flex flex-col gap-2">
-            {activePlayers.map(p => (
-              <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900/60">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-zinc-200 text-sm font-medium">{p.name}</span>
-                  {p.attributes.profession && (
-                    <span className="text-zinc-500 text-xs">{p.attributes.profession}</span>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-0.5 text-xs text-zinc-600">
-                  {p.attributes.inventory && <span>{p.attributes.inventory}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <StatusTable
+          players={roomState.players}
+          myPlayerId={myPlayerId}
+          send={send}
+        />
       </div>
 
       {/* Event modal */}

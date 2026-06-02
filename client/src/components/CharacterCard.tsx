@@ -25,7 +25,7 @@ export default function CharacterCard({ player, send }: Props) {
           return (
             <div key={key} className="flex items-start gap-2">
               <span className="text-gray-500 text-sm w-24 shrink-0">{ATTRIBUTE_LABELS[key]}:</span>
-              <span className="text-gray-200 text-sm flex-1">{value ?? '?'}</span>
+              <span className="text-gray-200 text-sm flex-1">{value?.display ?? '?'}</span>
               {!revealed && (
                 <button
                   className="text-xs text-blue-400 hover:text-blue-300 shrink-0 transition-colors"
