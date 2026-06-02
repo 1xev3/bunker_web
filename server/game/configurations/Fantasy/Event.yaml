@@ -2,7 +2,8 @@
 # Пассивное событие: без base_chance, только success_effect.
 # participants_template: couple | random_one | random_group.
 # Для random_group можно задать participants_min / participants_max.
-# effect.type здесь обычно survival_change или food_change, value - число.
+# effect.type здесь обычно survival_change или food_change.
+# Для survival_change value задаётся в процентах шанса выживания, для food_change - в процентах от текущего остатка еды.
 # Поля title и description могут быть строкой или массивом строк.
 # Для текстовых подстановок используйте {alt.some_key}, а сами наборы значений храните в alt.
 # Значение ключа в alt может быть строкой или массивом строк.
@@ -95,10 +96,10 @@ EVENTS:
     base_chance: 0.10
     success_effect:
       type: food_change
-      value: -1
+      value: -10
     failure_effect:
       type: food_change
-      value: -4
+      value: -40
 
   - id: illness_outbreak
     title:
@@ -186,10 +187,10 @@ EVENTS:
     base_chance: 0.20
     success_effect:
       type: food_change
-      value: -1
+      value: -10
     failure_effect:
       type: food_change
-      value: -3
+      value: -30
 
   - id: conflict_erupts
     title:
@@ -378,10 +379,10 @@ EVENTS:
     base_chance: 0.20
     success_effect:
       type: food_change
-      value: -1
+      value: -10
     failure_effect:
       type: food_change
-      value: -4
+      value: -40
 
   - id: fire_hazard
     title:
@@ -646,7 +647,7 @@ EVENTS:
           - пыльной нише за стеллажом
     success_effect:
       type: food_change
-      value: 3
+      value: 30
 
   - id: coitus
     title:
@@ -811,7 +812,7 @@ EVENTS:
     participants_template: random_one
     success_effect:
       type: food_change
-      value: 2
+      value: 20
 
   - id: skill_training
     title:
@@ -858,4 +859,4 @@ EVENTS:
           - мешки с сухими запасами
     success_effect:
       type: food_change
-      value: -1
+      value: -10

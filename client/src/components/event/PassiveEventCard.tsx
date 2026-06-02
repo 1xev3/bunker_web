@@ -48,7 +48,7 @@ export default function PassiveEventCard({ event, send }: Props) {
               : 'text-red-400 bg-red-950/30 border border-red-900/30'
           }`}>
             {isFoodEffect
-              ? `${value > 0 ? '+' : ''}${value} мес. еды`
+              ? `${value > 0 ? '+' : ''}${value}% запасов еды`
               : `${value > 0 ? '+' : ''}${value}% к шансу выживания`
             }
           </div>

@@ -229,12 +229,16 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
         {/* Event outcome notification */}
         {eventOutcome && (
           <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up flex items-center justify-center gap-2 ${
-            eventOutcome.food_change !== undefined && eventOutcome.food_change < 0
-              ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
-              : eventOutcome.outcome === 'success'
+            eventOutcome.event_id === 'food_replenish'
+              ? eventOutcome.outcome === 'success'
                 ? 'border-green-900/40 bg-green-950/20 text-green-300'
-                : eventOutcome.event_id === 'food_replenish'
+                : 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+              : eventOutcome.food_change !== undefined
+                ? eventOutcome.food_change < 0
                   ? 'border-orange-900/40 bg-orange-950/20 text-orange-300'
+                  : 'border-green-900/40 bg-green-950/20 text-green-300'
+                : eventOutcome.survival_change > 0
+                  ? 'border-green-900/40 bg-green-950/20 text-green-300'
                   : 'border-red-900/40 bg-red-950/20 text-red-300'
           }`}>
             {eventOutcome.event_id === 'food_replenish' ? (
@@ -245,16 +249,16 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
               )
             ) : eventOutcome.food_change !== undefined ? (
               eventOutcome.food_change > 0 ? (
-                <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change} мес.</>
+                <><Utensils size={14} /> Запасы еды: +{eventOutcome.food_change}%</>
               ) : eventOutcome.food_change < 0 ? (
-                <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change} мес.</>
+                <><Utensils size={14} /> Запасы еды: {eventOutcome.food_change}%</>
               ) : (
                 <><Utensils size={14} /> Запасы еды не изменились</>
               )
-            ) : eventOutcome.outcome === 'success' ? (
-              <><TrendingUp size={14} /> Вам повезло! Шанс выживания: {eventOutcome.survival_change > 0 ? '+' : ''}{eventOutcome.survival_change}%</>
+            ) : eventOutcome.survival_change > 0 ? (
+              <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
             ) : (
-              <><TrendingDown size={14} /> Не повезло. Шанс выживания: {eventOutcome.survival_change}%</>
+              <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
             )}
           </div>
         )}

@@ -27,7 +27,7 @@ export function formatEffect(effect?: EventEffect): string {
   if (!effect) return 'Без изменений';
   if (effect.type === 'food_change') {
     if (effect.value === 0) return 'Запасы еды без изменений';
-    return `${effect.value > 0 ? '+' : ''}${effect.value} мес. еды`;
+    return `${effect.value > 0 ? '+' : ''}${effect.value}% запасов еды`;
   }
   if (effect.value === 0) return 'Шанс выживания без изменений';
   return `${effect.value > 0 ? '+' : ''}${effect.value}% к шансу выживания`;

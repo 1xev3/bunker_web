@@ -21,12 +21,21 @@ function applyBunkerEventEffect(room, effect) {
   }
 
   if (effect.type === 'food_change') {
-    const activeCount = Math.max(1, room.getActivePlayers().length);
     const before = room.foodMonths;
-    const delta = effect.value * activeCount;
+    if (before <= 0) {
+      result.foodChange = 0;
+      return result;
+    }
+
+    const rawDelta = before * (effect.value / 100);
+    let delta = Math.round(rawDelta);
+    if (delta === 0 && effect.value !== 0) {
+      delta = effect.value > 0 ? 1 : -1;
+    }
+
     room.foodMonths = Math.max(0, Math.min(room.foodMaxPersonMonths, room.foodMonths + delta));
     room.starvationPending = room.foodMonths <= 0 ? room.starvationPending : false;
-    result.foodChange = Math.round((room.foodMonths - before) / activeCount);
+    result.foodChange = Math.round(((room.foodMonths - before) / before) * 100);
   }
 
   return result;
