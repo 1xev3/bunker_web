@@ -12,8 +12,8 @@ interface Props {
   eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string } | null;
 }
 
-function SurvivalBar({ chance }: { chance: number }) {
-  const pct = Math.min(100, (chance / 150) * 100);
+function SurvivalBar({ chance, maxChance }: { chance: number; maxChance: number }) {
+  const pct = Math.min(100, (chance / Math.max(1, maxChance)) * 100);
   const color =
     chance > 100 ? 'bg-emerald-400' :
     chance >= 70 ? 'bg-green-500' :
@@ -217,7 +217,10 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <div className="hidden lg:block w-px bg-zinc-800/90" />
 
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-            <SurvivalBar chance={roomState.survival_chance} />
+            <SurvivalBar
+              chance={roomState.survival_chance}
+              maxChance={roomState.pack_settings.bunker_life.max_survival_chance}
+            />
             <div className="w-full h-px bg-zinc-800" />
             <FoodBar foodMonths={roomState.food_months_display} totalMonths={roomState.total_months} currentMonth={roomState.current_month} />
           </div>
@@ -269,6 +272,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           event={roomState.active_event}
           activePlayers={activePlayers}
           bunker={roomState.bunker}
+          packSettings={roomState.pack_settings}
           send={send}
         />
       )}

@@ -27,9 +27,6 @@ const DEV_BOT_NAMES = [
   'Кедр',
   'Вектор',
 ];
-const BUNKER_EVENT_CHANCE = 0.10;
-const FOOD_REPLENISH_RATIO = 0.25;
-const MAX_SURVIVAL_CHANCE = 150;
 const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
 const EVENT_PARTICIPANT_TEMPLATE_RE = /^participant(\d+)$/;
 const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
@@ -693,7 +690,7 @@ function startNextMonth(roomCode) {
   // Reset starvation flag once food is back
   room.starvationPending = false;
 
-  if (Math.random() < BUNKER_EVENT_CHANCE) {
+  if (Math.random() < room.config.packSettings.events.bunker_event_chance) {
     const event = pickRandomEvent(room.config);
     const isPassive = event.event_type === 'passive';
 
@@ -763,7 +760,10 @@ function applyBunkerEventEffect(room, effect) {
 
   if (effect.type === 'survival_change') {
     result.survivalChange = effect.value;
-    room.survivalChance = Math.max(0, Math.min(MAX_SURVIVAL_CHANCE, room.survivalChance + effect.value));
+    room.survivalChance = Math.max(
+      0,
+      Math.min(room.config.packSettings.bunker_life.max_survival_chance, room.survivalChance + effect.value),
+    );
     return result;
   }
 
@@ -845,7 +845,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   }
 
   const foodBefore = room.foodMonths;
-  const replenish = Math.round(FOOD_REPLENISH_RATIO * room.foodMaxPersonMonths * resourceCount);
+  const replenish = Math.round(room.config.packSettings.events.food_replenish.ratio_per_resource * room.foodMaxPersonMonths * resourceCount);
   room.foodMonths = Math.min(room.foodMaxPersonMonths, room.foodMonths + replenish);
   room.starvationPending = false;
 
@@ -890,7 +890,7 @@ function tryStartBunkerLife(roomCode, room) {
   if (room.confirmedBunkerLife.size < active.length) return false;
 
   room.status = 'bunker_life';
-  room.survivalChance = 100;
+  room.survivalChance = room.config.packSettings.bunker_life.initial_survival_chance;
   room.currentMonth = 0;
   room.totalMonths = parseDurationMonths(room.bunker.duration?.label);
   const foodDurationMonths = parseFoodMonths(room.bunker.food?.label);
@@ -925,17 +925,17 @@ function handleResolveEvent(roomCode, playerId, msg) {
   const selectedProfessions = Array.isArray(msg.selected_professions) ? msg.selected_professions : [];
   const selectedItems = Array.isArray(msg.selected_items) ? msg.selected_items : [];
 
-  // 0 resources → base_chance, 1 → 75%, 2 → 90%, 3+ → 100%
+  const successChances = room.config.packSettings.events.success_chances;
   const resourceCount = selectedProfessions.length + selectedItems.length;
   let successChance;
   if (resourceCount === 0) {
     successChance = event.base_chance;
   } else if (resourceCount === 1) {
-    successChance = 0.75;
+    successChance = successChances.one_resource;
   } else if (resourceCount === 2) {
-    successChance = 0.90;
+    successChance = successChances.two_resources;
   } else {
-    successChance = 1.0;
+    successChance = successChances.three_plus_resources;
   }
 
   const succeeded = Math.random() < successChance;

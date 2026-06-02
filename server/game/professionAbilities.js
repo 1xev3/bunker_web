@@ -63,7 +63,11 @@ function generateGender(config) {
 }
 
 function generateBody(config) {
-  return { bodyTypeId: weightedRandom(config.BODY_TYPES).id, height: randInt(150, 210) };
+  const heightSettings = config.packSettings.characters.height;
+  return {
+    bodyTypeId: weightedRandom(config.BODY_TYPES).id,
+    height: randInt(heightSettings.min, heightSettings.max),
+  };
 }
 
 function generateHealth(config, forceHealthy = false) {
@@ -92,7 +96,9 @@ function randomizeAttribute(attribute, target, config) {
     case 'body':
       return generateBody(config);
     case 'health':
-      return Math.random() < 0.5 ? generateHealth(config) : generateWorseHealth(target.health, config);
+      return Math.random() < config.packSettings.characters.health_randomize_worse_chance
+        ? generateWorseHealth(target.health, config)
+        : generateHealth(config);
     case 'hobby': {
       const hobby = pickDifferent(target.hobby?.id, config.HOBBIES);
       return { id: hobby.id, levelId: weightedRandom(config.SKILL_LEVELS).id };

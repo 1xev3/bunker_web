@@ -1,13 +1,12 @@
 import { Fragment, useState } from 'react';
 import { AlertTriangle, Send, Sparkles, Users, Utensils } from 'lucide-react';
-import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem } from '../types/game';
-
-const FOOD_REPLENISH_PERCENT_PER_RESOURCE = 25;
+import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, PackSettings } from '../types/game';
 
 interface Props {
   event: GameEvent;
   activePlayers: Player[];
   bunker: BunkerInfo | null;
+  packSettings: PackSettings;
   send: (msg: ClientMessage) => void;
 }
 
@@ -26,11 +25,11 @@ const EVENT_HIGHLIGHT_RE = /(<<event-highlight>>.*?<<\/event-highlight>>)/g;
 const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
 const EVENT_HIGHLIGHT_END = '<</event-highlight>>';
 
-function getSuccessChance(resourceCount: number, baseChance: number): number {
+function getSuccessChance(resourceCount: number, baseChance: number, packSettings: PackSettings): number {
   if (resourceCount === 0) return Math.round(baseChance * 100);
-  if (resourceCount === 1) return 75;
-  if (resourceCount === 2) return 90;
-  return 100;
+  if (resourceCount === 1) return Math.round(packSettings.events.success_chances.one_resource * 100);
+  if (resourceCount === 2) return Math.round(packSettings.events.success_chances.two_resources * 100);
+  return Math.round(packSettings.events.success_chances.three_plus_resources * 100);
 }
 
 function ChanceBar({ chance }: { chance: number }) {
@@ -217,7 +216,7 @@ function PassiveEventCard({ event, send }: { event: GameEvent; send: (msg: Clien
   );
 }
 
-function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
+function FoodReplenishCard({ event, activePlayers, bunker, packSettings, send }: Props) {
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const playerItems = getPlayerItemOptions(activePlayers);
@@ -241,7 +240,7 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
     selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
-  const projectedFoodPercent = Math.round(FOOD_REPLENISH_PERCENT_PER_RESOURCE * resourceCount);
+  const projectedFoodPercent = Math.round(packSettings.events.food_replenish.ratio_per_resource * resourceCount * 100);
 
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
@@ -309,7 +308,7 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
             }`}>
               <p className="text-[11px] uppercase tracking-widest opacity-70">Если помочь</p>
               <p className="mt-1 text-sm font-semibold">
-                {resourceCount > 0
+              {resourceCount > 0
                   ? `Примерно +${projectedFoodPercent}% от срока запасов еды`
                   : 'Нужно выбрать хотя бы один ресурс'}
               </p>
@@ -326,7 +325,7 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
           )}
           {resourceCount > 0 && (
             <p className="text-green-400/70 text-xs text-center">
-              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{Math.round(FOOD_REPLENISH_PERCENT_PER_RESOURCE * resourceCount)}% срока
+              {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{projectedFoodPercent}% срока
             </p>
           )}
           <button
@@ -341,7 +340,7 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
   );
 }
 
-export default function EventModal({ event, activePlayers, bunker, send }: Props) {
+export default function EventModal({ event, activePlayers, bunker, packSettings, send }: Props) {
   const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const playerItems = getPlayerItemOptions(activePlayers);
@@ -352,7 +351,7 @@ export default function EventModal({ event, activePlayers, bunker, send }: Props
   }
 
   if (event.event_type === 'food_replenish') {
-    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} send={send} />;
+    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} send={send} />;
   }
 
   const toggleProfession = (profession: string) => {
@@ -373,7 +372,7 @@ export default function EventModal({ event, activePlayers, bunker, send }: Props
     selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
-  const successChance = getSuccessChance(resourceCount, event.base_chance ?? 0.1);
+  const successChance = getSuccessChance(resourceCount, event.base_chance ?? 0.1, packSettings);
 
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });

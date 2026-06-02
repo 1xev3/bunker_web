@@ -112,6 +112,42 @@ export interface PackMeta {
   color: string;
 }
 
+export interface PackSettings {
+  bunker_life: {
+    initial_survival_chance: number;
+    max_survival_chance: number;
+    month_duration_ms: number;
+  };
+  events: {
+    bunker_event_chance: number;
+    success_chances: {
+      one_resource: number;
+      two_resources: number;
+      three_plus_resources: number;
+    };
+    food_replenish: {
+      ratio_per_resource: number;
+    };
+  };
+  characters: {
+    height: {
+      min: number;
+      max: number;
+      female_offset: number;
+      age_curves: Array<{
+        max_age: number | null;
+        mean: number;
+        std: number;
+      }>;
+    };
+    health_randomize_worse_chance: number;
+  };
+  bunker_generation: {
+    max_empty_fraction: number;
+    max_extra_items: number;
+  };
+}
+
 export interface PackListing {
   id: string;
   meta: PackMeta;
@@ -122,6 +158,7 @@ export interface RoomState {
   admin_id: string;
   pack: string;
   pack_meta: PackMeta;
+  pack_settings: PackSettings;
   status: GameStatus;
   is_voting: boolean;
   round: number;

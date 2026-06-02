@@ -24,7 +24,7 @@ class GameRoom {
     this.isVoting = false;
     this.round = 0;
     this.bunkerCapacity = null;
-    this.survivalChance = 100;
+    this.survivalChance = this.config.packSettings.bunker_life.initial_survival_chance;
     this.currentMonth = 0;
     this.totalMonths = 0;
     this.foodMonths = 0;
@@ -32,7 +32,7 @@ class GameRoom {
     this.starvationPending = false;
     this.activeEvent = null;
     this.monthStartTime = null;
-    this.monthDuration = 750; // ms per month (empty months)
+    this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
@@ -93,6 +93,7 @@ class GameRoom {
       admin_id: this.adminId,
       pack: this.packName,
       pack_meta: this.config.packMeta ?? { name: this.packName, author: '', color: '#f59e0b' },
+      pack_settings: this.config.packSettings,
       status: this.status,
       is_voting: this.isVoting,
       round: this.round,

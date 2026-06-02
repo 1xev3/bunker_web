@@ -1,6 +1,7 @@
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
 function generateGrid(sizeId, itemPool, config) {
+  const generationSettings = config.packSettings.bunker_generation;
   const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.id === sizeId);
   const roomCount = sizeIndex >= 0 ? config.ROOM_COUNTS[sizeIndex] : 5;
   const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
@@ -35,12 +36,12 @@ function generateGrid(sizeId, itemPool, config) {
 
   const nonCenter = rooms.filter(([r, c]) => !(r === 2 && c === 2));
 
-  // randomly leave ~0-33% of rooms empty, minimum 1 filled room
-  const emptyCount = Math.floor(Math.random() * Math.ceil(nonCenter.length / 3));
+  const maxEmptyRooms = Math.floor(nonCenter.length * generationSettings.max_empty_fraction);
+  const emptyCount = maxEmptyRooms > 0 ? randInt(0, maxEmptyRooms) : 0;
   const filledCount = Math.max(1, nonCenter.length - emptyCount);
 
   const base = shuffled.slice(0, filledCount);
-  const extraCount = Math.min(Math.floor(Math.random() * 3), shuffled.length - filledCount);
+  const extraCount = Math.min(randInt(0, generationSettings.max_extra_items), shuffled.length - filledCount);
   const extras = shuffled.slice(filledCount, filledCount + extraCount);
 
   const roomItems = base.map(item => [item]);
@@ -55,6 +56,10 @@ function generateGrid(sizeId, itemPool, config) {
   });
 
   return result;
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 class Bunker {

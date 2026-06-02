@@ -76,6 +76,11 @@ function publicAttribute(attr, value, config) {
   return value ? { value, display: formatAttribute(attr, value, config) } : null;
 }
 
+function getHeightCurve(config, age) {
+  const curves = config.packSettings.characters.height.age_curves;
+  return curves.find((curve) => curve.max_age == null || age <= curve.max_age) ?? curves[curves.length - 1];
+}
+
 class Player {
   constructor(name, options = {}) {
     this.id = randomUUID();
@@ -112,13 +117,11 @@ class Player {
     this.race = { id: weightedRandom(config.RACES).id };
 
     const bodyType = weightedRandom(config.BODY_TYPES);
-    let height;
-    if (age < 18) height = Math.round(gaussRandom(160, 20));
-    else if (age < 30) height = Math.round(gaussRandom(180, 15));
-    else if (age < 50) height = Math.round(gaussRandom(175, 10));
-    else height = Math.round(gaussRandom(170, 8));
-    if (gender.id === 'gender_2') height -= 10;
-    height = Math.max(150, Math.min(210, height));
+    const heightSettings = config.packSettings.characters.height;
+    const curve = getHeightCurve(config, age);
+    let height = Math.round(gaussRandom(curve.mean, curve.std));
+    if (gender.id === 'gender_2') height -= heightSettings.female_offset;
+    height = Math.max(heightSettings.min, Math.min(heightSettings.max, height));
     this.body = { bodyTypeId: bodyType.id, height };
 
     this.trait = { id: config.TRAITS[Math.floor(Math.random() * config.TRAITS.length)].id };
