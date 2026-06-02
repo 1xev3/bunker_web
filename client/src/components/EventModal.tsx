@@ -17,6 +17,11 @@ interface ItemOption {
   owner: string;
 }
 
+interface EventEffect {
+  type: 'survival_change' | 'food_change' | string;
+  value: number;
+}
+
 function getSuccessChance(resourceCount: number, baseChance: number): number {
   if (resourceCount === 0) return Math.round(baseChance * 100);
   if (resourceCount === 1) return 75;
@@ -34,6 +39,41 @@ function ChanceBar({ chance }: { chance: number }) {
       <span className={`text-xs font-mono font-bold w-10 text-right ${
         chance >= 90 ? 'text-green-400' : chance >= 75 ? 'text-yellow-400' : chance >= 30 ? 'text-orange-400' : 'text-red-400'
       }`}>{chance}%</span>
+    </div>
+  );
+}
+
+function formatEffect(effect?: EventEffect): string {
+  if (!effect) return 'Без изменений';
+
+  if (effect.type === 'food_change') {
+    if (effect.value === 0) return 'Запасы еды без изменений';
+    return `${effect.value > 0 ? '+' : ''}${effect.value} мес. еды`;
+  }
+
+  if (effect.value === 0) return 'Шанс выживания без изменений';
+  return `${effect.value > 0 ? '+' : ''}${effect.value}% к шансу выживания`;
+}
+
+function OutcomePreview({
+  label,
+  effect,
+  tone,
+}: {
+  label: string;
+  effect?: EventEffect;
+  tone: 'good' | 'bad' | 'neutral';
+}) {
+  const toneClass = tone === 'good'
+    ? 'border-green-900/40 bg-green-950/20 text-green-300'
+    : tone === 'bad'
+      ? 'border-red-900/40 bg-red-950/20 text-red-300'
+      : 'border-zinc-700/50 bg-zinc-800/60 text-zinc-300';
+
+  return (
+    <div className={`rounded-xl border px-3 py-2 ${toneClass}`}>
+      <p className="text-[11px] uppercase tracking-widest opacity-70">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{formatEffect(effect)}</p>
     </div>
   );
 }
@@ -138,15 +178,18 @@ function PassiveEventCard({ event, send }: { event: GameEvent; send: (msg: Clien
           </div>
         )}
 
-        <div className={`text-center text-sm font-semibold rounded-lg py-2 ${
-          isPositive
-            ? 'text-green-400 bg-green-950/30 border border-green-900/30'
-            : 'text-red-400 bg-red-950/30 border border-red-900/30'
-        }`}>
-          {isFoodEffect
-            ? `${value > 0 ? '+' : ''}${value} мес. еды`
-            : `${value > 0 ? '+' : ''}${value}% к шансу выживания`
-          }
+        <div className="flex flex-col gap-2">
+          <p className="text-zinc-500 text-xs uppercase tracking-widest">Эффект события</p>
+          <div className={`text-center text-sm font-semibold rounded-lg py-2 ${
+            isPositive
+              ? 'text-green-400 bg-green-950/30 border border-green-900/30'
+              : 'text-red-400 bg-red-950/30 border border-red-900/30'
+          }`}>
+            {isFoodEffect
+              ? `${value > 0 ? '+' : ''}${value} мес. еды`
+              : `${value > 0 ? '+' : ''}${value}% к шансу выживания`
+            }
+          </div>
         </div>
 
         <button
@@ -184,6 +227,7 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
     selectedItems.some(i => getItemKey(i) === getItemKey(entry));
 
   const resourceCount = selectedProfessions.length + selectedItems.length;
+  const projectedFoodPercent = Math.round(FOOD_REPLENISH_PERCENT_PER_RESOURCE * resourceCount);
 
   const handleSend = () => {
     send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
@@ -243,6 +287,24 @@ function FoodReplenishCard({ event, activePlayers, bunker, send }: Props) {
 
         {/* Footer */}
         <div className="p-5 border-t border-zinc-800 flex flex-col gap-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className={`rounded-xl border px-3 py-2 ${
+              resourceCount > 0
+                ? 'border-green-900/40 bg-green-950/20 text-green-300'
+                : 'border-zinc-700/50 bg-zinc-800/60 text-zinc-300'
+            }`}>
+              <p className="text-[11px] uppercase tracking-widest opacity-70">Если помочь</p>
+              <p className="mt-1 text-sm font-semibold">
+                {resourceCount > 0
+                  ? `Примерно +${projectedFoodPercent}% от срока запасов еды`
+                  : 'Нужно выбрать хотя бы один ресурс'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-3 py-2 text-red-300">
+              <p className="text-[11px] uppercase tracking-widest opacity-70">Если не помочь</p>
+              <p className="mt-1 text-sm font-semibold">Через месяц бункер погибнет от голода</p>
+            </div>
+          </div>
           {resourceCount === 0 && (
             <p className="text-orange-400/70 text-xs text-center">
               Если ничего не выбрать — следующий месяц станет последним
@@ -324,6 +386,11 @@ export default function EventModal({ event, activePlayers, bunker, send }: Props
         </div>
 
         <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[55vh]">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <OutcomePreview label="При успехе" effect={event.success_effect} tone="good" />
+            <OutcomePreview label="При провале" effect={event.failure_effect} tone="bad" />
+          </div>
+
           {/* Professions */}
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Профессии выживших</p>
