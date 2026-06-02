@@ -1,5 +1,5 @@
 const { randomUUID } = require('crypto');
-const { getProfessionAbilityInfo } = require('./professionAbilities');
+const { getProfessionAbilityInfo } = require('../abilities/professionAbilities');
 
 const ATTRIBUTE_KEYS = ['gender', 'race', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
 

@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const { Player, ATTRIBUTE_KEYS } = require('./player');
 const Bunker = require('./bunker');
-const { loadPack, getDefaultPackName } = require('./gameConfig');
+const { loadPack, getDefaultPackName } = require('../gameConfig');
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

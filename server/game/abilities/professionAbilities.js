@@ -31,7 +31,7 @@ function randInt(min, max) {
 }
 
 function format(attr, value, config) {
-  return require('./player').formatAttribute(attr, value, config);
+  return require('../entities/player').formatAttribute(attr, value, config);
 }
 
 function pickDifferent(currentId, values) {
