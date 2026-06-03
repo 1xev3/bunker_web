@@ -632,6 +632,14 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
   if (!vote) return;
 
   room.choiceVotes[playerId] = vote;
+
+  // Auto-vote for bots that haven't voted yet
+  for (const p of room.getActivePlayers()) {
+    if (p.is_bot && !room.choiceVotes[p.id]) {
+      room.choiceVotes[p.id] = Math.random() < 0.5 ? 'success' : 'failure';
+    }
+  }
+
   wsManager.broadcastState(roomCode, room);
 
   // Auto-resolve when all active players have voted

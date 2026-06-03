@@ -23,15 +23,18 @@ interface Props {
   send: (msg: ClientMessage) => void;
 }
 
-function VoterDots({ voters, activePlayers }: { voters: string[]; activePlayers: Player[] }) {
+function VoterDotsInline({ voters, activePlayers, tone }: { voters: string[]; activePlayers: Player[]; tone: 'good' | 'bad' }) {
   if (voters.length === 0) return null;
+  const cls = tone === 'good'
+    ? 'bg-green-900/60 border-green-600/40 text-green-300'
+    : 'bg-red-900/60 border-red-600/40 text-red-300';
   return (
-    <div className="flex gap-1 flex-wrap mt-1.5">
+    <div className="flex gap-1 flex-wrap justify-center">
       {voters.map(id => {
         const p = activePlayers.find(p => p.id === id);
         if (!p) return null;
         return (
-          <span key={id} className="w-5 h-5 rounded-full bg-zinc-700 border border-zinc-600 flex items-center justify-center text-[10px] font-bold text-zinc-300" title={p.name}>
+          <span key={id} className={`w-4 h-4 rounded-full border flex items-center justify-center text-[9px] font-bold ${cls}`} title={p.name}>
             {p.name.charAt(0).toUpperCase()}
           </span>
         );
@@ -94,43 +97,33 @@ function ChoiceEventCard({
         </div>
 
         <div className="p-5 grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <OutcomePreview label={labels.success} effects={successEffects} tone="good" />
-            <VoterDots voters={successVoters} activePlayers={activePlayers} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <OutcomePreview label={labels.failure} effects={failureEffects} tone="bad" />
-            <VoterDots voters={failureVoters} activePlayers={activePlayers} />
-          </div>
+          <OutcomePreview label={labels.success} effects={successEffects} tone="good" />
+          <OutcomePreview label={labels.failure} effects={failureEffects} tone="bad" />
         </div>
-
-        {totalVoted > 0 && (
-          <div className="px-5 pb-2 text-xs text-zinc-500 text-center">
-            Проголосовали {totalVoted} из {totalActive}
-          </div>
-        )}
 
         <div className="p-5 pt-0 flex flex-col gap-2">
           <div className="flex gap-3">
             <button
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2 ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold border transition-colors flex flex-col items-center justify-center gap-1 ${
                 myVote === 'success'
                   ? 'bg-green-800/60 border-green-600/60 text-green-200'
                   : 'bg-green-900/20 border-green-800/30 text-green-400 hover:bg-green-900/40'
               }`}
               onClick={() => castVote('success')}
             >
-              <CheckCircle size={15} /> {labels.success}
+              <span className="flex items-center gap-2"><CheckCircle size={15} /> {labels.success}</span>
+              <VoterDotsInline voters={successVoters} activePlayers={activePlayers} tone="good" />
             </button>
             <button
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors flex items-center justify-center gap-2 ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold border transition-colors flex flex-col items-center justify-center gap-1 ${
                 myVote === 'failure'
                   ? 'bg-red-800/50 border-red-600/50 text-red-200'
                   : 'bg-red-900/20 border-red-800/30 text-red-400 hover:bg-red-900/40'
               }`}
               onClick={() => castVote('failure')}
             >
-              <XCircle size={15} /> {labels.failure}
+              <span className="flex items-center gap-2"><XCircle size={15} /> {labels.failure}</span>
+              <VoterDotsInline voters={failureVoters} activePlayers={activePlayers} tone="bad" />
             </button>
           </div>
 
