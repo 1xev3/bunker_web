@@ -39,8 +39,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
+  const prevOutcomeConfirmationsRef = useRef<string[] | null | undefined>(undefined);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
     setFlashMessage({ kind, text });
@@ -146,7 +147,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
+        setEventOutcome({ outcome: msg.outcome, message: msg.message, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
       }
 
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
@@ -186,6 +187,14 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       setHasVoted(false);
     }
   }, [roomState?.is_voting]);
+
+  useEffect(() => {
+    const oc = roomState?.outcome_confirmations ?? null;
+    if (Array.isArray(prevOutcomeConfirmationsRef.current) && oc === null) {
+      setEventOutcome(null);
+    }
+    prevOutcomeConfirmationsRef.current = oc;
+  }, [roomState?.outcome_confirmations]);
 
   useEffect(() => {
     const token = localStorage.getItem('bunker_token');
@@ -276,6 +285,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           send={send}
           onLeave={handleLeave}
           eventOutcome={eventOutcome}
+          outcomeConfirmations={roomState.outcome_confirmations}
           onDismissEventOutcome={() => setEventOutcome(null)}
           isConnectionLost={isConnectionLost}
         />

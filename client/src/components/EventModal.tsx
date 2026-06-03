@@ -1,8 +1,7 @@
 import type { BunkerInfo, GameEvent, Player, ClientMessage, PackSettings, EventSelection } from '../types/game';
 import PassiveEventCard from './event/PassiveEventCard';
 import FoodReplenishCard from './event/FoodReplenishCard';
-import InteractiveEventCard from './event/InteractiveEventCard';
-import NarrativeEventCard from './event/NarrativeEventCard';
+import ChoiceEventCard from './event/ChoiceEventCard';
 
 interface Props {
   event: GameEvent;
@@ -10,21 +9,19 @@ interface Props {
   bunker: BunkerInfo | null;
   packSettings: PackSettings;
   eventSelection: EventSelection;
-  choiceVotes: Record<string, 'success' | 'failure'>;
+  choiceVotes: Record<string, string>;
+  resolveConfirmations: string[];
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
 }
 
-export default function EventModal({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, myPlayerId, send, disabled = false }: Props) {
-  if (event.event_type === 'narrative') {
-    return <NarrativeEventCard event={event} send={send} disabled={disabled} />;
-  }
-  if (event.event_type === 'passive') {
-    return <PassiveEventCard event={event} send={send} disabled={disabled} />;
-  }
+export default function EventModal({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, resolveConfirmations, myPlayerId, send, disabled = false }: Props) {
   if (event.event_type === 'food_replenish') {
-    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} send={send} disabled={disabled} />;
+    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} resolveConfirmations={resolveConfirmations} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
   }
-  return <InteractiveEventCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
+  if (event.event_type === 'choice') {
+    return <ChoiceEventCard event={event} activePlayers={activePlayers} bunker={bunker} eventSelection={eventSelection} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
+  }
+  return <PassiveEventCard event={event} activePlayers={activePlayers} resolveConfirmations={resolveConfirmations} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
 }

@@ -17,7 +17,7 @@ const {
   handleUseProfessionAbility,
   transferAdmin,
 } = require('./gameHandlers');
-const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent, handleCastChoiceVote } = require('./bunkerLifeHandlers');
+const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent, handleConfirmOutcome, handleCastChoiceVote, handlePlayerMaybeUnblock } = require('./bunkerLifeHandlers');
 
 function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
@@ -79,6 +79,7 @@ function setupWebSocket(wss) {
         case 'update_event_selection': handleUpdateEventSelection(roomCode, playerId, msg); break;
         case 'cast_choice_vote':      handleCastChoiceVote(roomCode, playerId, msg); break;
         case 'resolve_event':         handleResolveEvent(roomCode, playerId, msg); break;
+        case 'confirm_outcome':       handleConfirmOutcome(roomCode, playerId); break;
       }
     });
 
@@ -94,6 +95,7 @@ function setupWebSocket(wss) {
       }
 
       wsManager.broadcast(roomCode, { type: 'player_disconnected', player_id: playerId });
+      handlePlayerMaybeUnblock(roomCode, playerId);
 
       if (playerId === room.adminId) {
         const key = `${roomCode}:${playerId}`;

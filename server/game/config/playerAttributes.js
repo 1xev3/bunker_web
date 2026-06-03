@@ -1,5 +1,6 @@
-// Resolves a player's attribute to a human-readable label, used for {role.attribute}
-// placeholders in event text. Filtering itself lives in Lua (event Init handlers).
+// Resolves a player's attribute to a human-readable label, used both for
+// {role.attribute} placeholders in event text and for participant filters
+// (e.g. gender/profession) in the YAML event engine.
 
 function getAttrLabel(player, attribute) {
   const config = player?.config;

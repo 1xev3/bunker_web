@@ -4,7 +4,7 @@ const yaml = require('js-yaml');
 const { normalizeConfig } = require('./structuredConfig');
 const { normalizePackSettings } = require('./settings');
 const { addError, validatePackContent } = require('./validator');
-const { readLuaEventsDirectory } = require('./luaEvents');
+const { readYamlEventsDirectory } = require('./yamlEvents');
 
 const PACK_FILES = ['People', 'Inventory', 'Bunker', 'Professions'];
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -30,7 +30,7 @@ function readEventsDirectory(packDir) {
   const settings = readConfigFile(eventsDir, '_settings');
   return {
     EVENT_SETTINGS: settings?.EVENT_SETTINGS ?? {},
-    EVENTS: readLuaEventsDirectory(eventsDir),
+    EVENTS: readYamlEventsDirectory(eventsDir),
   };
 }
 

@@ -36,6 +36,9 @@ class GameRoom {
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.scheduledEvents = []; // [{ event_id, trigger_month, context }]
+    this.resolveConfirmations = new Set(); // players who confirmed current event resolve
+    this.outcomeConfirmations = null; // null | Set — players who confirmed outcome
+    this.pendingOutcomeAction = null; // 'next_month' | 'month_tick_continue'
     this.flags = {};
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
@@ -118,6 +121,8 @@ class GameRoom {
       month_start_time: this.monthStartTime,
       month_duration: this.monthDuration,
       confirmed_bunker_life: [...this.confirmedBunkerLife],
+      resolve_confirmations: [...this.resolveConfirmations],
+      outcome_confirmations: this.outcomeConfirmations ? [...this.outcomeConfirmations] : null,
       scheduled_events: this.scheduledEvents,
       players: this.players.map(p => p.toDict(viewerId)),
       bunker: this.status !== 'waiting' ? this.bunker.toDict() : null,

@@ -1,5 +1,5 @@
-const { getPlayerAttributeLabel } = require('./playerAttributes');
-const { prepareLuaEvent } = require('../game/config/luaEvents');
+const { getPlayerAttributeLabel } = require('../game/config/playerAttributes');
+const { matchesWhen, selectParticipants } = require('../game/config/yamlEvents');
 
 const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
 const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
@@ -25,91 +25,117 @@ function formatParticipantList(names) {
   return `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`;
 }
 
-// Renders {participants}, {role} and {role.attribute} placeholders against the
-// players the Lua Init handler bound to each role.
-// resolvedParticipants: [{ role: string, player: Player }]
-function renderParticipantText(template, resolvedParticipants) {
+// Renders {role}, {role.attribute} and {participants} against a role->player map.
+function renderRoleText(template, roleMap) {
   if (typeof template !== 'string') return template;
-  const roleMap = new Map(resolvedParticipants.map(rp => [rp.role, rp.player]));
-
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') {
-      return highlight(formatParticipantList(resolvedParticipants.map(rp => rp.player.name)));
+      return highlight(formatParticipantList(Object.values(roleMap).map(p => p.name)));
     }
-
     const dotIdx = key.indexOf('.');
     if (dotIdx !== -1) {
-      const player = roleMap.get(key.slice(0, dotIdx));
+      const player = roleMap[key.slice(0, dotIdx)];
       if (player) {
         const label = getPlayerAttributeLabel(player, key.slice(dotIdx + 1));
         if (label != null) return highlight(label);
       }
       return match;
     }
-
-    const player = roleMap.get(key);
+    const player = roleMap[key];
     return player ? highlight(player.name) : match;
   });
 }
 
-function materializeEventParticipants(event, resolvedParticipants) {
+function publicOptions(def) {
+  if (!Array.isArray(def.options)) return undefined;
+  return def.options.map(o => ({ id: o.id, label: o.label, description: o.description ?? null }));
+}
+
+function publicSelect(def) {
+  return def.select ? { kind: def.select.kind, prompt: def.select.prompt ?? null } : undefined;
+}
+
+// Builds the live activeEvent object from a definition + a role->player map.
+// __source / __roles are stripped before reaching the client (see GameRoom.toDict).
+function materializeEvent(def, roleMap) {
   return {
-    ...event,
-    title: renderParticipantText(event.title, resolvedParticipants),
-    description: renderParticipantText(event.description, resolvedParticipants),
-    participants: resolvedParticipants.map(rp => rp.player.name),
-    participant_ids: resolvedParticipants.map(rp => rp.player.id),
-    participant_roles: Object.fromEntries(resolvedParticipants.map(rp => [rp.role, rp.player.id])),
+    id: def.id,
+    event_type: def.type,
+    title: renderRoleText(def.title, roleMap),
+    description: renderRoleText(def.text, roleMap),
+    participants: Object.values(roleMap).map(p => p.name),
+    participant_ids: Object.values(roleMap).map(p => p.id),
+    options: publicOptions(def),
+    select: publicSelect(def),
+    __source: def,
+    __roles: Object.fromEntries(Object.entries(roleMap).map(([role, player]) => [role, player.id])),
   };
 }
 
-// Renders {context.key} placeholders for scheduled events.
-function renderContextText(template, context) {
-  if (typeof template !== 'string' || !context) return template;
-  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
-    if (!key.startsWith('context.')) return match;
-    const value = context[key.slice(8)];
-    if (typeof value !== 'string' && typeof value !== 'number') return match;
-    return highlight(value);
-  });
-}
-
-function materializeScheduledEvent(event, context) {
-  if (!context) return { ...event };
-  return {
-    ...event,
-    title: renderContextText(event.title, context),
-    description: renderContextText(event.description, context),
-    scheduled_context: context,
-  };
-}
-
-// Events that must never surface from the random pool — only via ctx:Schedule.
-function isTriggeredOnly(event) {
-  return event.event_type === 'narrative' || event.scheduled_only === true;
-}
-
-// Picks a random eligible event whose Lua CanInvoke/Init succeed.
-// Returns { event, participants } or null if nothing is eligible.
+// Picks a random eligible event whose `when` passes and whose participants fill.
+// Returns a materialized activeEvent or null.
 function pickRandomEvent(config, room) {
-  const pool = (Array.isArray(config.EVENTS) ? config.EVENTS : []).filter(e => !isTriggeredOnly(e));
-
+  const pool = (Array.isArray(config.EVENTS) ? config.EVENTS : []).filter(e => !e.scheduled_only);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-
-  for (const candidate of pool) {
-    const prepared = prepareLuaEvent(candidate, room);
-    if (prepared) return prepared;
+  for (const def of pool) {
+    if (!matchesWhen(def.when, room)) continue;
+    const roleMap = selectParticipants(def.participants, room);
+    if (roleMap === null) continue;
+    return materializeEvent(def, roleMap);
   }
   return null;
+}
+
+// Renders text for a scheduled event using carried role names (a player may be
+// gone by the time the follow-up fires).
+function renderScheduledText(template, roleNames, roleMap, room) {
+  if (typeof template !== 'string') return template;
+  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
+    if (key === 'participants') return highlight(formatParticipantList(Object.values(roleNames)));
+    const dotIdx = key.indexOf('.');
+    if (dotIdx !== -1) {
+      const role = key.slice(0, dotIdx);
+      const player = roleMap[role] ? room.getPlayer(roleMap[role]) : null;
+      if (player) {
+        const label = getPlayerAttributeLabel(player, key.slice(dotIdx + 1));
+        if (label != null) return highlight(label);
+      }
+      return roleNames[role] != null ? highlight(roleNames[role]) : match;
+    }
+    return roleNames[key] != null ? highlight(roleNames[key]) : match;
+  });
+}
+
+// Materializes a scheduled event from its stored context ({ roles: {role:{id,name}} }).
+function materializeScheduledEvent(def, context, room) {
+  const roles = context?.roles ?? {};
+  const roleMap = {};        // role -> id
+  const roleNames = {};      // role -> name
+  for (const [role, info] of Object.entries(roles)) {
+    roleMap[role] = info.id;
+    roleNames[role] = info.name;
+  }
+  const activeIds = Object.values(roleMap).filter(id => room.getPlayer(id)?.is_active);
+  return {
+    id: def.id,
+    event_type: def.type,
+    title: renderScheduledText(def.title, roleNames, roleMap, room),
+    description: renderScheduledText(def.text, roleNames, roleMap, room),
+    participants: Object.values(roleNames),
+    participant_ids: activeIds,
+    options: publicOptions(def),
+    select: publicSelect(def),
+    __source: def,
+    __roles: roleMap,
+  };
 }
 
 module.exports = {
   parseDurationMonths,
   pickRandomEvent,
-  materializeEventParticipants,
   materializeScheduledEvent,
   EVENT_HIGHLIGHT_START,
   EVENT_HIGHLIGHT_END,

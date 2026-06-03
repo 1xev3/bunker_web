@@ -1,9 +1,12 @@
 const { rooms, wsManager } = require('../state');
-const { runLuaEventHandler } = require('../game/config/luaEvents');
+const {
+  buildEffectPrimitives,
+  buildSchedulePrimitives,
+  pickOutcome,
+} = require('../game/config/yamlEvents');
 const {
   parseDurationMonths,
   pickRandomEvent,
-  materializeEventParticipants,
   materializeScheduledEvent,
 } = require('./eventHelpers');
 
@@ -102,17 +105,34 @@ function applyMonthlyVitals(room) {
   return result;
 }
 
-// Resolves a participant role name (e.g. "male") to a player for scheduled context.
-function resolveScheduledParticipant(participants, participantRef, participantRoles) {
-  const playerId = participantRoles?.[participantRef];
-  return playerId ? participants.find(p => p.id === playerId) ?? null : null;
+function eventParticipantIds(event) {
+  return event.participant_ids ?? [];
 }
 
-function getEventEffects(event, succeeded, room, context) {
-  const handlerKey = event.event_type === 'passive' || event.event_type === 'narrative'
-    ? 'run'
-    : succeeded ? 'success' : 'failure';
-  return runLuaEventHandler(event.__lua_file, event.id, handlerKey, { room, eventContext: event.__lua_context ?? {}, context });
+// Effects for a flavor event: declarative effects + scheduled follow-ups.
+function buildFlavorEffects(event, room) {
+  const def = event.__source ?? {};
+  const roleMap = { ...(event.__roles ?? {}) };
+  const participantIds = eventParticipantIds(event);
+  return [
+    ...buildEffectPrimitives(def.effects, roleMap, room, participantIds),
+    ...buildSchedulePrimitives(def.schedule, roleMap, room),
+  ];
+}
+
+// Effects for a chosen option of a choice event. Returns { effects, message }.
+function buildOptionEffects(event, option, room, selectedPlayerId) {
+  const roleMap = { ...(event.__roles ?? {}) };
+  if (selectedPlayerId) roleMap.chosen = selectedPlayerId;
+  const participantIds = eventParticipantIds(event);
+  const resolved = Array.isArray(option.outcomes) && option.outcomes.length > 0
+    ? pickOutcome(option.outcomes)
+    : option;
+  const effects = [
+    ...buildEffectPrimitives(resolved.effects, roleMap, room, participantIds),
+    ...buildSchedulePrimitives(option.schedule ?? [], roleMap, room),
+  ];
+  return { effects, message: resolved.text ?? null };
 }
 
 function uniquePlayerRefs(players) {
@@ -169,14 +189,13 @@ function applyBunkerEventEffect(room, effect, context) {
   }
 
   if (effect.type === 'food_change') {
-    const rawValue = effect.value ?? 0;
-    if (rawValue < 0) {
-      const percent = Math.abs(rawValue);
+    if (effect.mode === 'percent') {
+      const percent = Math.abs(effect.value ?? 0);
       const loss = room.food > 0 ? Math.ceil((room.food * percent) / 100) : 0;
       result.foodChange = updateFood(room, -Math.min(room.food, loss));
       return result;
     }
-    result.foodChange = updateFood(room, rawValue);
+    result.foodChange = updateFood(room, effect.value ?? 0);
     return result;
   }
 
@@ -205,22 +224,10 @@ function applyBunkerEventEffect(room, effect, context) {
   }
 
   if (effect.type === 'schedule_event') {
-    const scheduledContext = {};
-    if (effect.context_from_participants) {
-      const participantIds = context?.participantIds ?? [];
-      const participantRoles = context?.participantRoles ?? {};
-      const participants = participantIds.map(id => room.getPlayer(id)).filter(Boolean);
-      for (const [contextKey, participantRef] of Object.entries(effect.context_from_participants)) {
-        const p = resolveScheduledParticipant(participants, participantRef, participantRoles);
-        if (!p) continue;
-        scheduledContext[`${contextKey}_name`] = p.name;
-        scheduledContext[`${contextKey}_id`] = p.id;
-      }
-    }
     result.scheduledEvent = {
       event_id: effect.event_id,
       trigger_month: room.currentMonth + (effect.delay_months ?? 1),
-      context: scheduledContext,
+      context: { roles: effect.roles ?? {} },
     };
     return result;
   }
@@ -311,13 +318,15 @@ function normalizeEventSelection(msg) {
 function resetEventSelection(room) {
   room.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
   room.choiceVotes = {};
+  room.resolveConfirmations = new Set();
 }
 
-function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult) {
+function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null) {
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
     event_id: eventId,
     outcome,
+    message,
     health_changes: effectResult.healthChanges ?? [],
     sanity_changes: effectResult.sanityChanges ?? [],
     status_changes: effectResult.statusChanges ?? [],
@@ -343,33 +352,37 @@ function scheduleNextMonth(roomCode, room) {
   setTimeout(() => startNextMonth(roomCode), room.monthDuration);
 }
 
-function eventContextOf(event, extra = {}) {
-  return {
-    participantIds: event.participant_ids ?? [],
-    participantRoles: event.participant_roles ?? {},
-    scheduledContext: event.scheduled_context,
-    ...extra,
-  };
+function waitForOutcomeConfirmations(roomCode, action) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+  room.outcomeConfirmations = new Set();
+  room.pendingOutcomeAction = action;
+  for (const p of room.getActivePlayers()) {
+    if (p.is_bot) room.outcomeConfirmations.add(p.id);
+  }
+  wsManager.broadcastState(roomCode, room);
+  const active = room.getActivePlayers();
+  if (active.length > 0 && active.every(p => room.outcomeConfirmations.has(p.id))) {
+    executeOutcomeAction(roomCode);
+  }
 }
 
-function resolveNarrativeEvent(roomCode) {
+function executeOutcomeAction(roomCode) {
   const room = rooms.get(roomCode);
-  if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
-  const event = room.activeEvent;
-  if (event.event_type !== 'narrative') return;
-
-  const context = eventContextOf(event);
-  const effectResult = applyEffectsArray(room, getEventEffects(event, true, room, context), context);
-
-  room.activeEvent = null;
-  resetEventSelection(room);
-
-  broadcastEventResolved(roomCode, room, event.id, 'success', effectResult);
-
-  if (checkGameOver(roomCode, room)) return;
-
+  if (!room) return;
+  const action = room.pendingOutcomeAction;
+  room.outcomeConfirmations = null;
+  room.pendingOutcomeAction = null;
   wsManager.broadcastState(roomCode, room);
-  scheduleNextMonth(roomCode, room);
+  if (action === 'next_month') {
+    scheduleNextMonth(roomCode, room);
+  } else if (action === 'month_tick_continue') {
+    continueAfterMonthTick(roomCode);
+  }
+}
+
+function eventContextOf(event, extra = {}) {
+  return { participantIds: event.participant_ids ?? [], ...extra };
 }
 
 function startNextMonth(roomCode) {
@@ -390,7 +403,7 @@ function startNextMonth(roomCode) {
     const scheduled = due[0];
     const eventDef = room.config.EVENTS.find(e => e.id === scheduled.event_id);
     if (eventDef) {
-      const materialized = materializeScheduledEvent(eventDef, scheduled.context);
+      const materialized = materializeScheduledEvent(eventDef, scheduled.context, room);
       room.activeEvent = materialized;
       wsManager.broadcastState(roomCode, room);
       // Remaining due events are dropped this month (next month check will handle if still pending)
@@ -403,12 +416,13 @@ function startNextMonth(roomCode) {
   updateFood(room, -(activePlayers.length * consumptionPerPlayer));
   const monthlyVitals = applyMonthlyVitals(room);
 
-  if (
+  const hasVitals =
     monthlyVitals.healthChanges.length > 0 ||
     monthlyVitals.sanityChanges.length > 0 ||
     monthlyVitals.statusChanges.length > 0 ||
-    monthlyVitals.playersKilled.length > 0
-  ) {
+    monthlyVitals.playersKilled.length > 0;
+
+  if (hasVitals) {
     wsManager.broadcast(roomCode, {
       type: 'event_resolved',
       event_id: 'month_tick',
@@ -421,7 +435,16 @@ function startNextMonth(roomCode) {
       room_changed: false,
       players_added: [],
     });
+    waitForOutcomeConfirmations(roomCode, 'month_tick_continue');
+    return;
   }
+
+  continueAfterMonthTick(roomCode);
+}
+
+function continueAfterMonthTick(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life') return;
 
   if (checkGameOver(roomCode, room)) return;
 
@@ -464,7 +487,7 @@ function startNextMonth(roomCode) {
     : null;
 
   if (picked) {
-    room.activeEvent = materializeEventParticipants(picked.event, picked.participants);
+    room.activeEvent = picked;
     wsManager.broadcastState(roomCode, room);
   } else {
     room.activeEvent = null;
@@ -473,24 +496,23 @@ function startNextMonth(roomCode) {
   }
 }
 
-function resolvePassiveEvent(roomCode) {
+function resolveFlavorEvent(roomCode) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
   const event = room.activeEvent;
-  if (event.event_type !== 'passive') return;
+  if (event.event_type !== 'flavor') return;
 
   const context = eventContextOf(event);
-  const effectResult = applyEffectsArray(room, getEventEffects(event, true, room, context), context);
+  const effectResult = applyEffectsArray(room, buildFlavorEffects(event, room), context);
 
   room.activeEvent = null;
   resetEventSelection(room);
 
-  broadcastEventResolved(roomCode, room, event.id, 'success', effectResult);
+  broadcastEventResolved(roomCode, room, event.id, 'resolved', effectResult);
 
   if (checkGameOver(roomCode, room)) return;
 
-  wsManager.broadcastState(roomCode, room);
-  scheduleNextMonth(roomCode, room);
+  waitForOutcomeConfirmations(roomCode, 'next_month');
 }
 
 function resolveFoodReplenishEvent(roomCode, msg) {
@@ -516,8 +538,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
       room_changed: false,
       players_added: [],
     });
-    wsManager.broadcastState(roomCode, room);
-    scheduleNextMonth(roomCode, room);
+    waitForOutcomeConfirmations(roomCode, 'next_month');
     return;
   }
 
@@ -540,8 +561,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
     players_added: [],
   });
 
-  wsManager.broadcastState(roomCode, room);
-  scheduleNextMonth(roomCode, room);
+  waitForOutcomeConfirmations(roomCode, 'next_month');
 }
 
 function confirmBotsForBunkerLife(room) {
@@ -577,7 +597,7 @@ function handleUpdateEventSelection(roomCode, playerId, msg) {
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
   const player = room.getPlayer(playerId);
   if (!player || !player.is_active) return;
-  if (room.activeEvent.event_type === 'passive') return;
+  if (room.activeEvent.event_type === 'flavor') return;
 
   const { selectedPlayerId, selectedProfessions, selectedItems } = normalizeEventSelection(msg);
   const selectedPlayer = selectedPlayerId ? room.getPlayer(selectedPlayerId) : null;
@@ -611,22 +631,49 @@ function handleForceStartBunkerLife(roomCode, playerId) {
   tryStartBunkerLife(roomCode, room);
 }
 
-function resolveChoiceEvent(roomCode, outcome) {
+// Highest-voted option wins; ties break by declaration order.
+function tallyWinningOption(votes, optionIds) {
+  const counts = {};
+  for (const optionId of Object.values(votes)) counts[optionId] = (counts[optionId] ?? 0) + 1;
+  let best = optionIds[0];
+  let bestCount = -1;
+  for (const id of optionIds) {
+    const count = counts[id] ?? 0;
+    if (count > bestCount) { best = id; bestCount = count; }
+  }
+  return best;
+}
+
+function resolveChoiceEvent(roomCode, optionId) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
   const event = room.activeEvent;
+  const options = Array.isArray(event.__source?.options) ? event.__source.options : [];
+  if (options.length === 0) return;
+  const option = options.find(o => o.id === optionId) ?? options[0];
 
-  const succeeded = outcome === 'success';
+  // A player target is needed when the event declares a player picker; fall back
+  // to a random active survivor so bot-only rooms never soft-lock.
+  let selectedPlayerId = room.activeEventSelection.selected_player_id;
+  if (event.select?.kind === 'player' && !room.getPlayer(selectedPlayerId)?.is_active) {
+    const active = room.getActivePlayers();
+    selectedPlayerId = active.length ? active[Math.floor(Math.random() * active.length)].id : null;
+  }
+
+  if (option.consume_items) {
+    for (const entry of room.activeEventSelection.selected_items) consumeSelectedItem(room, entry);
+  }
+
+  const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId);
   const context = eventContextOf(event);
-  const effectResult = applyEffectsArray(room, getEventEffects(event, succeeded, room, context), context);
+  const effectResult = applyEffectsArray(room, effects, context);
 
   room.activeEvent = null;
   resetEventSelection(room);
 
-  broadcastEventResolved(roomCode, room, event.id, outcome, effectResult);
+  broadcastEventResolved(roomCode, room, event.id, option.id, effectResult, message);
   if (checkGameOver(roomCode, room)) return;
-  wsManager.broadcastState(roomCode, room);
-  scheduleNextMonth(roomCode, room);
+  waitForOutcomeConfirmations(roomCode, 'next_month');
 }
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
@@ -634,95 +681,96 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
   const player = room.getPlayer(playerId);
   if (!player || !player.is_active) return;
-  if (!room.activeEvent.choice_labels) return;
+  const event = room.activeEvent;
+  if (event.event_type !== 'choice' || !Array.isArray(event.options)) return;
 
-  const vote = msg?.vote === 'success' || msg?.vote === 'failure' ? msg.vote : null;
-  if (!vote) return;
+  const optionIds = event.options.map(o => o.id);
+  const optionId = typeof msg?.option_id === 'string' && optionIds.includes(msg.option_id) ? msg.option_id : null;
+  if (!optionId) return;
 
-  room.choiceVotes[playerId] = vote;
+  room.choiceVotes[playerId] = optionId;
 
-  // Auto-vote for bots that haven't voted yet
+  // Auto-vote for bots that haven't voted yet.
   for (const p of room.getActivePlayers()) {
     if (p.is_bot && !room.choiceVotes[p.id]) {
-      room.choiceVotes[p.id] = Math.random() < 0.5 ? 'success' : 'failure';
+      room.choiceVotes[p.id] = optionIds[Math.floor(Math.random() * optionIds.length)];
     }
   }
 
   wsManager.broadcastState(roomCode, room);
 
-  // Auto-resolve when all active players have voted
+  // Auto-resolve when all active players have voted.
   const activePlayers = room.getActivePlayers();
   if (activePlayers.every(p => room.choiceVotes[p.id])) {
-    const successCount = Object.values(room.choiceVotes).filter(v => v === 'success').length;
-    const failureCount = Object.values(room.choiceVotes).filter(v => v === 'failure').length;
-    resolveChoiceEvent(roomCode, failureCount > successCount ? 'failure' : 'success');
+    resolveChoiceEvent(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
   }
 }
 
-function handleResolveEvent(roomCode, playerId, msg) {
+function handleResolveEvent(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
   const player = room.getPlayer(playerId);
   if (!player || !player.is_active) return;
 
   const event = room.activeEvent;
-  if (event.event_type === 'passive') { resolvePassiveEvent(roomCode); return; }
-  if (event.event_type === 'narrative') { resolveNarrativeEvent(roomCode); return; }
-  if (event.event_type === 'food_replenish') {
-    resolveFoodReplenishEvent(roomCode, room.activeEventSelection);
-    return;
+  if (event.event_type !== 'flavor' && event.event_type !== 'food_replenish') return;
+
+  if (!room.resolveConfirmations) room.resolveConfirmations = new Set();
+  room.resolveConfirmations.add(playerId);
+  for (const p of room.getActivePlayers()) {
+    if (p.is_bot) room.resolveConfirmations.add(p.id);
   }
-
-  // Choice events: only forced_outcome is valid (player already voted via cast_choice_vote)
-  if (event.choice_labels) {
-    const forcedOutcome = typeof msg?.forced_outcome === 'string' ? msg.forced_outcome : null;
-    if (forcedOutcome !== 'success' && forcedOutcome !== 'failure') return;
-    resolveChoiceEvent(roomCode, forcedOutcome);
-    return;
-  }
-
-  const submittedSelection = normalizeEventSelection(msg);
-  const selectedProfessions = submittedSelection.selectedProfessions.length > 0
-    ? submittedSelection.selectedProfessions
-    : room.activeEventSelection.selected_professions;
-  const selectedItems = submittedSelection.selectedItems.length > 0
-    ? submittedSelection.selectedItems
-    : room.activeEventSelection.selected_items;
-  const selectedPlayerId = submittedSelection.selectedPlayerId ?? room.activeEventSelection.selected_player_id;
-  const selectedPlayer = selectedPlayerId ? room.getPlayer(selectedPlayerId) : null;
-  if (event.requires_player_selection === true && !selectedPlayer?.is_active) return;
-
-  const forcedOutcome = typeof msg?.forced_outcome === 'string' ? msg.forced_outcome : null;
-  let succeeded;
-  if (forcedOutcome === 'success') {
-    succeeded = true;
-  } else if (forcedOutcome === 'failure') {
-    succeeded = false;
-  } else {
-    const successChances = room.config.packSettings.events.success_chances;
-    const resourceCount = selectedProfessions.length + selectedItems.length;
-    let successChance;
-    if (resourceCount === 0) successChance = event.base_chance;
-    else if (resourceCount === 1) successChance = successChances.one_resource;
-    else if (resourceCount === 2) successChance = successChances.two_resources;
-    else successChance = successChances.three_plus_resources;
-    succeeded = Math.random() < successChance;
-  }
-  const context = eventContextOf(event, { selectedPlayerId: selectedPlayer?.id ?? null });
-  const effects = getEventEffects(event, succeeded, room, context);
-
-  for (const entry of selectedItems) consumeSelectedItem(room, entry);
-
-  const effectResult = applyEffectsArray(room, effects, context);
-  room.activeEvent = null;
-  resetEventSelection(room);
-
-  broadcastEventResolved(roomCode, room, event.id, succeeded ? 'success' : 'failure', effectResult);
-
-  if (checkGameOver(roomCode, room)) return;
-
   wsManager.broadcastState(roomCode, room);
-  scheduleNextMonth(roomCode, room);
+
+  const active = room.getActivePlayers();
+  if (active.every(p => room.resolveConfirmations.has(p.id))) {
+    if (event.event_type === 'flavor') resolveFlavorEvent(roomCode);
+    else resolveFoodReplenishEvent(roomCode, room.activeEventSelection);
+  }
+}
+
+function handleConfirmOutcome(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.outcomeConfirmations) return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+
+  room.outcomeConfirmations.add(playerId);
+  wsManager.broadcastState(roomCode, room);
+
+  const active = room.getActivePlayers();
+  if (active.every(p => room.outcomeConfirmations.has(p.id))) {
+    executeOutcomeAction(roomCode);
+  }
+}
+
+function handlePlayerMaybeUnblock(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life') return;
+
+  let unblocked = false;
+
+  if (room.activeEvent && room.resolveConfirmations && !room.resolveConfirmations.has(playerId)) {
+    room.resolveConfirmations.add(playerId);
+    const active = room.getActivePlayers();
+    if (active.every(p => room.resolveConfirmations.has(p.id))) {
+      const event = room.activeEvent;
+      if (event.event_type === 'flavor') { resolveFlavorEvent(roomCode); return; }
+      if (event.event_type === 'food_replenish') { resolveFoodReplenishEvent(roomCode, room.activeEventSelection); return; }
+    }
+    unblocked = true;
+  }
+
+  if (room.outcomeConfirmations && !room.outcomeConfirmations.has(playerId)) {
+    room.outcomeConfirmations.add(playerId);
+    const active = room.getActivePlayers();
+    if (active.every(p => room.outcomeConfirmations.has(p.id))) {
+      executeOutcomeAction(roomCode); return;
+    }
+    unblocked = true;
+  }
+
+  if (unblocked) wsManager.broadcastState(roomCode, room);
 }
 
 module.exports = {
@@ -731,7 +779,9 @@ module.exports = {
   handleForceStartBunkerLife,
   handleUpdateEventSelection,
   handleResolveEvent,
+  handleConfirmOutcome,
   handleCastChoiceVote,
+  handlePlayerMaybeUnblock,
   confirmBotsForBunkerLife,
   tryStartBunkerLife,
 };

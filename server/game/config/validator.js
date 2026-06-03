@@ -1,6 +1,7 @@
 const { isPlainObject } = require('./settings');
 const { validateVariantString } = require('./itemVariants');
 const { normalizeConfig, validateStructuredConfig } = require('./structuredConfig');
+const { validateEvent } = require('./yamlEvents');
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
@@ -386,28 +387,28 @@ function validatePackContent(packName, files) {
       addError(errors, 'Event -> EVENTS', 'ожидается непустой массив событий');
     } else {
       const seenIds = new Set();
+      const knownIds = new Set(files.Event.EVENTS.map(e => e?.id).filter(id => typeof id === 'string'));
       files.Event.EVENTS.forEach((event, index) => {
-        const scope = `Event -> EVENTS[${index}]`;
+        const fileName = event?.__file ? require('path').basename(event.__file) : `EVENTS[${index}]`;
+        const scope = `Event -> ${fileName}`;
         if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
 
-        if (typeof event.id !== 'string' || event.id.trim() === '') {
-          addError(errors, `${scope}.id`, 'ожидается непустая строка');
-        } else if (seenIds.has(event.id)) {
-          addError(errors, `${scope}.id`, `дублирующийся id события: "${event.id}"`);
-        } else {
+        if (typeof event.id === 'string' && event.id.trim() !== '') {
+          if (seenIds.has(event.id)) addError(errors, `${scope}.id`, `дублирующийся id события: "${event.id}"`);
           seenIds.add(event.id);
         }
 
-        if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
-        if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
+        for (const message of validateEvent(event, scope)) errors.push(message);
 
-        if (event.base_chance != null && (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1)) {
-          addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
-        }
-
-        if (event.choice_labels != null) {
-          if (typeof event.choice_labels.success !== 'string' || event.choice_labels.success.trim() === '') addError(errors, `${scope}.choice_labels.success`, 'ожидается непустая строка');
-          if (typeof event.choice_labels.failure !== 'string' || event.choice_labels.failure.trim() === '') addError(errors, `${scope}.choice_labels.failure`, 'ожидается непустая строка');
+        // Schedule targets must reference an existing event id.
+        const scheduleRefs = [
+          ...(event.schedule ?? []),
+          ...((event.options ?? []).flatMap(opt => opt?.schedule ?? [])),
+        ];
+        for (const ref of scheduleRefs) {
+          if (ref && typeof ref.event === 'string' && !knownIds.has(ref.event)) {
+            addError(errors, `${scope}.schedule`, `ссылка на несуществующее событие: "${ref.event}"`);
+          }
         }
       });
     }

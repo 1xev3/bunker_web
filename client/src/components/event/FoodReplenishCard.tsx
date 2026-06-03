@@ -1,4 +1,4 @@
-import { Send, Utensils } from 'lucide-react';
+import { CheckCheck, Send, Utensils } from 'lucide-react';
 import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, PackSettings, EventSelection } from '../../types/game';
 import {
   renderEventText,
@@ -15,11 +15,37 @@ interface Props {
   bunker: BunkerInfo | null;
   packSettings: PackSettings;
   eventSelection: EventSelection;
+  resolveConfirmations: string[];
+  myPlayerId: string;
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
 }
 
-export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, send, disabled = false }: Props) {
+function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; activePlayers: Player[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {activePlayers.map(p => {
+        const done = confirmed.includes(p.id);
+        return (
+          <span
+            key={p.id}
+            title={p.name}
+            className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-colors ${
+              done
+                ? 'border-amber-600/60 bg-amber-900/70 text-amber-200'
+                : 'border-zinc-700 bg-zinc-900 text-zinc-500'
+            }`}
+          >
+            {p.name.charAt(0).toUpperCase()}
+          </span>
+        );
+      })}
+      <span className="text-[10px] text-zinc-500">{confirmed.length} / {activePlayers.length}</span>
+    </div>
+  );
+}
+
+export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, resolveConfirmations, myPlayerId, send, disabled = false }: Props) {
   const selectedProfessions = eventSelection.selected_professions;
   const selectedItems = eventSelection.selected_items;
   const playerItems = getPlayerItemOptions(activePlayers);
@@ -52,8 +78,13 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
     ? Math.floor(projectedFoodGain / Math.max(1, activePlayers.length * packSettings.bunker_life.food_consumption_per_player))
     : 0;
 
+  const myConfirmed = resolveConfirmations.includes(myPlayerId);
+  const allConfirmed = activePlayers.length > 0 && activePlayers.every(p => resolveConfirmations.includes(p.id));
+
   const handleSend = () => {
-    send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
+    if (!myConfirmed && !disabled) {
+      send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
+    }
   };
 
   return (
@@ -135,14 +166,25 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
               {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{projectedFoodGain} еды, это около {projectedMonths} мес.
             </p>
           )}
+          <ConfirmationDots confirmed={resolveConfirmations} activePlayers={activePlayers} />
           <button
             className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleSend}
-            disabled={disabled}
+            disabled={disabled || myConfirmed || allConfirmed}
           >
-            <Send size={14} /> {disabled ? 'Переподключение...' : resourceCount === 0 ? 'Нечем помочь' : 'Пополнить запасы'}
+            {disabled
+              ? 'Переподключение...'
+              : myConfirmed
+              ? <><CheckCheck size={14} /> Подтверждено</>
+              : <><Send size={14} /> {resourceCount === 0 ? 'Нечем помочь' : 'Пополнить запасы'}</>}
           </button>
-          {disabled && <p className="text-center text-xs text-orange-400">Соединение восстанавливается. Выбор ресурсов временно заблокирован.</p>}
+          <p className="text-center text-xs text-zinc-500">
+            {disabled
+              ? 'Соединение восстанавливается.'
+              : allConfirmed
+              ? 'Все готовы, переходим...'
+              : `Ждём ${activePlayers.length - resolveConfirmations.length} из ${activePlayers.length}`}
+          </p>
         </div>
       </div>
     </div>

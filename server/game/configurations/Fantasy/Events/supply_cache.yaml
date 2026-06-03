@@ -1,0 +1,15 @@
+id: supply_cache
+type: flavor
+weight: 2
+when:
+  flag_unset: [supply_cache_found]
+participants:
+  finder: {}
+title: Забытый ящик
+text: >-
+  {finder} наткнулся на старый аварийный ящик за фальшпанелью. Еды немного, но
+  сама находка вернула людям ощущение контроля.
+effects:
+  - { food: 180 }
+  - { on: finder, sanity: 8 }
+  - { flag: { supply_cache_found: true } }

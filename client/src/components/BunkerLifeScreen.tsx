@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Brain, Calendar, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles } from 'lucide-react';
+import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles } from 'lucide-react';
 import type { ClientMessage, Player, RoomState, StatusChange, VitalChange } from '../types/game';
 import EventModal from './EventModal';
 
 interface EventOutcome {
-  outcome: 'success' | 'failure' | 'nothing';
+  outcome: string;
+  message?: string | null;
   health_changes?: VitalChange[];
   sanity_changes?: VitalChange[];
   status_changes?: StatusChange[];
@@ -21,6 +22,7 @@ interface Props {
   send: (msg: ClientMessage) => void;
   onLeave: () => void;
   eventOutcome: EventOutcome | null;
+  outcomeConfirmations: string[] | null;
   onDismissEventOutcome: () => void;
   isConnectionLost: boolean;
 }
@@ -119,7 +121,16 @@ function SurvivorCard({ player, isMe }: { player: Player; isMe: boolean }) {
   );
 }
 
-function EventOutcomeModal({ outcome, onDismiss }: { outcome: EventOutcome; onDismiss: () => void }) {
+function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirmations, send }: {
+  outcome: EventOutcome;
+  activePlayers: Player[];
+  myPlayerId: string;
+  outcomeConfirmations: string[] | null;
+  send: (msg: ClientMessage) => void;
+}) {
+  const confirmed = outcomeConfirmations ?? [];
+  const myConfirmed = confirmed.includes(myPlayerId);
+  const allConfirmed = activePlayers.length > 0 && activePlayers.every(p => confirmed.includes(p.id));
   const healthChanges = outcome.health_changes?.filter(change => change.delta !== 0) ?? [];
   const sanityChanges = outcome.sanity_changes?.filter(change => change.delta !== 0) ?? [];
   const statusAdded = outcome.status_changes?.filter(change => change.action === 'added' && change.status) ?? [];
@@ -132,13 +143,10 @@ function EventOutcomeModal({ outcome, onDismiss }: { outcome: EventOutcome; onDi
     outcome.food_change !== undefined ||
     Boolean(outcome.players_killed?.length) ||
     Boolean(outcome.players_added?.length) ||
-    outcome.room_changed;
+    outcome.room_changed ||
+    Boolean(outcome.message);
 
-  const title = outcome.event_id === 'month_tick'
-    ? 'Итоги месяца'
-    : outcome.outcome === 'failure'
-      ? 'Событие провалилось'
-      : 'Событие завершено';
+  const title = outcome.event_id === 'month_tick' ? 'Итоги месяца' : 'Событие завершено';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm animate-fade-in-up">
@@ -153,6 +161,10 @@ function EventOutcomeModal({ outcome, onDismiss }: { outcome: EventOutcome; onDi
             <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">Ничего заметного не произошло.</p>
           ) : (
             <div className="flex flex-col gap-3">
+              {outcome.message && (
+                <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm leading-relaxed text-zinc-300">{outcome.message}</p>
+              )}
+
               {outcome.food_change !== undefined && (
                 <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
                   <span className="flex items-center gap-2 font-semibold"><Utensils size={15} /> Еда: {outcome.food_change > 0 ? '+' : ''}{outcome.food_change}</span>
@@ -221,21 +233,46 @@ function EventOutcomeModal({ outcome, onDismiss }: { outcome: EventOutcome; onDi
           )}
         </div>
 
-        <div className="border-t border-zinc-800 px-5 py-4">
+        <div className="border-t border-zinc-800 px-5 py-4 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-1">
+            {activePlayers.map(p => {
+              const done = confirmed.includes(p.id);
+              return (
+                <span
+                  key={p.id}
+                  title={p.name}
+                  className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-colors ${
+                    done
+                      ? 'border-amber-600/60 bg-amber-900/70 text-amber-200'
+                      : 'border-zinc-700 bg-zinc-900 text-zinc-500'
+                  }`}
+                >
+                  {p.name.charAt(0).toUpperCase()}
+                </span>
+              );
+            })}
+            <span className="text-[10px] text-zinc-500">{confirmed.length} / {activePlayers.length}</span>
+          </div>
           <button
             type="button"
-            onClick={onDismiss}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white btn-primary"
+            onClick={() => { if (!myConfirmed) send({ type: 'confirm_outcome' }); }}
+            disabled={myConfirmed || allConfirmed}
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white btn-primary disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Дальше
+            {myConfirmed ? <><CheckCheck size={14} /> Подтверждено</> : 'Дальше'}
           </button>
+          <p className="text-center text-xs text-zinc-500">
+            {allConfirmed
+              ? 'Все готовы, продолжаем...'
+              : `Ждём ${activePlayers.length - confirmed.length} из ${activePlayers.length}`}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, onDismissEventOutcome, isConnectionLost }: Props) {
+export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, outcomeConfirmations, onDismissEventOutcome, isConnectionLost }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
   const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
@@ -337,7 +374,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
         </section>
       </main>
 
-      {roomState.active_event && (
+      {roomState.active_event && !eventOutcome && (
         <EventModal
           event={roomState.active_event}
           activePlayers={activePlayers}
@@ -345,6 +382,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           packSettings={roomState.pack_settings}
           eventSelection={roomState.active_event_selection}
           choiceVotes={roomState.choice_votes}
+          resolveConfirmations={roomState.resolve_confirmations ?? []}
           myPlayerId={myPlayerId}
           send={send}
           disabled={isConnectionLost}
@@ -352,7 +390,13 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
       )}
 
       {eventOutcome && (
-        <EventOutcomeModal outcome={eventOutcome} onDismiss={onDismissEventOutcome} />
+        <EventOutcomeModal
+          outcome={eventOutcome}
+          activePlayers={activePlayers}
+          myPlayerId={myPlayerId}
+          outcomeConfirmations={outcomeConfirmations}
+          send={send}
+        />
       )}
     </div>
   );

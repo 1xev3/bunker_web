@@ -1,0 +1,30 @@
+id: fever
+type: choice
+weight: 2
+when:
+  min_players: 1
+participants:
+  patient: {}
+title: Ночная лихорадка
+text: >-
+  {patient} горит в жару. Можно потратить остаток медикаментов или понадеяться,
+  что организм справится сам.
+options:
+  - id: medicate
+    label: Потратить лекарство
+    description: Израсходовать выбранные предметы, но почти наверняка сбить жар.
+    consume_items: true
+    effects:
+      - { on: patient, health: 16, sanity: 4, clear_status: debuffs }
+  - id: wait
+    label: Переждать
+    description: Ничего не тратить — но это риск.
+    outcomes:
+      - chance: 40
+        text: Жар отступил сам собой.
+        effects:
+          - { on: patient, health: 4 }
+      - text: Стало хуже — началось воспаление.
+        effects:
+          - { on: patient, health: -16 }
+          - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
