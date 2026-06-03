@@ -1,5 +1,5 @@
 const { getPlayerAttributeLabel } = require('../game/config/playerAttributes');
-const { matchesWhen, selectParticipants } = require('../game/config/yamlEvents');
+const { matchesWhen, selectParticipants, getSelectKinds, buildEventVars, resolveInlineText, outcomeTone } = require('../game/config/yamlEvents');
 
 const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
 const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
@@ -26,8 +26,11 @@ function formatParticipantList(names) {
 }
 
 // Renders {role}, {role.attribute} and {participants} against a role->player map.
-function renderRoleText(template, roleMap) {
+// `ctx` ({ def, vars }) lets the text first resolve inline alternatives
+// ("{a|b|c}") and event self-references ("{event.<name>}").
+function renderRoleText(template, roleMap, ctx) {
   if (typeof template !== 'string') return template;
+  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') {
       return highlight(formatParticipantList(Object.values(roleMap).map(p => p.name)));
@@ -46,23 +49,77 @@ function renderRoleText(template, roleMap) {
   });
 }
 
+// Normalizes a list of weighted outcomes into {chance, tone} entries. An outcome
+// without `chance` splits the leftover probability (mirrors pickOutcome).
+function summarizeOutcomes(list) {
+  if (!Array.isArray(list) || list.length === 0) return undefined;
+  const known = list.reduce((sum, o) => sum + (typeof o.chance === 'number' ? o.chance : 0), 0);
+  const remainderCount = list.filter(o => o.chance == null).length;
+  const remainderEach = remainderCount > 0 ? Math.max(0, (100 - known) / remainderCount) : 0;
+  return list.map(o => ({
+    chance: Math.round(typeof o.chance === 'number' ? o.chance : remainderEach),
+    tone: outcomeTone(o),
+  }));
+}
+
+// Tone of the "good" branch of a selection-scaled option (highest-chance
+// non-bad outcome among the all/some buckets), used to colour the success share.
+function selectionGoodTone(buckets) {
+  for (const bucket of ['all', 'some']) {
+    for (const outcome of buckets[bucket] ?? []) {
+      const tone = outcomeTone(outcome);
+      if (tone !== 'bad') return tone;
+    }
+  }
+  return 'good';
+}
+
+function optionOdds(option) {
+  // Selection-scaled options compute their odds live on the client from the
+  // current pick count (see selectionSuccessChance); the server only needs to
+  // hand over the success/failure colours.
+  if (isPlainObject(option.outcomes_by_selection)) {
+    return { odds_scaled: { good_tone: selectionGoodTone(option.outcomes_by_selection), bad_tone: 'bad' } };
+  }
+  return { odds: summarizeOutcomes(option.outcomes) };
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function publicOptions(def) {
   if (!Array.isArray(def.options)) return undefined;
-  return def.options.map(o => ({ id: o.id, label: o.label, description: o.description ?? null }));
+  return def.options.map(o => ({
+    id: o.id,
+    label: o.label,
+    description: o.description ?? null,
+    requires: Array.isArray(o.requires) ? o.requires.filter(k => ['player', 'item', 'profession'].includes(k)) : [],
+    ...optionOdds(o),
+  }));
 }
 
 function publicSelect(def) {
-  return def.select ? { kind: def.select.kind, prompt: def.select.prompt ?? null } : undefined;
+  if (!def.select) return undefined;
+  const kinds = getSelectKinds(def.select);
+  return {
+    kind: kinds[0] ?? null,
+    kinds,
+    prompt: def.select.prompt ?? null,
+    prompt_item: def.select.prompt_item ?? null,
+    prompt_profession: def.select.prompt_profession ?? null,
+  };
 }
 
 // Builds the live activeEvent object from a definition + a role->player map.
 // __source / __roles are stripped before reaching the client (see GameRoom.toDict).
 function materializeEvent(def, roleMap) {
+  const ctx = { def, vars: buildEventVars(def) };
   return {
     id: def.id,
     event_type: def.type,
-    title: renderRoleText(def.title, roleMap),
-    description: renderRoleText(def.text, roleMap),
+    title: renderRoleText(def.title, roleMap, ctx),
+    description: renderRoleText(def.text, roleMap, ctx),
     participants: Object.values(roleMap).map(p => p.name),
     participant_ids: Object.values(roleMap).map(p => p.id),
     options: publicOptions(def),
@@ -91,8 +148,9 @@ function pickRandomEvent(config, room) {
 
 // Renders text for a scheduled event using carried role names (a player may be
 // gone by the time the follow-up fires).
-function renderScheduledText(template, roleNames, roleMap, room) {
+function renderScheduledText(template, roleNames, roleMap, room, ctx) {
   if (typeof template !== 'string') return template;
+  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') return highlight(formatParticipantList(Object.values(roleNames)));
     const dotIdx = key.indexOf('.');
@@ -119,11 +177,12 @@ function materializeScheduledEvent(def, context, room) {
     roleNames[role] = info.name;
   }
   const activeIds = Object.values(roleMap).filter(id => room.getPlayer(id)?.is_active);
+  const ctx = { def, vars: buildEventVars(def) };
   return {
     id: def.id,
     event_type: def.type,
-    title: renderScheduledText(def.title, roleNames, roleMap, room),
-    description: renderScheduledText(def.text, roleNames, roleMap, room),
+    title: renderScheduledText(def.title, roleNames, roleMap, room, ctx),
+    description: renderScheduledText(def.text, roleNames, roleMap, room, ctx),
     participants: Object.values(roleNames),
     participant_ids: activeIds,
     options: publicOptions(def),

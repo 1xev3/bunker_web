@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles } from 'lucide-react';
+import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles, Send } from 'lucide-react';
 import type { ClientMessage, Player, RoomState, StatusChange, VitalChange } from '../types/game';
 import EventModal from './EventModal';
 
@@ -24,7 +24,15 @@ interface Props {
   eventOutcome: EventOutcome | null;
   outcomeConfirmations: string[] | null;
   onDismissEventOutcome: () => void;
+  monthlyNotice: MonthlyNotice | null;
   isConnectionLost: boolean;
+}
+
+interface MonthlyNotice {
+  health_changes?: VitalChange[];
+  sanity_changes?: VitalChange[];
+  status_changes?: StatusChange[];
+  players_killed?: Array<{ id: string; name: string }>;
 }
 
 function MonthProgressBar({ progress }: { progress: number }) {
@@ -121,151 +129,147 @@ function SurvivorCard({ player, isMe }: { player: Player; isMe: boolean }) {
   );
 }
 
-function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirmations, send }: {
+function OutcomeChip({ children, color }: { children: ReactNode; color: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${color}`}>
+      {children}
+    </span>
+  );
+}
+
+function OutcomeRow({ icon, label, value, valueColor }: { icon: ReactNode; label: string; value?: string; valueColor?: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1.5">
+      <span className="shrink-0">{icon}</span>
+      <span className="flex-1 text-sm text-zinc-300">{label}</span>
+      {value && <span className={`font-mono text-sm font-bold ${valueColor ?? 'text-zinc-200'}`}>{value}</span>}
+    </div>
+  );
+}
+
+function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; activePlayers: Player[] }) {
+  return (
+    <span className="font-mono text-base font-bold text-white">
+      {confirmed.length} / {activePlayers.length}
+    </span>
+  );
+}
+
+function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirmations, send, disabled }: {
   outcome: EventOutcome;
   activePlayers: Player[];
   myPlayerId: string;
   outcomeConfirmations: string[] | null;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }) {
   const confirmed = outcomeConfirmations ?? [];
   const myConfirmed = confirmed.includes(myPlayerId);
   const allConfirmed = activePlayers.length > 0 && activePlayers.every(p => confirmed.includes(p.id));
-  const healthChanges = outcome.health_changes?.filter(change => change.delta !== 0) ?? [];
-  const sanityChanges = outcome.sanity_changes?.filter(change => change.delta !== 0) ?? [];
-  const statusAdded = outcome.status_changes?.filter(change => change.action === 'added' && change.status) ?? [];
-  const statusCleared = outcome.status_changes?.filter(change => change.action === 'cleared') ?? [];
-  const hasAny =
-    healthChanges.length > 0 ||
-    sanityChanges.length > 0 ||
-    statusAdded.length > 0 ||
-    statusCleared.length > 0 ||
-    outcome.food_change !== undefined ||
-    Boolean(outcome.players_killed?.length) ||
-    Boolean(outcome.players_added?.length) ||
-    outcome.room_changed ||
-    Boolean(outcome.message);
+
+  const healthChanges = outcome.health_changes?.filter(c => c.delta !== 0) ?? [];
+  const sanityChanges = outcome.sanity_changes?.filter(c => c.delta !== 0) ?? [];
+
+  const rows: ReactNode[] = [];
+  if (outcome.food_change !== undefined && outcome.food_change !== 0)
+    rows.push(<OutcomeRow key="food" icon={<Utensils size={14} className="text-amber-400" />} label="Запасы еды" value={`${outcome.food_change > 0 ? '+' : ''}${outcome.food_change}`} valueColor={outcome.food_change > 0 ? 'text-emerald-400' : 'text-red-400'} />);
+  for (const c of healthChanges)
+    rows.push(<OutcomeRow key={`hp-${c.name}`} icon={<HeartPulse size={14} className="text-red-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />);
+  for (const c of sanityChanges)
+    rows.push(<OutcomeRow key={`san-${c.name}`} icon={<Brain size={14} className="text-sky-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />);
+  for (const p of outcome.players_killed ?? [])
+    rows.push(<OutcomeRow key={`killed-${p.id}`} icon={<Skull size={14} className="text-red-400" />} label={p.name} valueColor="text-red-400" />);
+  for (const p of outcome.players_added ?? [])
+    rows.push(<OutcomeRow key={`added-${p.id}`} icon={<Baby size={14} className="text-blue-400" />} label={p.name} />);
+  if (outcome.room_changed)
+    rows.push(<OutcomeRow key="room" icon={<DoorOpen size={14} className="text-zinc-400" />} label="Бункер изменился" />);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm animate-fade-in-up">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-700/70 bg-zinc-950 shadow-2xl">
-        <div className="max-h-[65vh] overflow-y-auto px-5 pt-5 pb-4">
-          {!hasAny ? (
-            <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">Ничего заметного не произошло.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {outcome.message && (
-                <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm leading-relaxed text-zinc-300">{outcome.message}</p>
-              )}
-
-              {outcome.food_change !== undefined && (
-                <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
-                  <span className="flex items-center gap-2 font-semibold"><Utensils size={15} /> Еда: {outcome.food_change > 0 ? '+' : ''}{outcome.food_change}</span>
-                </div>
-              )}
-
-              {healthChanges.length > 0 && (
-                <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-4 py-3">
-                  <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-200"><HeartPulse size={15} /> Здоровье</p>
-                  <div className="flex flex-col gap-1">
-                    {healthChanges.map((change, index) => (
-                      <span key={`${change.id}:health:${index}`} className="text-sm text-zinc-300">{change.name}: {change.delta > 0 ? '+' : ''}{change.delta}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {sanityChanges.length > 0 && (
-                <div className="rounded-xl border border-sky-900/40 bg-sky-950/20 px-4 py-3">
-                  <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-sky-200"><Brain size={15} /> Рассудок</p>
-                  <div className="flex flex-col gap-1">
-                    {sanityChanges.map((change, index) => (
-                      <span key={`${change.id}:sanity:${index}`} className="text-sm text-zinc-300">{change.name}: {change.delta > 0 ? '+' : ''}{change.delta}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {statusAdded.length > 0 && (
-                <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3">
-                  <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-200"><Sparkles size={15} /> Новые статусы</p>
-                  <div className="flex flex-col gap-1">
-                    {statusAdded.map((change, index) => (
-                      <span key={`${change.id}:status:${index}`} className="text-sm text-zinc-300">
-                        {change.name}: {change.status!.label} ({change.status!.months} мес.)
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {statusCleared.length > 0 && (
-                <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-200">
-                  Сняты статусы: {statusCleared.map(change => change.name).join(', ')}
-                </div>
-              )}
-
-              {outcome.players_killed && outcome.players_killed.length > 0 && (
-                <div className="rounded-xl border border-red-900/50 bg-red-950/25 px-4 py-3 text-sm text-red-200">
-                  <span className="flex items-center gap-2 font-semibold"><Skull size={15} /> Выбыли: {outcome.players_killed.map(p => p.name).join(', ')}</span>
-                </div>
-              )}
-
-              {outcome.players_added && outcome.players_added.length > 0 && (
-                <div className="rounded-xl border border-blue-900/50 bg-blue-950/25 px-4 py-3 text-sm text-blue-200">
-                  <span className="flex items-center gap-2 font-semibold"><Baby size={15} /> Присоединились: {outcome.players_added.map(p => p.name).join(', ')}</span>
-                </div>
-              )}
-
-              {outcome.room_changed && (
-                <div className="rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-200">
-                  <span className="flex items-center gap-2 font-semibold"><DoorOpen size={15} /> Структура бункера изменилась</span>
-                </div>
-              )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
+      <div className="mx-4 flex w-full max-w-lg flex-col rounded-2xl border border-amber-900/40 bg-zinc-900 shadow-2xl">
+        {outcome.message && (
+          <div className="border-b border-zinc-800 p-5">
+            <div className="flex items-start gap-3">
+              <Sparkles size={20} className="mt-0.5 shrink-0 text-amber-400" />
+              <p className="mt-1 text-sm leading-relaxed text-zinc-400">{outcome.message}</p>
             </div>
-          )}
-        </div>
-
-        <div className="border-t border-zinc-800 px-5 py-4 flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-1">
-            {activePlayers.map(p => {
-              const done = confirmed.includes(p.id);
-              return (
-                <span
-                  key={p.id}
-                  title={p.name}
-                  className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-colors ${
-                    done
-                      ? 'border-amber-600/60 bg-amber-900/70 text-amber-200'
-                      : 'border-zinc-700 bg-zinc-900 text-zinc-500'
-                  }`}
-                >
-                  {p.name.charAt(0).toUpperCase()}
-                </span>
-              );
-            })}
-            <span className="text-[10px] text-zinc-500">{confirmed.length} / {activePlayers.length}</span>
           </div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="px-5 py-2 border-b border-zinc-800 divide-y divide-zinc-800/60">
+            {rows}
+          </div>
+        )}
+
+        <div className="p-5 flex flex-col gap-3">
           <button
             type="button"
-            onClick={() => { if (!myConfirmed) send({ type: 'confirm_outcome' }); }}
-            disabled={myConfirmed || allConfirmed}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white btn-primary disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            onClick={() => { if (!myConfirmed && !disabled) send({ type: 'confirm_outcome' }); }}
+            disabled={disabled || myConfirmed || allConfirmed}
+            className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-between gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {myConfirmed ? <><CheckCheck size={14} /> Подтверждено</> : 'Дальше'}
+            <span className="flex items-center gap-2">
+              {disabled ? 'Переподключение...' : myConfirmed ? <><CheckCheck size={14} /> Подтверждено</> : <><Send size={14} /> Готов</>}
+            </span>
+            <ConfirmationDots confirmed={confirmed} activePlayers={activePlayers} />
           </button>
-          <p className="text-center text-xs text-zinc-500">
-            {allConfirmed
-              ? 'Все готовы, продолжаем...'
-              : `Ждём ${activePlayers.length - confirmed.length} из ${activePlayers.length}`}
-          </p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, outcomeConfirmations, onDismissEventOutcome, isConnectionLost }: Props) {
+function BuffDebuffSnackbar({ statusChanges = [], healthChanges = [], sanityChanges = [], playersKilled = [] }: {
+  statusChanges?: StatusChange[];
+  healthChanges?: VitalChange[];
+  sanityChanges?: VitalChange[];
+  playersKilled?: Array<{ id: string; name: string }>;
+}) {
+  const added = statusChanges.filter(c => c.action === 'added' && c.status);
+  const cleared = statusChanges.filter(c => c.action === 'cleared');
+  const hp = healthChanges.filter(c => c.delta !== 0);
+  const san = sanityChanges.filter(c => c.delta !== 0);
+  if (added.length === 0 && cleared.length === 0 && hp.length === 0 && san.length === 0 && playersKilled.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-[60] animate-fade-in-up pointer-events-none">
+      <div className="mx-auto max-w-4xl px-3 pb-3">
+        <div className="rounded-2xl border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 shadow-2xl backdrop-blur-sm">
+          <div className="flex flex-wrap gap-1.5">
+            {added.map(c => (
+              <OutcomeChip key={`add-${c.id}`} color="border-amber-800/60 bg-amber-950/50 text-amber-200">
+                <Sparkles size={11} /> {c.name}: {c.status!.label}
+              </OutcomeChip>
+            ))}
+            {cleared.map(c => (
+              <OutcomeChip key={`clr-${c.id}`} color="border-emerald-800/60 bg-emerald-950/50 text-emerald-300">
+                <CheckCheck size={11} /> Снят: {c.name}
+              </OutcomeChip>
+            ))}
+            {hp.length > 0 && (
+              <OutcomeChip color="border-red-800/60 bg-red-950/50 text-red-300">
+                <HeartPulse size={11} /> {hp.map(c => `${c.name} ${c.delta > 0 ? '+' : ''}${c.delta}`).join(', ')}
+              </OutcomeChip>
+            )}
+            {san.length > 0 && (
+              <OutcomeChip color="border-sky-800/60 bg-sky-950/50 text-sky-300">
+                <Brain size={11} /> {san.map(c => `${c.name} ${c.delta > 0 ? '+' : ''}${c.delta}`).join(', ')}
+              </OutcomeChip>
+            )}
+            {playersKilled.length > 0 && (
+              <OutcomeChip color="border-red-800/70 bg-red-950/60 text-red-200">
+                <Skull size={11} /> {playersKilled.map(p => p.name).join(', ')}
+              </OutcomeChip>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, outcomeConfirmations, onDismissEventOutcome, monthlyNotice, isConnectionLost }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
   const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
@@ -375,6 +379,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           packSettings={roomState.pack_settings}
           eventSelection={roomState.active_event_selection}
           choiceVotes={roomState.choice_votes}
+          choicePendingSelection={roomState.choice_pending_selection ?? null}
           resolveConfirmations={roomState.resolve_confirmations ?? []}
           myPlayerId={myPlayerId}
           send={send}
@@ -389,6 +394,20 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           myPlayerId={myPlayerId}
           outcomeConfirmations={outcomeConfirmations}
           send={send}
+          disabled={isConnectionLost}
+        />
+      )}
+
+      {eventOutcome && (eventOutcome.status_changes?.length ?? 0) > 0 && (
+        <BuffDebuffSnackbar statusChanges={eventOutcome.status_changes!} />
+      )}
+
+      {monthlyNotice && (
+        <BuffDebuffSnackbar
+          statusChanges={monthlyNotice.status_changes}
+          healthChanges={monthlyNotice.health_changes}
+          sanityChanges={monthlyNotice.sanity_changes}
+          playersKilled={monthlyNotice.players_killed}
         />
       )}
     </div>

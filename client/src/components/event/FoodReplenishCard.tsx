@@ -124,16 +124,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
 
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Предметы</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <p className="text-zinc-600 text-xs mb-2">Выжившие</p>
-                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
-              </div>
-              <div>
-                <p className="text-zinc-600 text-xs mb-2">Бункер</p>
-                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
-              </div>
-            </div>
+            <SelectableItemList items={[...playerItems, ...bunkerItems]} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
           </div>
         </div>
 
@@ -153,12 +144,12 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
             </div>
             <div className="rounded-xl border border-red-900/40 bg-red-950/20 px-3 py-2 text-red-300">
               <p className="text-[11px] uppercase tracking-widest opacity-70">Если не помочь</p>
-              <p className="mt-1 text-sm font-semibold">Через месяц бункер погибнет от голода</p>
+              <p className="mt-1 text-sm font-semibold">Дебаф «Голод»: −35 хп и −20 рассудка в месяц на каждого</p>
             </div>
           </div>
           {resourceCount === 0 && (
             <p className="text-orange-400/70 text-xs text-center">
-              Если ничего не выбрать — следующий месяц станет последним
+              Без ресурсов все получат дебаф «Голод» и будут терять хп и рассудок каждый месяц
             </p>
           )}
           {resourceCount > 0 && (

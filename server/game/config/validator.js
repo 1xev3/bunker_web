@@ -91,11 +91,12 @@ function validateEventSettings(settings, scope, errors) {
   }
 }
 
-function validateWeightedTable(value, scope, errors, valueValidator = () => {}) {
+function validateWeightedTable(value, scope, errors, valueValidator = () => {}, { allowMultiplier = false } = {}) {
   if (!Array.isArray(value) || value.length === 0) {
     addError(errors, scope, 'ожидается непустой массив пар [значение, вес]');
     return;
   }
+  const maxLen = allowMultiplier ? 3 : 2;
   value.forEach((entry, index) => {
     // Object syntax: { label, weight, groups? }
     if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'label' in entry) {
@@ -105,15 +106,23 @@ function validateWeightedTable(value, scope, errors, valueValidator = () => {}) 
       if (typeof entry.weight !== 'number' || !Number.isFinite(entry.weight) || entry.weight <= 0) {
         addError(errors, `${scope}[${index}].weight`, 'вес должен быть положительным числом');
       }
+      if (allowMultiplier && entry.multiplier !== undefined && (typeof entry.multiplier !== 'number' || !Number.isFinite(entry.multiplier) || entry.multiplier < 0)) {
+        addError(errors, `${scope}[${index}].multiplier`, 'множитель должен быть неотрицательным числом');
+      }
       return;
     }
-    if (!Array.isArray(entry) || entry.length !== 2) {
-      addError(errors, `${scope}[${index}]`, 'ожидается массив из 2 элементов: [значение, вес]');
+    if (!Array.isArray(entry) || entry.length < 2 || entry.length > maxLen) {
+      addError(errors, `${scope}[${index}]`, allowMultiplier
+        ? 'ожидается массив [значение, вес] или [значение, вес, множитель]'
+        : 'ожидается массив из 2 элементов: [значение, вес]');
       return;
     }
     valueValidator(entry[0], `${scope}[${index}][0]`, errors);
     if (typeof entry[1] !== 'number' || !Number.isFinite(entry[1]) || entry[1] <= 0) {
       addError(errors, `${scope}[${index}][1]`, 'вес должен быть положительным числом');
+    }
+    if (allowMultiplier && entry[2] !== undefined && (typeof entry[2] !== 'number' || !Number.isFinite(entry[2]) || entry[2] < 0)) {
+      addError(errors, `${scope}[${index}][2]`, 'множитель должен быть неотрицательным числом');
     }
   });
 }
@@ -304,7 +313,7 @@ function validatePackContent(packName, files) {
     });
     validateWeightedTable(files.People.SKILL_LEVELS, 'People -> SKILL_LEVELS', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
-    });
+    }, { allowMultiplier: true });
     validateStringArray(files.People.TRAITS, 'People -> TRAITS', errors);
     validateWeightedTable(files.People.HEALTH_STATES, 'People -> HEALTH_STATES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
@@ -408,6 +417,22 @@ function validatePackContent(packName, files) {
         for (const ref of scheduleRefs) {
           if (ref && typeof ref.event === 'string' && !knownIds.has(ref.event)) {
             addError(errors, `${scope}.schedule`, `ссылка на несуществующее событие: "${ref.event}"`);
+          }
+        }
+
+        // status.on_expire targets must reference an existing event id too.
+        const allEffects = [
+          ...(event.effects ?? []),
+          ...((event.options ?? []).flatMap(opt => [
+            ...(opt?.effects ?? []),
+            ...((opt?.outcomes ?? []).flatMap(o => o?.effects ?? [])),
+            ...Object.values(opt?.outcomes_by_selection ?? {}).flatMap(list => (Array.isArray(list) ? list : []).flatMap(o => o?.effects ?? [])),
+          ])),
+        ];
+        for (const eff of allEffects) {
+          const ref = eff?.status?.on_expire?.event;
+          if (typeof ref === 'string' && !knownIds.has(ref)) {
+            addError(errors, `${scope}.on_expire`, `ссылка на несуществующее событие: "${ref}"`);
           }
         }
       });

@@ -1,0 +1,57 @@
+id: machinery_breakdown
+type: choice
+weight: 2
+when:
+  min_month: 2
+  min_players: 2
+participants:
+  victim: {}
+vars:
+  system: "{системы жизнеобеспечения|вентиляция|фильтры воздуха|насос подачи воды}"
+title: Поломка систем жизнеобеспечения
+text: >-
+  {event.system} заглохли в недрах бункера, воздух становится спёртым. Можно
+  посмотреть, что есть на складе, и найти того, кто разбирается в технике, — или
+  понадеяться на удачу.
+select:
+  kinds: [item, profession]
+  prompt_item: Посмотрите, что есть на складе
+  prompt_profession: Кто возьмётся за ремонт
+options:
+  - id: repair
+    label: Взяться за ремонт
+    description: >-
+      С нужным инструментом и мастером — почти наверняка. С чем-то одним — как
+      повезёт. С пустыми руками — наугад.
+    requires: [item, profession]
+    consume_items: true
+    outcomes_by_selection:
+      all:
+        - text: Инструмент в умелых руках — системы снова гудят ровно.
+          effects:
+            - { on: all, sanity: 6 }
+            - { flag: { life_support_fixed: true } }
+      some:
+        - chance: 50
+          text: Кое-как, но удалось запустить системы заново.
+          effects:
+            - { on: all, sanity: 3 }
+            - { flag: { life_support_fixed: true } }
+        - text: Без нужного сочетания инструмента и знаний ремонт не задался.
+          effects:
+            - { on: all, health: -8, sanity: -6 }
+      none:
+        - text: Голыми руками и наугад — стало только хуже.
+          effects:
+            - { on: all, health: -12, sanity: -8 }
+  - id: ignore
+    label: Не трогать
+    description: Понадеяться, что обойдётся само.
+    outcomes:
+      - chance: 35
+        text: Система кое-как восстановилась сама.
+        effects:
+          - { on: all, sanity: -3 }
+      - text: Без вмешательства стало совсем тяжело дышать.
+        effects:
+          - { on: all, health: -10, sanity: -6 }

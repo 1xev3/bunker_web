@@ -1,0 +1,52 @@
+id: rats_invasion
+type: choice
+weight: 2
+when:
+  min_month: 1
+vars:
+  animals: [крыс, мышей, тараканов, гнуса]
+title: Незваные жильцы
+text: >-
+  Несколько {event.animals} пробрались в убежище и теперь шныряют у запасов.
+  Если расплодятся — сожрут половину провизии.
+select:
+  kinds: [item, profession]
+  prompt_item: Чем будем травить?
+  prompt_profession: Кто возьмётся вывести их?
+options:
+  - id: exterminate
+    label: Вывести
+    description: С нужным средством и умельцем — наверняка. Иначе как выйдет.
+    requires: [item, profession]
+    consume_items: true
+    outcomes_by_selection:
+      all:
+        - text: Травля сработала — от {event.animals} не осталось и следа.
+          effects:
+            - { on: all, sanity: 4 }
+            - { flag: { vermin_cleared: true } }
+      some:
+        - chance: 55
+          text: Большую часть {event.animals} удалось извести.
+          effects:
+            - { on: all, sanity: 2 }
+        - text: Полумеры не помогли — запасы всё же подъели.
+          effects:
+            - { food: "20%" }
+      none:
+        - text: Голыми руками с {event.animals} не справиться — провизия тает на глазах.
+          effects:
+            - { food: "30%" }
+            - { on: all, sanity: -4 }
+  - id: ignore
+    label: Не обращать внимания
+    description: Авось сами уйдут и не расплодятся.
+    outcomes:
+      - chance: 30
+        text: Похоже, {event.animals} ушли дальше по вентиляции.
+        effects:
+          - { on: all, sanity: 1 }
+      - text: За пару недель {event.animals} расплодились и сожрали часть припасов.
+        effects:
+          - { food: "25%" }
+          - { on: random, status: { id: vermin_sickness, label: Зараза, stat: health, value: -5, months: 2 } }

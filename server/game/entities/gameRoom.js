@@ -28,10 +28,10 @@ class GameRoom {
     this.totalMonths = 0;
     this.food = 0;
     this.foodMax = 0;
-    this.starvationPending = false;
     this.activeEvent = null;
     this.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
     this.choiceVotes = {};
+    this.choicePendingSelection = null; // option id awaiting the council's picker choice, or null
     this.monthStartTime = null;
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
@@ -113,6 +113,7 @@ class GameRoom {
       food_max: this.foodMax,
       active_event: publicEvent,
       choice_votes: { ...this.choiceVotes },
+      choice_pending_selection: this.choicePendingSelection ?? null,
       active_event_selection: {
         selected_player_id: this.activeEventSelection.selected_player_id ?? null,
         selected_professions: [...this.activeEventSelection.selected_professions],

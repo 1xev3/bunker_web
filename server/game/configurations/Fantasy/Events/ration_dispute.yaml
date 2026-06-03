@@ -1,0 +1,39 @@
+id: ration_dispute
+type: choice
+weight: 1
+when:
+  min_players: 3
+participants:
+  hoarder: {}
+  accuser: {}
+title: Спор из-за пайков
+text: >-
+  {accuser} в открытую обвиняет {hoarder} в том, что тот тайком берёт лишнее из
+  общих запасов. Голоса всё {громче|злее|надрывнее}, бункер замер в ожидании.
+options:
+  - id: side_accuser
+    label: Встать на сторону обвинителя
+    description: Обыскать и пристыдить — порядок важнее.
+    outcomes:
+      - chance: 60
+        text: Нашли заначку. Виновный пристыжён, остальные приободрились.
+        effects:
+          - { food: 80 }
+          - { on: hoarder, sanity: -10 }
+          - { on: others, sanity: 4 }
+      - text: Ничего не нашли — пустое обвинение лишь раскололо людей.
+        effects:
+          - { on: all, sanity: -6 }
+  - id: hush
+    label: Замять конфликт
+    description: Не раздувать — всем сейчас и без того тяжело.
+    effects:
+      - { on: accuser, sanity: -5 }
+      - { on: hoarder, sanity: 3 }
+  - id: punish_both
+    label: Урезать паёк обоим
+    description: Чтоб неповадно было склочничать — но это удар по двоим.
+    effects:
+      - { on: hoarder, health: -6 }
+      - { on: accuser, health: -6 }
+      - { on: all, sanity: -3 }

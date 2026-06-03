@@ -127,7 +127,16 @@ function normalizeConfig(config) {
   }));
   next.AGES = (config.AGES ?? []).map((entry, index) => normalizeRange(entry, 'age', index));
   next.BODY_TYPES = weightedEntities(config.BODY_TYPES ?? [], 'body');
-  next.SKILL_LEVELS = weightedEntities(config.SKILL_LEVELS ?? [], 'skill_level');
+  next.SKILL_LEVELS = (config.SKILL_LEVELS ?? []).map((entry, index) => {
+    const normalized = weightedEntity(entry, 'skill_level', index);
+    // Optional event success multiplier: array `[label, weight, multiplier]`
+    // or object `{ label, weight, multiplier }`. Defaults to 1.
+    const raw = Array.isArray(entry)
+      ? entry[2]
+      : (entry && typeof entry === 'object' ? entry.multiplier : undefined);
+    normalized.value.multiplier = typeof raw === 'number' && Number.isFinite(raw) ? raw : 1;
+    return normalized;
+  });
   next.TRAITS = plainEntities(config.TRAITS ?? [], 'trait');
   next.HEALTH_STATES = weightedEntities(config.HEALTH_STATES ?? [], 'health_state');
   next.HEALTH_STAGES = weightedEntities(config.HEALTH_STAGES ?? [], 'health_stage');

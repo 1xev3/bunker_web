@@ -1,0 +1,54 @@
+# Пробоина в обшивке + отложенное последствие при запечатывании отсека.
+events:
+  - id: breach_volunteer
+    type: choice
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [breach_sealed]
+    select:
+      kind: player
+      prompt: Кого отправить заделать пробоину?
+    vars:
+      crack: "{трещину|щель|разлом}"
+    title: Пробоина в обшивке
+    text: >-
+      Сквозь {event.crack} в стене сочится спёртый воздух. В узкий лаз пролезет
+      только один человек — но если он застрянет, вытаскивать будет поздно.
+    options:
+      - id: send
+        label: Отправить добровольца
+        requires: [player]
+        description: Выберите человека. Риск есть, но иначе дышать будет нечем.
+        outcomes:
+          - chance: 60
+            text: "{Пробоину заделали|Лаз закрыли|Течь остановили} — воздух снова чистый."
+            effects:
+              - { on: chosen, health: -4, sanity: 8 }
+              - { flag: { breach_sealed: true } }
+          - text: Доброволец застрял и едва выбрался; всем стало хуже от поднятой пыли.
+            effects:
+              - { on: chosen, health: -22, sanity: -10 }
+              - { on: chosen, status: { id: cramped_chest, label: Сдавленная грудь, stat: health, value: -5, months: 2 } }
+              - { on: others, status: { id: stale_air, label: Спёртый воздух, stat: health, value: -3, months: 2 } }
+      - id: seal_off
+        label: Запечатать отсек
+        description: Никого не рисковать, но бункер станет теснее и холоднее.
+        effects:
+          - { on: all, sanity: -6 }
+          - { on: all, status: { id: cold, label: Холод, stat: health, value: -4, months: 2 } }
+          - { flag: { breach_sealed: true } }
+        schedule:
+          - { event: sealed_draft, in: 2, chance: 50 }
+
+  - id: sealed_draft
+    type: flavor
+    scheduled_only: true
+    title: Сквозняк из запертого отсека
+    text: >-
+      Из заваренного отсека всё равно тянет холодом — {швы|стыки|сварные рубцы}
+      разошлись. Люди кутаются плотнее и недобро косятся на тех, кто решил его
+      замуровать.
+    effects:
+      - { on: all, sanity: -4 }
+      - { on: random, health: -6 }

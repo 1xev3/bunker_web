@@ -72,8 +72,21 @@ function formatAttribute(attr, value, config) {
   }
 }
 
+// Event success multiplier of a skill level, configured in the pack's
+// SKILL_LEVELS (`[label, weight, multiplier]`). Defaults to 1.
+function skillMultiplier(config, levelId) {
+  const entry = (config.SKILL_LEVELS ?? []).find(e => e.value.id === levelId);
+  return typeof entry?.value?.multiplier === 'number' ? entry.value.multiplier : 1;
+}
+
 function publicAttribute(attr, value, config) {
-  return value ? { value, display: formatAttribute(attr, value, config) } : null;
+  if (!value) return null;
+  const display = formatAttribute(attr, value, config);
+  // Expose the profession's skill multiplier so event success odds can scale with it.
+  if (attr === 'profession') {
+    return { value: { ...value, skill_multiplier: skillMultiplier(config, value.levelId) }, display };
+  }
+  return { value, display };
 }
 
 function getHeightCurve(config, age) {

@@ -1,0 +1,115 @@
+# Связанная цепочка: близость -> утренние слухи (выбор реакции).
+events:
+  - id: night_together
+    type: flavor
+    weight: 2
+    when:
+      min_players: 2
+    participants:
+      man: { gender: Мужчина, min_age: 18 }
+      woman: { gender: Женщина, min_age: 18 }
+    vars:
+      place: "{в кладовой|в дальнем отсеке|за стеллажами|в тёмном углу}"
+    title: Близость {event.place}
+    text: >-
+      {man} и {woman} уединились {event.place}, пока остальные делали вид, что
+      ничего не слышат. На одну ночь бункер стал чуть меньше похож на могилу — но
+      секреты тут живут недолго.
+    effects:
+      - { on: man, sanity: 12 }
+      - { on: woman, sanity: 12 }
+    schedule:
+      - { event: morning_rumors, in: 1, chance: 40, carry: [man, woman] }
+      - { event: pregnancy, in: 1, chance: 80, carry: [woman] }
+
+  - id: pregnancy
+    type: flavor
+    scheduled_only: true
+    title: Беременность
+    text: >-
+      Спустя недели после той ночи {woman} понимает, что беременна. В бункере,
+      где каждый паёк на счету, это и хрупкая надежда, и тяжкое бремя.
+    effects:
+      # Когда дебафф истечёт (через 9 месяцев) — сами роды как событие childbirth.
+      - { on: woman, status: { id: pregnancy, label: Беременность, stat: sanity, value: -5, months: 9, on_expire: { event: childbirth, carry_as: mother } } }
+
+  - id: childbirth
+    type: choice
+    scheduled_only: true
+    title: Роды
+    text: >-
+      Срок {mother} подошёл — начались схватки. От того, кто примет роды, зависит,
+      выживут ли мать и ребёнок. Как поступить?
+    select:
+      kind: profession
+      prompt_profession: Кто примет роды
+    options:
+      - id: attended
+        label: Доверить специалисту
+        description: Пусть роды примет кто-то из выживших — чем опытнее, тем лучше.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Роды прошли благополучно — на свет появился новый житель бункера.
+              effects:
+                - { on: mother, sanity: 10 }
+                - { on: mother, spawn_survivor: true }
+          some:
+            - chance: 65
+              text: Тяжело, но обошлось — ребёнок родился живым.
+              effects:
+                - { on: mother, spawn_survivor: true }
+            - text: Спасти ребёнка не удалось — выкидыш. {mother} едва выжила.
+              effects:
+                - { on: mother, health: -20, sanity: -25 }
+          none:
+            - chance: 30
+              text: Без помощи, на голых инстинктах — но ребёнок всё же родился.
+              effects:
+                - { on: mother, health: -10, spawn_survivor: true }
+            - text: Без помощи роды обернулись бедой — выкидыш.
+              effects:
+                - { on: mother, health: -25, sanity: -25 }
+      - id: alone
+        label: Пустить само собой
+        description: Никто не вмешивается — будь что будет.
+        outcomes:
+          - chance: 40
+            text: Природа взяла своё — ребёнок родился без чужой помощи.
+            effects:
+              - { on: mother, health: -8, spawn_survivor: true }
+          - text: Без помощи {mother} не справилась — выкидыш.
+            effects:
+              - { on: mother, health: -25, sanity: -25 }
+
+  - id: morning_rumors
+    type: choice
+    scheduled_only: true
+    title: Утренние слухи
+    text: >-
+      История про {man} и {woman} разошлась по бункеру. Кто-то {завидует|злится|
+      осуждает}, кто-то ехидно перешёптывается — и слишком много взглядов липнет
+      к этим двоим. Как быть?
+    options:
+      - id: go_public
+        label: Не прятаться
+        description: Признать всё открыто — будь что будет.
+        outcomes:
+          - chance: 55
+            text: Люди пожали плечами и вскоре оставили их в покое.
+            effects:
+              - { on: man, sanity: 6 }
+              - { on: woman, sanity: 6 }
+          - text: Открытость лишь подлила масла — пошли склоки на весь бункер.
+            effects:
+              - { on: all, sanity: -5 }
+              - { on: man, sanity: -6 }
+              - { on: woman, sanity: -6 }
+      - id: deny
+        label: Всё отрицать
+        description: Сделать вид, что ничего не было.
+        effects:
+          - { on: man, sanity: -10 }
+          - { on: woman, sanity: -10 }
+          - { on: man, status: { id: whispered_about, label: Перешёптывания, stat: sanity, value: -3, months: 2 } }
+          - { on: woman, status: { id: whispered_about, label: Перешёптывания, stat: sanity, value: -3, months: 2 } }

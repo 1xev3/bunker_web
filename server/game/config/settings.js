@@ -4,7 +4,7 @@ const DEFAULT_PACK_SETTINGS = {
     food_consumption_per_player: 90,
   },
   events: {
-    bunker_event_chance: 0.10,
+    bunker_event_chance: 0.20,
     success_chances: {
       one_resource: 0.75,
       two_resources: 0.90,

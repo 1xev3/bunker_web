@@ -3,18 +3,40 @@ const {
   buildEffectPrimitives,
   buildSchedulePrimitives,
   pickOutcome,
+  outcomeTone,
+  selectionSuccessChance,
+  getSelectKinds,
+  buildEventVars,
+  resolveInlineText,
 } = require('../game/config/yamlEvents');
 const {
   parseDurationMonths,
   pickRandomEvent,
   materializeScheduledEvent,
 } = require('./eventHelpers');
+const { Player } = require('../game/entities/player');
+
+const NEWBORN_NAMES = ['Малыш', 'Кроха', 'Найдёныш', 'Новорождённый', 'Пострел', 'Карапуз'];
+
+// A child born in the bunker: a fresh survivor without the adult attributes,
+// inheriting the parent's race when one is known.
+function spawnNewborn(room, parent, name) {
+  const used = new Set(room.players.map(p => p.name));
+  const baseName = (typeof name === 'string' && name.trim()) ? name.trim() : NEWBORN_NAMES[Math.floor(Math.random() * NEWBORN_NAMES.length)];
+  let finalName = baseName;
+  let n = 2;
+  while (used.has(finalName)) finalName = `${baseName} ${n++}`;
+  const child = new Player(finalName);
+  child.generateMinimalCharacter(room.config, { raceId: parent?.race?.id });
+  room.addPlayer(child);
+  return child;
+}
 
 function updateFood(room, delta) {
   const before = room.food;
   room.food = Math.max(0, room.food + delta);
   if (room.food > room.foodMax) room.foodMax = room.food;
-  if (room.food > 0) room.starvationPending = false;
+  if (before <= 0 && room.food > 0) clearHungerDebuff(room);
   return room.food - before;
 }
 
@@ -59,7 +81,7 @@ function changePlayerStat(player, stat, value) {
 
 function normalizeStatus(effect) {
   const stat = effect.stat === 'sanity' ? 'sanity' : 'health';
-  return {
+  const status = {
     id: effect.status_id || `${stat}_${effect.value < 0 ? 'debuff' : 'buff'}`,
     label: effect.label || (effect.value < 0 ? 'Неблагоприятное состояние' : 'Поддержка'),
     type: effect.value < 0 ? 'debuff' : 'buff',
@@ -67,12 +89,19 @@ function normalizeStatus(effect) {
     delta: Number(effect.value ?? 0),
     months: Math.max(1, Number(effect.months ?? 1)),
   };
+  // Optional follow-up event fired when the status runs out (e.g. pregnancy → birth).
+  if (effect.on_expire && typeof effect.on_expire.event === 'string') {
+    status.on_expire = {
+      event: effect.on_expire.event,
+      carry_as: typeof effect.on_expire.carry_as === 'string' ? effect.on_expire.carry_as : 'self',
+    };
+  }
+  return status;
 }
 
 function applyMonthlyVitals(room) {
-  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], playersKilled: [] };
+  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], playersKilled: [], expiredEvents: [] };
   const active = room.getActivePlayers();
-  const noFood = room.food <= 0;
 
   for (const player of active) {
     const vital = ensureVitalStatus(player);
@@ -87,16 +116,20 @@ function applyMonthlyVitals(room) {
       status.months = Math.max(0, Number(status.months ?? 1) - 1);
     }
 
+    const expired = statuses.filter(status => status.months <= 0);
     vital.statuses = statuses.filter(status => status.months > 0);
 
-    if (noFood && player.is_active) {
-      const healthDelta = changePlayerStat(player, 'health', -18);
-      const sanityDelta = changePlayerStat(player, 'sanity', -8);
-      result.healthChanges.push({ id: player.id, name: player.name, delta: healthDelta });
-      result.sanityChanges.push({ id: player.id, name: player.name, delta: sanityDelta });
-      result.statusChanges.push({ id: player.id, name: player.name, status: { id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -6, months: 2 }, action: 'added' });
-      vital.statuses = vital.statuses.filter(status => status.id !== 'hunger');
-      vital.statuses.push({ id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -6, months: 2 });
+    // A status that just ran out may trigger a follow-up event for its bearer
+    // (only while they are still alive after this tick).
+    if (player.is_active) {
+      for (const status of expired) {
+        if (status.on_expire?.event) {
+          result.expiredEvents.push({
+            event_id: status.on_expire.event,
+            roles: { [status.on_expire.carry_as ?? 'self']: { id: player.id, name: player.name } },
+          });
+        }
+      }
     }
 
     if (!player.is_active) result.playersKilled.push({ id: player.id, name: player.name });
@@ -120,19 +153,71 @@ function buildFlavorEffects(event, room) {
   ];
 }
 
+// Picks the outcome for a chosen option. For outcomes_by_selection the success
+// chance scales with how many resources were picked (selectionSuccessChance):
+// `all` outcomes describe the win, `none`/`some` the loss. Falls back to
+// outcomes/effects when no outcomes_by_selection is declared.
+function resolveOptionOutcome(option, selection) {
+  if (isPlainObject(option.outcomes_by_selection)) {
+    return pickSelectionScaledOutcome(option.outcomes_by_selection, selection ?? {});
+  }
+  return Array.isArray(option.outcomes) && option.outcomes.length > 0
+    ? pickOutcome(option.outcomes)
+    : option;
+}
+
+function filterTone(list, pred) {
+  return Array.isArray(list) ? list.filter(o => pred(outcomeTone(o))) : [];
+}
+
+function pickSelectionScaledOutcome(buckets, { count = 0, diverse = false }) {
+  if (count <= 0) {
+    const none = buckets.none ?? buckets.some ?? buckets.all;
+    return Array.isArray(none) && none.length ? pickOutcome(none) : { effects: [] };
+  }
+  const success = selectionSuccessChance(count, diverse);
+  const goodSource = (diverse ? buckets.all : buckets.some) ?? buckets.all ?? buckets.some;
+  const badSource = buckets.none ?? buckets.some ?? buckets.all;
+  const won = Math.random() * 100 < success;
+  const goods = filterTone(goodSource, t => t !== 'bad');
+  const bads = filterTone(badSource, t => t === 'bad');
+  const pool = won ? (goods.length ? goods : goodSource) : (bads.length ? bads : badSource);
+  return Array.isArray(pool) && pool.length ? pickOutcome(pool) : { effects: [] };
+}
+
+// Weighted contribution of the chosen professions to a selection's success:
+// each picked profession (referenced by its owner's player id) adds its skill
+// level's configured `multiplier`, so a better specialist helps more.
+function professionSelectionStrength(room, playerIds) {
+  const levels = room.config?.SKILL_LEVELS ?? [];
+  let strength = 0;
+  for (const id of playerIds ?? []) {
+    const player = room.getPlayer(id);
+    const entry = levels.find(e => e.value.id === player?.profession?.levelId);
+    strength += typeof entry?.value?.multiplier === 'number' ? entry.value.multiplier : 1;
+  }
+  return strength;
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 // Effects for a chosen option of a choice event. Returns { effects, message }.
-function buildOptionEffects(event, option, room, selectedPlayerId) {
+function buildOptionEffects(event, option, room, selectedPlayerId, selection) {
   const roleMap = { ...(event.__roles ?? {}) };
   if (selectedPlayerId) roleMap.chosen = selectedPlayerId;
   const participantIds = eventParticipantIds(event);
-  const resolved = Array.isArray(option.outcomes) && option.outcomes.length > 0
-    ? pickOutcome(option.outcomes)
-    : option;
+  const resolved = resolveOptionOutcome(option, selection ?? { count: 0, diverse: false });
   const effects = [
     ...buildEffectPrimitives(resolved.effects, roleMap, room, participantIds),
     ...buildSchedulePrimitives(option.schedule ?? [], roleMap, room),
   ];
-  return { effects, message: resolved.text ?? null };
+  const def = event.__source ?? {};
+  const message = resolved.text != null
+    ? resolveInlineText(resolved.text, def, buildEventVars(def))
+    : null;
+  return { effects, message };
 }
 
 function uniquePlayerRefs(players) {
@@ -147,7 +232,7 @@ function uniquePlayerRefs(players) {
 }
 
 function applyBunkerEventEffect(room, effect, context) {
-  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], foodChange: undefined, playerKilled: null, playersKilled: [], roomChanged: false, scheduledEvent: null };
+  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], foodChange: undefined, playerKilled: null, playersKilled: [], playersAdded: [], roomChanged: false, scheduledEvent: null };
   if (!effect) return result;
 
   if (effect.type === 'health_change' || effect.type === 'sanity_change') {
@@ -223,6 +308,13 @@ function applyBunkerEventEffect(room, effect, context) {
     return result;
   }
 
+  if (effect.type === 'spawn_survivor') {
+    const parent = effect.parent_id ? room.getPlayer(effect.parent_id) : null;
+    const child = spawnNewborn(room, parent, effect.name);
+    result.playersAdded.push({ id: child.id, name: child.name });
+    return result;
+  }
+
   if (effect.type === 'schedule_event') {
     result.scheduledEvent = {
       event_id: effect.event_id,
@@ -242,6 +334,7 @@ function applyEffectsArray(room, effects, context) {
     statusChanges: [],
     foodChange: undefined,
     playersKilled: [],
+    playersAdded: [],
     roomChanged: false,
   };
 
@@ -253,6 +346,7 @@ function applyEffectsArray(room, effects, context) {
     if (r.foodChange !== undefined) accumulated.foodChange = (accumulated.foodChange ?? 0) + r.foodChange;
     if (r.playerKilled) accumulated.playersKilled.push(r.playerKilled);
     accumulated.playersKilled.push(...r.playersKilled);
+    accumulated.playersAdded.push(...(r.playersAdded ?? []));
     if (r.roomChanged) accumulated.roomChanged = true;
     if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
   }
@@ -318,7 +412,23 @@ function normalizeEventSelection(msg) {
 function resetEventSelection(room) {
   room.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
   room.choiceVotes = {};
+  room.choicePendingSelection = null;
   room.resolveConfirmations = new Set();
+}
+
+// Picker kinds an option asks the council to choose (player/item/profession).
+function optionRequiredKinds(option) {
+  return Array.isArray(option?.requires)
+    ? option.requires.filter(k => k === 'player' || k === 'item' || k === 'profession')
+    : [];
+}
+
+function selectionHasKind(room, kind) {
+  const sel = room.activeEventSelection;
+  if (kind === 'player') return Boolean(room.getPlayer(sel.selected_player_id)?.is_active);
+  if (kind === 'item') return sel.selected_items.length > 0;
+  if (kind === 'profession') return sel.selected_professions.length > 0;
+  return true;
 }
 
 function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null) {
@@ -333,7 +443,7 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, 
     food_change: effectResult.foodChange,
     players_killed: uniquePlayerRefs(effectResult.playersKilled),
     room_changed: effectResult.roomChanged ?? false,
-    players_added: [],
+    players_added: uniquePlayerRefs(effectResult.playersAdded),
   });
 }
 
@@ -376,8 +486,6 @@ function executeOutcomeAction(roomCode) {
   wsManager.broadcastState(roomCode, room);
   if (action === 'next_month') {
     scheduleNextMonth(roomCode, room);
-  } else if (action === 'month_tick_continue') {
-    continueAfterMonthTick(roomCode);
   }
 }
 
@@ -416,26 +524,34 @@ function startNextMonth(roomCode) {
   updateFood(room, -(activePlayers.length * consumptionPerPlayer));
   const monthlyVitals = applyMonthlyVitals(room);
 
-  const hasVitals =
+  const hasChanges =
     monthlyVitals.healthChanges.length > 0 ||
     monthlyVitals.sanityChanges.length > 0 ||
     monthlyVitals.statusChanges.length > 0 ||
     monthlyVitals.playersKilled.length > 0;
 
-  if (hasVitals) {
+  // Monthly buff/debuff ticks are passive: surface them as a transient bottom
+  // notification rather than the blocking outcome modal (reserved for events).
+  if (hasChanges) {
     wsManager.broadcast(roomCode, {
-      type: 'event_resolved',
-      event_id: 'month_tick',
-      outcome: 'success',
+      type: 'monthly_report',
       health_changes: monthlyVitals.healthChanges,
       sanity_changes: monthlyVitals.sanityChanges,
       status_changes: monthlyVitals.statusChanges,
-      food_change: undefined,
       players_killed: uniquePlayerRefs(monthlyVitals.playersKilled),
-      room_changed: false,
-      players_added: [],
     });
-    waitForOutcomeConfirmations(roomCode, 'month_tick_continue');
+  }
+
+  // A status that ran out this tick may open a follow-up event (e.g. birth).
+  // Present the first; any others are queued to fire next month.
+  const pending = monthlyVitals.expiredEvents.filter(e => room.config.EVENTS.some(def => def.id === e.event_id));
+  if (pending.length > 0) {
+    for (const extra of pending.slice(1)) {
+      room.scheduledEvents.push({ event_id: extra.event_id, trigger_month: room.currentMonth + 1, context: { roles: extra.roles } });
+    }
+    const eventDef = room.config.EVENTS.find(e => e.id === pending[0].event_id);
+    room.activeEvent = materializeScheduledEvent(eventDef, { roles: pending[0].roles }, room);
+    wsManager.broadcastState(roomCode, room);
     return;
   }
 
@@ -462,25 +578,20 @@ function continueAfterMonthTick(roomCode) {
   }
 
   if (room.food <= 0) {
-    if (room.starvationPending) {
-      room.status = 'finished';
-      room.revealAllPlayers();
-      wsManager.broadcast(roomCode, { type: 'game_ended', winner: null, from_bunker_life: true });
+    const hungerActive = room.getActivePlayers().some(p =>
+      p.vital_status?.statuses?.some(s => s.id === 'hunger')
+    );
+    if (!hungerActive) {
+      room.activeEvent = {
+        id: 'food_replenish',
+        event_type: 'food_replenish',
+        title: 'Запасы еды иссякли',
+        description: 'Еда в бункере закончилась. Если есть профессии или предметы, которые помогут восполнить запасы — выберите их. Без еды жители бункера получат дебаф «Голод» и будут терять здоровье и рассудок каждый месяц.',
+      };
       wsManager.broadcastState(roomCode, room);
       return;
     }
-    room.starvationPending = true;
-    room.activeEvent = {
-      id: 'food_replenish',
-      event_type: 'food_replenish',
-      title: 'Запасы еды иссякли',
-      description: 'Еда в бункере закончилась. Если есть профессии или предметы, которые помогут восполнить запасы — выберите их. Иначе через месяц бункер погибнет от голода.',
-    };
-    wsManager.broadcastState(roomCode, room);
-    return;
   }
-
-  room.starvationPending = false;
 
   const picked = Math.random() < room.config.packSettings.events.bunker_event_chance
     ? pickRandomEvent(room.config, room)
@@ -515,6 +626,36 @@ function resolveFlavorEvent(roomCode) {
   waitForOutcomeConfirmations(roomCode, 'next_month');
 }
 
+const HUNGER_HEALTH_STATUS = { id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -35, months: 99 };
+const HUNGER_SANITY_STATUS = { id: 'hunger_sanity', label: 'Голод', type: 'debuff', stat: 'sanity', delta: -20, months: 99 };
+
+function applyHungerDebuff(room) {
+  const statusChanges = [];
+  for (const player of room.getActivePlayers()) {
+    const vital = ensureVitalStatus(player);
+    vital.statuses = vital.statuses.filter(s => s.id !== 'hunger' && s.id !== 'hunger_sanity');
+    vital.statuses.push({ ...HUNGER_HEALTH_STATUS }, { ...HUNGER_SANITY_STATUS });
+    statusChanges.push(
+      { id: player.id, name: player.name, status: { ...HUNGER_HEALTH_STATUS }, action: 'added' },
+      { id: player.id, name: player.name, status: { ...HUNGER_SANITY_STATUS }, action: 'added' },
+    );
+  }
+  return statusChanges;
+}
+
+function clearHungerDebuff(room) {
+  const statusChanges = [];
+  for (const player of room.getActivePlayers()) {
+    const vital = ensureVitalStatus(player);
+    const before = vital.statuses.length;
+    vital.statuses = vital.statuses.filter(s => s.id !== 'hunger' && s.id !== 'hunger_sanity');
+    if (vital.statuses.length !== before) {
+      statusChanges.push({ id: player.id, name: player.name, status_id: 'hunger', action: 'cleared' });
+    }
+  }
+  return statusChanges;
+}
+
 function resolveFoodReplenishEvent(roomCode, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
@@ -526,13 +667,14 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   resetEventSelection(room);
 
   if (resourceCount === 0) {
+    const statusChanges = applyHungerDebuff(room);
     wsManager.broadcast(roomCode, {
       type: 'event_resolved',
       event_id: 'food_replenish',
       outcome: 'failure',
       health_changes: [],
       sanity_changes: [],
-      status_changes: [],
+      status_changes: statusChanges,
       food_change: 0,
       players_killed: [],
       room_changed: false,
@@ -547,6 +689,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   const replenishPerResource = room.config.packSettings.events.food_replenish.food_per_resource;
   const replenish = replenishPerResource * room.getActivePlayers().length * resourceCount;
   const foodDisplay = updateFood(room, replenish);
+  const statusChanges = clearHungerDebuff(room);
 
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
@@ -554,7 +697,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
     outcome: 'success',
     health_changes: [],
     sanity_changes: [],
-    status_changes: [],
+    status_changes: statusChanges,
     food_change: foodDisplay,
     players_killed: [],
     room_changed: false,
@@ -579,7 +722,6 @@ function tryStartBunkerLife(roomCode, room) {
   room.totalMonths = room.bunker.duration?.months ?? parseDurationMonths(room.bunker.duration?.label);
   room.food = (room.bunker.food?.amount ?? 0) * active.length;
   room.foodMax = room.food;
-  room.starvationPending = false;
   room.scheduledEvents = [];
   room.activeEvent = null;
   for (const player of active) {
@@ -655,16 +797,29 @@ function resolveChoiceEvent(roomCode, optionId) {
   // A player target is needed when the event declares a player picker; fall back
   // to a random active survivor so bot-only rooms never soft-lock.
   let selectedPlayerId = room.activeEventSelection.selected_player_id;
-  if (event.select?.kind === 'player' && !room.getPlayer(selectedPlayerId)?.is_active) {
+  if (getSelectKinds(event.select).includes('player') && !room.getPlayer(selectedPlayerId)?.is_active) {
     const active = room.getActivePlayers();
     selectedPlayerId = active.length ? active[Math.floor(Math.random() * active.length)].id : null;
   }
+
+  // The picked resources (item/profession) scale the success chance: items
+  // count as 1 each, professions by their skill tier (a better specialist
+  // helps more). The total is capped at 90% unless the full mix (one of each
+  // declared kind) is present, which lifts the cap to 100%.
+  const resourceKinds = getSelectKinds(event.select).filter(k => k === 'item' || k === 'profession');
+  const itemCount = room.activeEventSelection.selected_items.length;
+  const profCount = room.activeEventSelection.selected_professions.length;
+  const strength =
+    (resourceKinds.includes('item') ? itemCount : 0) +
+    (resourceKinds.includes('profession') ? professionSelectionStrength(room, room.activeEventSelection.selected_professions) : 0);
+  const diverse = resourceKinds.every(k => (k === 'item' ? itemCount > 0 : profCount > 0));
+  const selection = { count: strength, diverse };
 
   if (option.consume_items) {
     for (const entry of room.activeEventSelection.selected_items) consumeSelectedItem(room, entry);
   }
 
-  const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId);
+  const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId, selection);
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
 
@@ -690,20 +845,68 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
 
   room.choiceVotes[playerId] = optionId;
 
-  // Auto-vote for bots that haven't voted yet.
+  // Bots mirror the triggering human's vote so they never override the
+  // human's choice in a dev/test game with multiple bot players.
   for (const p of room.getActivePlayers()) {
     if (p.is_bot && !room.choiceVotes[p.id]) {
-      room.choiceVotes[p.id] = optionIds[Math.floor(Math.random() * optionIds.length)];
+      room.choiceVotes[p.id] = optionId;
     }
   }
 
   wsManager.broadcastState(roomCode, room);
 
-  // Auto-resolve when all active players have voted.
+  // Once everyone has voted, either resolve or wait for the council's pick.
   const activePlayers = room.getActivePlayers();
   if (activePlayers.every(p => room.choiceVotes[p.id])) {
-    resolveChoiceEvent(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
+    finalizeChoiceVote(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
   }
+}
+
+// Decides whether the winning option can resolve now, or must wait for the
+// council to make a required picker choice. Picks are made by humans only and
+// just synced; bots never choose. With no humans present, resolve immediately
+// (the picker stays empty — player targets fall back to a random survivor).
+function finalizeChoiceVote(roomCode, winningOptionId) {
+  const room = rooms.get(roomCode);
+  if (!room || !room.activeEvent) return;
+  const options = Array.isArray(room.activeEvent.__source?.options) ? room.activeEvent.__source.options : [];
+  const option = options.find(o => o.id === winningOptionId) ?? options[0];
+  const missing = optionRequiredKinds(option).filter(k => !selectionHasKind(room, k));
+
+  const humans = room.getActivePlayers().filter(p => !p.is_bot);
+  if (missing.length === 0 || humans.length === 0) {
+    resolveChoiceEvent(roomCode, winningOptionId);
+    return;
+  }
+
+  // Wait: surface the winning option's pickers and a confirm step to the humans.
+  room.choicePendingSelection = winningOptionId;
+  wsManager.broadcastState(roomCode, room);
+}
+
+function handleConfirmChoiceSelection(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent || !room.choicePendingSelection) return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+
+  const winningOptionId = room.choicePendingSelection;
+  room.choicePendingSelection = null;
+  resolveChoiceEvent(roomCode, winningOptionId);
+}
+
+// Rolls back a pending decision so the council can vote again (e.g. they realize
+// no suitable item/profession exists). Clears votes and the synced picks.
+function handleCancelChoiceSelection(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent || !room.choicePendingSelection) return;
+  const player = room.getPlayer(playerId);
+  if (!player || !player.is_active) return;
+
+  room.choicePendingSelection = null;
+  room.choiceVotes = {};
+  room.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
+  wsManager.broadcastState(roomCode, room);
 }
 
 function handleResolveEvent(roomCode, playerId) {
@@ -781,6 +984,8 @@ module.exports = {
   handleResolveEvent,
   handleConfirmOutcome,
   handleCastChoiceVote,
+  handleConfirmChoiceSelection,
+  handleCancelChoiceSelection,
   handlePlayerMaybeUnblock,
   confirmBotsForBunkerLife,
   tryStartBunkerLife,

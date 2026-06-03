@@ -40,6 +40,8 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
   const [eventOutcome, setEventOutcome] = useState<{ outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
+  const [monthlyNotice, setMonthlyNotice] = useState<{ health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> } | null>(null);
+  const monthlyNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
   const prevOutcomeConfirmationsRef = useRef<string[] | null | undefined>(undefined);
 
@@ -148,6 +150,12 @@ export default function GameApp({ onOpenPackEditor }: Props) {
 
       if (msg.type === 'event_resolved') {
         setEventOutcome({ outcome: msg.outcome, message: msg.message, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
+      }
+
+      if (msg.type === 'monthly_report') {
+        setMonthlyNotice({ health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, players_killed: msg.players_killed });
+        if (monthlyNoticeTimerRef.current) clearTimeout(monthlyNoticeTimerRef.current);
+        monthlyNoticeTimerRef.current = setTimeout(() => setMonthlyNotice(null), 7000);
       }
 
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
@@ -287,6 +295,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           eventOutcome={eventOutcome}
           outcomeConfirmations={roomState.outcome_confirmations}
           onDismissEventOutcome={() => setEventOutcome(null)}
+          monthlyNotice={monthlyNotice}
           isConnectionLost={isConnectionLost}
         />
         {connectionOverlay}

@@ -17,7 +17,7 @@ const {
   handleUseProfessionAbility,
   transferAdmin,
 } = require('./gameHandlers');
-const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent, handleConfirmOutcome, handleCastChoiceVote, handlePlayerMaybeUnblock } = require('./bunkerLifeHandlers');
+const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent, handleConfirmOutcome, handleCastChoiceVote, handleConfirmChoiceSelection, handleCancelChoiceSelection, handlePlayerMaybeUnblock } = require('./bunkerLifeHandlers');
 
 function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
@@ -78,6 +78,8 @@ function setupWebSocket(wss) {
         case 'force_start_bunker_life': handleForceStartBunkerLife(roomCode, playerId); break;
         case 'update_event_selection': handleUpdateEventSelection(roomCode, playerId, msg); break;
         case 'cast_choice_vote':      handleCastChoiceVote(roomCode, playerId, msg); break;
+        case 'confirm_choice_selection': handleConfirmChoiceSelection(roomCode, playerId); break;
+        case 'cancel_choice_selection': handleCancelChoiceSelection(roomCode, playerId); break;
         case 'resolve_event':         handleResolveEvent(roomCode, playerId, msg); break;
         case 'confirm_outcome':       handleConfirmOutcome(roomCode, playerId); break;
       }

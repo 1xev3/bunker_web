@@ -5,14 +5,20 @@ when:
   min_players: 1
 participants:
   patient: {}
+vars:
+  symptom: "{горит в жару|бьётся в ознобе|бредит и не узнаёт своих}"
 title: Ночная лихорадка
 text: >-
-  {patient} горит в жару. Можно потратить остаток медикаментов или понадеяться,
-  что организм справится сам.
+  {patient} {event.symptom}. Можно посмотреть, что есть на складе, и потратить
+  медикаменты — или понадеяться, что организм справится сам.
+select:
+  kind: item
+  prompt_item: Посмотрите, что есть на складе
 options:
   - id: medicate
-    label: Потратить лекарство
-    description: Израсходовать выбранные предметы, но почти наверняка сбить жар.
+    label: Посмотреть, что есть на складе
+    description: Израсходовать выбранный предмет — почти наверняка сбить жар.
+    requires: [item]
     consume_items: true
     effects:
       - { on: patient, health: 16, sanity: 4, clear_status: debuffs }
@@ -21,7 +27,7 @@ options:
     description: Ничего не тратить — но это риск.
     outcomes:
       - chance: 40
-        text: Жар отступил сам собой.
+        text: "{Жар отступил сам собой|Кризис миновал к утру|Организм справился}."
         effects:
           - { on: patient, health: 4 }
       - text: Стало хуже — началось воспаление.

@@ -42,6 +42,8 @@ export interface IdValue {
 export interface ProfessionValue {
   id: string;
   levelId: string;
+  /** Event success multiplier of the skill level (from SKILL_LEVELS). */
+  skill_multiplier?: number;
 }
 
 export type PlayerAttributes = Record<AttributeKey, AttributeValue | null> & {
@@ -122,10 +124,18 @@ export interface ScheduledEvent {
   context: Record<string, unknown>;
 }
 
+export interface OutcomeOdds {
+  chance: number;
+  tone: 'good' | 'bad' | 'neutral';
+}
+
 export interface EventOption {
   id: string;
   label: string;
   description?: string | null;
+  requires?: ('player' | 'item' | 'profession')[];
+  odds?: OutcomeOdds[];
+  odds_scaled?: { good_tone: OutcomeOdds['tone']; bad_tone: OutcomeOdds['tone'] };
 }
 
 export interface GameEvent {
@@ -136,7 +146,13 @@ export interface GameEvent {
   participants?: string[];
   participant_ids?: string[];
   options?: EventOption[];
-  select?: { kind: 'player' | 'item'; prompt?: string | null };
+  select?: {
+    kind: 'player' | 'item' | 'profession' | null;
+    kinds?: ('player' | 'item' | 'profession')[];
+    prompt?: string | null;
+    prompt_item?: string | null;
+    prompt_profession?: string | null;
+  };
 }
 
 export interface PackMeta {
@@ -219,6 +235,7 @@ export interface RoomState {
   food_max: number;
   active_event: GameEvent | null;
   choice_votes: Record<string, string>;
+  choice_pending_selection: string | null;
   active_event_selection: EventSelection;
   scheduled_events: ScheduledEvent[];
   month_start_time: number | null;
@@ -269,7 +286,8 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] };
+  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] }
+  | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> };
 
 export interface VitalChange {
   id: string;
@@ -306,5 +324,7 @@ export type ClientMessage =
   | { type: 'confirm_bunker_life' }
   | { type: 'update_event_selection'; selected_player_id?: string | null; selected_professions: string[]; selected_items: SelectedItem[] }
   | { type: 'cast_choice_vote'; option_id: string }
+  | { type: 'confirm_choice_selection' }
+  | { type: 'cancel_choice_selection' }
   | { type: 'resolve_event'; selected_player_id?: string | null; selected_professions: string[]; selected_items: SelectedItem[] }
   | { type: 'confirm_outcome' };
