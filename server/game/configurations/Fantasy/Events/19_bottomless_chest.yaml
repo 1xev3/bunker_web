@@ -1,0 +1,78 @@
+# В сундуке без дна появляются чужие вещи — цепочка: открытие → выбор что делать.
+events:
+  - id: chest_mystery
+    type: flavor
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [chest_mystery_resolved]
+    participants:
+      finder: {}
+    vars:
+      item_found:
+        - "обугленный свиток с незнакомой печатью"
+        - "мешочек с незнакомыми монетами"
+        - "детский сапожок"
+        - "письмо, написанное задом наперёд"
+    title: В сундуке чужое
+    text: >-
+      {finder} открыл сундук без дна и нашёл на дне {event.item_found}. Никто
+      не клал. Сундук не открывали несколько дней. У него точно нет второго
+      дна — или всё-таки есть?
+    effects:
+      - { on: finder, sanity: -5 }
+      - { on: all, sanity: -2 }
+    schedule:
+      - { event: chest_choice, in: 1, carry: [finder] }
+
+  - id: chest_choice
+    type: choice
+    scheduled_only: true
+    title: Сундук ждёт ответа
+    text: >-
+      После первой находки вещи стали появляться регулярно — раз в несколько
+      дней. Кто-то снаружи (или не снаружи — страшнее всего именно это)
+      использует сундук как тайник. Что делать?
+    options:
+      - id: chest_respond
+        label: Оставить ответный знак
+        description: Положить что-то своё и посмотреть, что будет.
+        outcomes:
+          - chance: 40
+            text: >-
+              Через день в сундуке лежал запас еды и короткая записка:
+              «Ещё придём».
+            effects:
+              - { food: 100 }
+              - { on: all, sanity: 5 }
+              - { flag: { chest_mystery_resolved: true } }
+          - text: >-
+              Ответный знак исчез, но следующая «посылка» оказалась
+              пустым черепом.
+            effects:
+              - { on: all, sanity: -12 }
+              - { flag: { chest_mystery_resolved: true } }
+      - id: chest_seal
+        label: Запечатать сундук рунами
+        description: Накрыть защитными рунами — чтобы ничего больше не появлялось.
+        effects:
+          - { on: all, sanity: 5 }
+          - { on: finder, sanity: 8 }
+          - { flag: { chest_mystery_resolved: true } }
+      - id: chest_watch
+        label: Устроить засаду
+        description: Кто-то дежурит у сундука всю ночь.
+        outcomes:
+          - chance: 35
+            text: >-
+              Дежурный задремал — наутро снова нашли посылку.
+              Бдительности не хватило.
+            effects:
+              - { on: all, sanity: -5 }
+              - { flag: { chest_mystery_resolved: true } }
+          - text: >-
+              Дежурный увидел, как вещь появляется ниоткуда — сундук мигнул
+              синим, и всё. Теперь дежурный боится темноты.
+            effects:
+              - { on: all, sanity: -8 }
+              - { flag: { chest_mystery_resolved: true } }

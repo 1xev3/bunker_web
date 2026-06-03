@@ -1,0 +1,63 @@
+# Твари осаждают ворота — отбиваться оружием и артефактами или запираться.
+events:
+  - id: monster_raid
+    type: choice
+    weight: 2
+    when:
+      min_players: 2
+      min_month: 2
+    participants:
+      defender: {}
+    vars:
+      threat: "{стая клыкастых тварей|орда нежити|волчий прайд с магическим вожаком|рой скверненых насекомых}"
+    title: Нападение снаружи
+    text: >-
+      {defender} поднял тревогу — {event.threat} добрался до ворот. Ломятся.
+      Можно поднять всё годное для обороны и дать бой — или тихо забиться
+      внутрь и молиться, что не пролезут.
+    select:
+      kinds: [item, profession]
+      prompt_item: Собрать оружие и ловушки
+      prompt_profession: Кто встанет в оборону
+    options:
+      - id: raid_fight
+        label: Дать бой
+        description: >-
+          Луки, колбы, руны, капканы — чем лучше арсенал и умелее защитник,
+          тем меньше потерь.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Отогнали с первого натиска — {defender} сегодня герой убежища.
+              effects:
+                - { on: defender, sanity: 15 }
+                - { on: others, sanity: 8 }
+          some:
+            - chance: 55
+              text: Отбились, но кое-кого задело. Бой вышел грязным.
+              effects:
+                - { on: defender, health: -14 }
+                - { on: all, sanity: 3 }
+            - text: Не хватило ни снаряжения, ни знаний — твари прорвались во двор.
+              effects:
+                - { on: all, health: -10, sanity: -8 }
+                - { food: "10%" }
+          none:
+            - text: С голыми руками против такого не выстоять. Потери серьёзные.
+              effects:
+                - { on: all, health: -14, sanity: -10 }
+                - { food: "15%" }
+                - { on: random, kill: true }
+      - id: raid_barricade
+        label: Запереться внутри
+        description: Укрепить ворота и ждать, пока уйдут.
+        outcomes:
+          - chance: 60
+            text: Твари ломились час и убрались — слишком твёрдые ворота.
+            effects:
+              - { on: all, sanity: -5 }
+          - text: Твари нашли слабое место. Прорвались в крайний отсек.
+            effects:
+              - { on: all, health: -8, sanity: -12 }
+              - { food: "8%" }

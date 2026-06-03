@@ -1,0 +1,75 @@
+# Нечисть обосновалась в убежище: изгнать защитными артефактами или договориться.
+events:
+  - id: haunting
+    type: choice
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [haunting_resolved]
+    participants:
+      victim: {}
+    vars:
+      entity: "{тень|призрак|неупокоенный дух|бесплотная тварь}"
+    title: "{event.entity} в убежище"
+    text: >-
+      {victim} первым увидел его — {event.entity} скользит по коридорам,
+      трогает вещи и шепчет. Несколько ночей никто нормально не спал. Можно
+      собрать всё, что годится для изгнания, — или попробовать разобраться,
+      чего оно хочет.
+    select:
+      kinds: [item, profession]
+      prompt_item: Собрать защитные артефакты
+      prompt_profession: Кто займётся изгнанием
+    options:
+      - id: haunting_exorcise
+        label: Изгнать
+        description: >-
+          Охранные руны, колокол, круги защиты — чем больше и чем опытнее
+          изгонятель, тем чище уйдёт.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Дух выбросило вон с воем — стены трое суток ещё чуть светились.
+              effects:
+                - { on: all, sanity: 12 }
+                - { flag: { haunting_resolved: true } }
+          some:
+            - chance: 50
+              text: Изгнали, но не до конца — {entity} ушёл, но иногда мерещится в углах.
+              effects:
+                - { on: all, sanity: 4 }
+                - { on: all, status: { id: unease, label: Беспокойство, stat: sanity, value: -2, months: 2 } }
+                - { flag: { haunting_resolved: true } }
+            - text: Ритуал разозлил духа — следующая ночь выдалась жуткой.
+              effects:
+                - { on: all, health: -8, sanity: -14 }
+                - { flag: { haunting_resolved: true } }
+          none:
+            - text: Без нужных артефактов и знаний нечисть лишь развеселилась.
+              effects:
+                - { on: all, sanity: -16 }
+                - { on: victim, health: -10 }
+                - { flag: { haunting_resolved: true } }
+      - id: haunting_negotiate
+        label: Попытаться поговорить
+        description: Нечисть редко приходит без причины — может, у неё есть дело.
+        outcomes:
+          - chance: 30
+            text: Оказалось, дух искал конкретную вещь. Отдали — ушёл тихо.
+            effects:
+              - { on: all, sanity: 8 }
+              - { food: 60 }
+              - { flag: { haunting_resolved: true } }
+          - text: Дух не хотел говорить. Хотел напугать. У него получилось.
+            effects:
+              - { on: all, sanity: -12 }
+              - { on: victim, health: -8 }
+              - { flag: { haunting_resolved: true } }
+      - id: haunting_ignore
+        label: Не обращать внимания
+        description: Может, само уйдёт, если не провоцировать.
+        effects:
+          - { on: all, sanity: -8 }
+          - { on: all, status: { id: haunted_sleep, label: Тревожный сон, stat: sanity, value: -3, months: 3 } }
+          - { flag: { haunting_resolved: true } }

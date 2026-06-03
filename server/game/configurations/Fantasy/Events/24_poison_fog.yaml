@@ -1,0 +1,70 @@
+# Ядовитый туман просачивается через вентиляцию — защищаться снаряжением или перекрывать воздух.
+events:
+  - id: poison_fog
+    type: choice
+    weight: 2
+    when:
+      min_month: 2
+      flag_unset: [poison_fog_cleared]
+    vars:
+      fog: "{туман скверны|ядовитые споры|магический смог|едкое марево}"
+    title: "{event.fog} в убежище"
+    text: >-
+      Сквозь вентиляцию в убежище просочился {event.fog}. Несколько человек уже
+      кашляют. Можно поднять всё защитное снаряжение и попытаться перебыть волну
+      — или перекрыть воздух и задыхаться самим.
+    select:
+      kinds: [item, profession]
+      prompt_item: Поднять защитное снаряжение из запасов
+      prompt_profession: Кто возьмётся организовать защиту
+    options:
+      - id: fog_protect
+        label: Защититься
+        description: >-
+          Маски, фильтры, очищающие артефакты — чем больше, тем лучше.
+          Со знающим человеком раздать правильно.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Защита сработала — волна прошла, никто серьёзно не пострадал.
+              effects:
+                - { on: all, sanity: 5 }
+                - { flag: { poison_fog_cleared: true } }
+          some:
+            - chance: 55
+              text: Защиты хватило не всем — кто-то надышался, прежде чем добрались до запасов.
+              effects:
+                - { on: all, health: -6 }
+                - { on: random, status: { id: lung_burn, label: Жжение в лёгких, stat: health, value: -4, months: 2 } }
+                - { flag: { poison_fog_cleared: true } }
+            - text: Снаряжения или знаний не хватило — туман прошёлся по убежищу жёстко.
+              effects:
+                - { on: all, health: -12, sanity: -5 }
+                - { flag: { poison_fog_cleared: true } }
+          none:
+            - text: Без защиты убежище заволокло насквозь. Долго отходили.
+              effects:
+                - { on: all, health: -16, sanity: -6 }
+                - { on: random, status: { id: poisoning, label: Отравление, stat: health, value: -6, months: 2 } }
+                - { flag: { poison_fog_cleared: true } }
+      - id: fog_seal
+        label: Заглушить вентиляцию
+        description: Перекрыть воздух — туман не войдёт, но дышать станет трудно.
+        effects:
+          - { on: all, health: -8, sanity: -6 }
+          - { on: all, status: { id: stale_air_fog, label: Спёртый воздух, stat: health, value: -3, months: 1 } }
+          - { flag: { poison_fog_cleared: true } }
+      - id: fog_endure
+        label: Перетерпеть
+        description: Авось обойдётся — волна схлынет сама.
+        outcomes:
+          - chance: 30
+            text: Туман действительно рассеялся быстро — повезло.
+            effects:
+              - { on: all, health: -4 }
+              - { flag: { poison_fog_cleared: true } }
+          - text: Не обошлось. Убежище провоняло скверной ещё на неделю.
+            effects:
+              - { on: all, health: -14, sanity: -8 }
+              - { flag: { poison_fog_cleared: true } }

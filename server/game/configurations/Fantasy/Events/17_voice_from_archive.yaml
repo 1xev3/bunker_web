@@ -1,0 +1,71 @@
+# Говорящий архив транслирует что-то сам по себе — флейвор, потом развилка.
+events:
+  - id: archive_voice
+    type: flavor
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [archive_voice_resolved]
+    participants:
+      listener: {}
+    vars:
+      phrase:
+        - "\"Вы не последние\""
+        - "\"Ключ под третьей плитой\""
+        - "\"Не открывайте северный ход\""
+        - "\"Счётчик идёт назад\""
+    title: Голос из архива
+    text: >-
+      {listener} услышал, как Говорящий архив — обычно молчаливый — сам
+      по себе произнёс: {event.phrase}. Никто из остальных не был рядом,
+      и теперь трудно сказать, привиделось ли это.
+    effects:
+      - { on: listener, sanity: -6 }
+    schedule:
+      - { event: archive_decision, in: 1, carry: [listener] }
+
+  - id: archive_decision
+    type: choice
+    scheduled_only: true
+    title: Что делать с голосом из архива?
+    text: >-
+      {listener} рассказал остальным. Архив по-прежнему молчит, но некоторые
+      прикладывают ухо к его поверхности и клянутся, что слышат дыхание.
+    options:
+      - id: archive_investigate
+        label: Проверить слова архива
+        description: Последовать подсказке буквально — вдруг в ней правда.
+        outcomes:
+          - chance: 45
+            text: Нашли. За третьей плитой был запас, о котором все забыли.
+            effects:
+              - { food: 120 }
+              - { on: all, sanity: 6 }
+              - { flag: { archive_voice_resolved: true } }
+          - text: Ничего не нашли. Зато трое подрались из-за того, кто слышал что не то.
+            effects:
+              - { on: all, sanity: -6 }
+              - { flag: { archive_voice_resolved: true } }
+      - id: archive_seal
+        label: Отключить архив
+        description: Слишком тревожно — лучше заглушить это.
+        effects:
+          - { on: all, sanity: -3 }
+          - { on: listener, sanity: -8 }
+          - { flag: { archive_voice_resolved: true } }
+      - id: archive_talk_back
+        label: Заговорить с ним
+        description: Ответить архиву — может, он ждёт диалога.
+        outcomes:
+          - chance: 35
+            text: >-
+              Архив ответил. Что именно — {listener} не стал пересказывать,
+              но выглядел потрясённым и спал крепче остальных.
+            effects:
+              - { on: listener, sanity: 20 }
+              - { on: others, sanity: -4 }
+              - { flag: { archive_voice_resolved: true } }
+          - text: Тишина. Только эхо. Хуже, чем если бы ответил.
+            effects:
+              - { on: all, sanity: -5 }
+              - { flag: { archive_voice_resolved: true } }

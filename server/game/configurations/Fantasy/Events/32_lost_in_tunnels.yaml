@@ -1,0 +1,63 @@
+# Кто-то заблудился в подземных ходах — найти разведывательными артефактами или вглубь сам.
+events:
+  - id: lost_in_tunnels
+    type: choice
+    weight: 1
+    when:
+      min_players: 3
+    participants:
+      lost: {}
+    title: "{lost} пропал в ходах"
+    text: >-
+      {lost} ушёл проверить дальние туннели и не вернулся. Ходы петляют,
+      там темно и эхо. Можно поднять всё, что поможет нащупать след, —
+      или отправить кого-то следом.
+    select:
+      kinds: [item, player]
+      prompt_item: Поднять навигационные и разведывательные артефакты
+      prompt: Кого отправить на поиски
+    options:
+      - id: tunnels_search
+        label: Искать
+        description: >-
+          Фамильяры, кристаллы маршрута, зеркала, светокристаллы — чем больше
+          инструментов и надёжнее человек, тем быстрее найдут.
+        requires: [item, player]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Нашли быстро — {lost} сидел на развилке и ругался на темноту.
+              effects:
+                - { on: lost, sanity: -4 }
+                - { on: chosen, sanity: 8 }
+                - { on: others, sanity: 5 }
+          some:
+            - chance: 60
+              text: Нашли, но не скоро — {lost} уже начинал думать о плохом.
+              effects:
+                - { on: lost, health: -6, sanity: -8 }
+                - { on: chosen, health: -4, sanity: 6 }
+            - text: Поиски ни к чему не привели — {lost} выбрался сам через несколько часов.
+              effects:
+                - { on: lost, health: -12, sanity: -12 }
+                - { on: all, sanity: -5 }
+          none:
+            - text: Без снаряжения и помощи {lost} блуждал почти сутки. Едва выбрался.
+              effects:
+                - { on: lost, health: -18, sanity: -15 }
+                - { on: all, sanity: -6 }
+      - id: tunnels_wait
+        label: Ждать у входа
+        description: Позвать и подождать — сам найдёт дорогу.
+        outcomes:
+          - chance: 45
+            text: "{lost} вышел сам через несколько часов — помятый, но живой."
+            effects:
+              - { on: lost, sanity: -8 }
+              - { on: all, sanity: -3 }
+          - text: >-
+              {lost} не выходил трое суток. Когда нашли — молчал и не объяснял,
+              где был.
+            effects:
+              - { on: lost, health: -14, sanity: -20 }
+              - { on: all, sanity: -8 }

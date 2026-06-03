@@ -1,0 +1,74 @@
+# Силовой кристалл нестабилен: нарастающее напряжение с выбором реакции.
+events:
+  - id: crystal_pulse
+    type: choice
+    weight: 1
+    when:
+      flag_unset: [crystal_resolved]
+    select:
+      kinds: [item, profession]
+      prompt_item: Выберите материал для стабилизации
+      prompt_profession: Кто возьмётся за работу
+    vars:
+      glow: "{тревожно|ритмично|неровно}"
+    title: Кристалл пульсирует
+    text: >-
+      Силовой кристалл в основании бункера начал светиться {event.glow} —
+      раз в несколько секунд яркая вспышка, гул, вибрация в стенах. Если это
+      резонанс, в любой момент может рвануть.
+    options:
+      - id: crystal_stabilize
+        label: Стабилизировать
+        description: Погасить резонанс — с материалами и знатоком шансы выше.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Кристалл успокоен — теперь светит ровно и даже ярче, чем прежде.
+              effects:
+                - { on: all, sanity: 10 }
+                - { flag: { crystal_resolved: true } }
+          some:
+            - chance: 60
+              text: Резонанс подавили, но кристалл немного потускнел. Справились.
+              effects:
+                - { on: all, sanity: 4 }
+                - { flag: { crystal_resolved: true } }
+            - text: Попытка лишь усилила пульсацию — пришлось срочно отступить.
+              effects:
+                - { on: all, sanity: -8 }
+                - { on: random, health: -10 }
+                - { flag: { crystal_resolved: true } }
+          none:
+            - text: Без подготовки прикоснулись не к тому — вспышка ослепила полубункера.
+              effects:
+                - { on: all, health: -8, sanity: -10 }
+                - { flag: { crystal_resolved: true } }
+      - id: crystal_evacuate
+        label: Отступить и ждать
+        description: Освободить зону и надеяться, что само утихнет.
+        outcomes:
+          - chance: 55
+            text: Пульсация затихла сама — кристалл стабилизировался. Повезло.
+            effects:
+              - { on: all, sanity: 3 }
+              - { flag: { crystal_resolved: true } }
+          - text: Кристалл рванул — взрывная волна прошла через несколько отсеков.
+            effects:
+              - { on: all, health: -12, sanity: -8 }
+              - { flag: { crystal_resolved: true } }
+      - id: crystal_absorb
+        label: Высосать в зарядные камни
+        description: Направить выброс в накопители — рискованно, но выгодно.
+        outcomes:
+          - chance: 40
+            text: Энергия ушла в камни — запасы маны пополнились сверх нормы.
+            effects:
+              - { on: all, sanity: 8 }
+              - { food: 60 }
+              - { flag: { crystal_resolved: true } }
+          - text: Камни не выдержали перегрузки и взорвались. Осколки задели нескольких.
+            effects:
+              - { on: all, health: -10 }
+              - { on: random, health: -15 }
+              - { flag: { crystal_resolved: true } }

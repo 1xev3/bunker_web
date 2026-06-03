@@ -1,0 +1,101 @@
+# Кто-то из выживших проклят — снять алхимией и магией или изолировать.
+events:
+  - id: curse_appears
+    type: flavor
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [curse_resolved]
+    participants:
+      cursed: {}
+    vars:
+      sign: [
+        "вещи рвутся в его руках, замки перестают открываться",
+        "за ним гаснут светильники, а стены покрываются инеем",
+        "у него кровоточат ладони без видимых ран",
+        "всё, к чему он прикасается, вскоре ломается или гниёт"
+      ]
+    title: Проклятие
+    text: >-
+      {cursed} проклят — {event.sign}. Сам он это понял последним. Убежище
+      начинает это замечать, и молчать долго не получится.
+    effects:
+      - { on: cursed, sanity: -10 }
+      - { on: all, sanity: -4 }
+      - { on: cursed, status: { id: cursed_aura, label: Проклятие, stat: health, value: -3, months: 3 } }
+    schedule:
+      - { event: curse_choice, in: 1, carry: [cursed] }
+
+  - id: curse_choice
+    type: choice
+    scheduled_only: true
+    title: Что делать с проклятием {cursed}?
+    text: >-
+      Ждать больше нельзя — проклятие уже задело чужие вещи. Можно поднять
+      всё магическое и попытаться снять, — или отгородить {cursed} от
+      остальных и надеяться, что само развеется.
+    select:
+      kinds: [item, profession]
+      prompt_item: Собрать магические артефакты для ритуала
+      prompt_profession: Кто проведёт ритуал снятия
+    options:
+      - id: curse_lift
+        label: Снять проклятие
+        description: >-
+          Охранные руны, амулеты, алхимия, свитки — чем полнее набор и
+          опытнее маг, тем чище снятие.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Проклятие ушло чисто — {cursed} почувствовал, как с плеч свалился груз.
+              effects:
+                - { on: cursed, clear_status: cursed_aura, sanity: 18 }
+                - { on: all, sanity: 8 }
+                - { flag: { curse_resolved: true } }
+          some:
+            - chance: 50
+              text: Проклятие ослабили, но не сняли полностью. {cursed} легче, но знак остался.
+              effects:
+                - { on: cursed, sanity: 8 }
+                - { on: cursed, status: { id: cursed_aura, label: Слабое проклятие, stat: health, value: -1, months: 3 } }
+                - { flag: { curse_resolved: true } }
+            - text: Ритуал не справился — и, кажется, разбудил что-то в проклятии.
+              effects:
+                - { on: cursed, health: -14, sanity: -10 }
+                - { on: all, sanity: -6 }
+                - { flag: { curse_resolved: true } }
+          none:
+            - text: Без артефактов и знаний ритуал не состоялся. Проклятие продолжает расти.
+              effects:
+                - { on: cursed, health: -10, sanity: -12 }
+                - { on: all, sanity: -6 }
+                - { flag: { curse_resolved: true } }
+      - id: curse_isolate
+        label: Изолировать {cursed}
+        description: Отдельный отсек, подальше от общих запасов — пока само не пройдёт.
+        effects:
+          - { on: cursed, sanity: -20 }
+          - { on: others, sanity: -4 }
+          - { flag: { curse_resolved: true } }
+        schedule:
+          - { event: curse_fades, in: 3, chance: 50 }
+      - id: curse_accept
+        label: Жить с этим
+        description: Принять как есть — проклятые тоже люди.
+        effects:
+          - { on: cursed, sanity: 6 }
+          - { on: all, sanity: -3 }
+          - { on: all, status: { id: cursed_contagion, label: Тревога от проклятия, stat: sanity, value: -2, months: 3 } }
+          - { flag: { curse_resolved: true } }
+
+  - id: curse_fades
+    type: flavor
+    scheduled_only: true
+    title: Проклятие спало
+    text: >-
+      Изоляция, видимо, помогла — или срок проклятия вышел сам собой.
+      {cursed} вернулся в общий отсек молча. Принял без объятий.
+    effects:
+      - { on: cursed, clear_status: cursed_aura, sanity: 8 }
+      - { on: all, sanity: 4 }

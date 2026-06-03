@@ -139,15 +139,15 @@ BUNKER_DURATIONS:
 
 FOOD_SUPPLIES:
   - name: Очень мало еды
-    amount: 1080
+    amount: 540
   - name: Мало еды
-    amount: 2160
+    amount: 1080
   - name: Достаточно еды
-    amount: 4320
+    amount: 2160
   - name: Много еды
-    amount: 8640
+    amount: 4320
   - name: Стратегический запас
-    amount: 17280
+    amount: 8640
 
 ROOM_COUNTS:
   - 3

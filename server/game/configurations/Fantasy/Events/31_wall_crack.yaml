@@ -1,0 +1,73 @@
+# Трещина в несущей стене расходится — заделать инструментами или жертвовать отсеком.
+events:
+  - id: wall_crack
+    type: choice
+    weight: 1
+    when:
+      min_month: 2
+      flag_unset: [wall_crack_fixed]
+    vars:
+      location: "{в северном отсеке|в проходе к складу|под лестничным маршем|в несущей арке}"
+    title: Трещина в стене
+    text: >-
+      Трещина {event.location} за последние дни разошлась на два пальца —
+      из неё тянет холодом и слышен далёкий гул. Если не заделать, через
+      несколько недель свод может не выдержать. Можно поднять строительные
+      материалы и инструменты — или пожертвовать отсеком.
+    select:
+      kinds: [item, profession]
+      prompt_item: Поднять строительные материалы
+      prompt_profession: Кто возьмётся за ремонт
+    options:
+      - id: crack_repair
+        label: Заделать трещину
+        description: >-
+          Герметик, жесть, рунные пластины, инструменты — чем лучше набор
+          и опытнее строитель, тем надёжнее ремонт.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Трещину заделали на совесть — рунная пломба держит, гул стих.
+              effects:
+                - { on: all, sanity: 7 }
+                - { flag: { wall_crack_fixed: true } }
+          some:
+            - chance: 55
+              text: Заделали как смогли. Гул не пропал, но свод пока держится.
+              effects:
+                - { on: all, sanity: 2 }
+                - { on: all, status: { id: crack_worry, label: Тревога о своде, stat: sanity, value: -2, months: 2 } }
+                - { flag: { wall_crack_fixed: true } }
+            - text: Ремонт не удался — материалов или умения не хватило. Трещина продолжает расходиться.
+              effects:
+                - { on: all, health: -6, sanity: -8 }
+              schedule:
+                - { event: wall_collapse, in: 2, chance: 55 }
+          none:
+            - text: Без материалов и знаний стену не удержать.
+              effects:
+                - { on: all, sanity: -10 }
+              schedule:
+                - { event: wall_collapse, in: 1, chance: 70 }
+      - id: crack_seal_off
+        label: Замуровать отсек
+        description: Пожертвовать этим отсеком — отгородиться и жить в меньшем пространстве.
+        effects:
+          - { on: all, sanity: -8 }
+          - { on: all, status: { id: cramped, label: Тесно, stat: sanity, value: -3, months: 3 } }
+          - { flag: { wall_crack_fixed: true } }
+
+  - id: wall_collapse
+    type: flavor
+    scheduled_only: true
+    when:
+      flag_unset: [wall_crack_fixed]
+    title: Свод обвалился
+    text: >-
+      Стена не выдержала — обрушился угол свода. Обошлось без жертв, но
+      завалило часть склада. Теперь придётся жить в обломках.
+    effects:
+      - { on: all, health: -10, sanity: -10 }
+      - { food: "15%" }
+      - { flag: { wall_crack_fixed: true } }

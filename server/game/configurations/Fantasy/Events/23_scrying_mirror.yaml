@@ -1,0 +1,74 @@
+# Зеркало дальнего взгляда засекло чужой лагерь — цепочка: наблюдение → контакт.
+events:
+  - id: mirror_sighting
+    type: flavor
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [mirror_contact]
+    participants:
+      watcher: {}
+    vars:
+      sight:
+        - "костёр в трёх лигах к северу"
+        - "силуэты с факелами на холме"
+        - "укреплённую стоянку в распадке"
+        - "огни в руинах старой башни"
+    title: Зеркало показало чужих
+    text: >-
+      {watcher} дежурил у зеркала дальнего взгляда и увидел {event.sight}.
+      Люди, животные или что-то ещё — не разглядеть. Движение точно есть.
+    effects:
+      - { on: watcher, sanity: -3 }
+    schedule:
+      - { event: mirror_contact_choice, in: 1, carry: [watcher] }
+
+  - id: mirror_contact_choice
+    type: choice
+    scheduled_only: true
+    title: Что делать с чужими?
+    text: >-
+      {watcher} продолжает наблюдение — их там несколько, есть укрытие.
+      Они пока нас не видят. Или делают вид, что не видят.
+    options:
+      - id: mirror_signal
+        label: Подать сигнал
+        description: Обозначить своё присутствие — вдруг выгодный контакт.
+        outcomes:
+          - chance: 40
+            text: Через день к воротам пришли двое с едой и предложением торговли.
+            effects:
+              - { food: 100 }
+              - { on: all, sanity: 12 }
+              - { flag: { mirror_contact: true } }
+          - text: Сигнал заметили не те — ночью у ворот слышали шорохи и скрежет.
+            effects:
+              - { on: all, sanity: -10 }
+              - { flag: { mirror_contact: true } }
+      - id: mirror_observe
+        label: Продолжать наблюдать
+        description: Не обнаруживать себя — изучить, прежде чем решать.
+        effects:
+          - { on: watcher, sanity: 5 }
+          - { on: all, sanity: 2 }
+          - { flag: { mirror_contact: true } }
+        schedule:
+          - { event: strangers_arrive, in: 2, chance: 35 }
+      - id: mirror_hide
+        label: Заглушить зеркало
+        description: Отключить наблюдение — меньше знаешь, крепче спишь.
+        effects:
+          - { on: all, sanity: -3 }
+          - { flag: { mirror_contact: true } }
+
+  - id: strangers_arrive
+    type: flavor
+    scheduled_only: true
+    title: Они нашли нас
+    text: >-
+      Пока {watcher} наблюдал, кто-то из чужих смотрел в ответ — у них тоже
+      оказалось зеркало. К воротам пришёл один человек без оружия с запиской:
+      «Поговорим?»
+    effects:
+      - { on: all, sanity: 5 }
+      - { food: 60 }

@@ -1,0 +1,75 @@
+# Малый гомункул начал говорить — флейвор, потом выбор его судьбы с последствиями.
+events:
+  - id: homunculus_speaks
+    type: flavor
+    weight: 1
+    when:
+      min_players: 2
+      flag_unset: [homunculus_resolved]
+    participants:
+      witness: {}
+    title: Гомункул заговорил
+    text: >-
+      {witness} застал малого гомункула у окошка отсека — тот смотрел в
+      темноту коридора и что-то бормотал. Когда его окликнули, он обернулся
+      и чётко произнёс: «Я хочу имя». Потом замолчал и больше не отвечает.
+    effects:
+      - { on: witness, sanity: -4 }
+      - { on: all, sanity: -2 }
+    schedule:
+      - { event: homunculus_choice, in: 1, carry: [witness] }
+
+  - id: homunculus_choice
+    type: choice
+    scheduled_only: true
+    title: Гомункул ждёт ответа
+    text: >-
+      Гомункул теперь смотрит на каждого, кто входит. Не двигается, не
+      работает — просто ждёт. {witness} говорит, что в его глазах что-то
+      появилось, чего раньше не было.
+    options:
+      - id: homunculus_name
+        label: Дать ему имя
+        description: Признать его личностью — как бы странно это ни звучало.
+        effects:
+          - { on: all, sanity: 10 }
+          - { on: witness, sanity: 8 }
+          - { flag: { homunculus_resolved: true } }
+        schedule:
+          - { event: homunculus_gift, in: 2, chance: 60 }
+      - id: homunculus_reset
+        label: Сбросить настройки
+        description: Стереть это поведение — слишком тревожно.
+        effects:
+          - { on: witness, sanity: -15 }
+          - { on: others, sanity: 4 }
+          - { flag: { homunculus_resolved: true } }
+      - id: homunculus_ignore
+        label: Сделать вид, что ничего нет
+        description: Просто подождать — само пройдёт.
+        effects:
+          - { on: all, sanity: -4 }
+          - { flag: { homunculus_resolved: true } }
+        schedule:
+          - { event: homunculus_leaves, in: 2, chance: 55 }
+
+  - id: homunculus_gift
+    type: flavor
+    scheduled_only: true
+    title: Благодарность гомункула
+    text: >-
+      Гомункул, которому дали имя, принёс к чьей-то койке горстку орехов и
+      свёрнутое одеяло. Потом встал рядом и замер — так, как охраняют.
+    effects:
+      - { on: all, sanity: 6 }
+      - { food: 40 }
+
+  - id: homunculus_leaves
+    type: flavor
+    scheduled_only: true
+    title: Гомункул ушёл
+    text: >-
+      Утром его не нашли нигде. Дверь заперта изнутри — значит, он всё же
+      научился открывать засовы. Или никогда и не был заперт.
+    effects:
+      - { on: all, sanity: -8 }

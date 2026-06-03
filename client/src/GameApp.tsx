@@ -204,6 +204,13 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     prevOutcomeConfirmationsRef.current = oc;
   }, [roomState?.outcome_confirmations]);
 
+  // A new event must never stay hidden behind a stale outcome modal. The server
+  // always nulls active_event before resolving (they're mutually exclusive), so
+  // a fresh active_event means the previous outcome flow is done — drop it.
+  useEffect(() => {
+    if (roomState?.active_event) setEventOutcome(null);
+  }, [roomState?.active_event?.id]);
+
   useEffect(() => {
     const token = localStorage.getItem('bunker_token');
     if (token) {

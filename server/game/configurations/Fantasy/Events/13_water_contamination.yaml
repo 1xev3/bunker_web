@@ -58,6 +58,7 @@ events:
             effects:
               - { on: all, sanity: -2 }
           - text: Кипячение не убило всю заразу — по убежищу пошли рези в животе.
+            chance: 50
             effects:
               - { on: all, health: -6 }
             schedule:

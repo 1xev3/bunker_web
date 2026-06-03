@@ -1,0 +1,77 @@
+# Вода отдаёт горечью — определить, что не так, и очистить или перейти на запасы.
+events:
+  - id: tainted_water
+    type: choice
+    weight: 2
+    when:
+      flag_unset: [water_tainted_resolved]
+    participants:
+      patient: {}
+    vars:
+      symptom: "{горечь и тошнота|металлический привкус и головная боль|зеленоватый оттенок и слабость|странный запах и рези в животе}"
+    title: Что-то с водой
+    text: >-
+      {patient} первым почувствовал {event.symptom} после кружки воды. Бак
+      выглядит чистым, но вкус явно не тот. Можно поднять запасы алхимических
+      реагентов и попробовать установить причину и очистить, — или просто
+      переключиться на резервные запасы.
+    select:
+      kinds: [item, profession]
+      prompt_item: Достать реагенты и очищающее снаряжение
+      prompt_profession: Кто разберётся с водой
+    options:
+      - id: water_purify
+        label: Найти причину и очистить
+        description: >-
+          Анализаторы, очищающие порошки, фильтры, антидоты — с алхимиком
+          или целителем шансы понять и исправить куда выше.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Нашли — магическая плесень в трубе. Вычистили, вода снова чистая.
+              effects:
+                - { on: patient, health: 6, clear_status: debuffs }
+                - { on: all, sanity: 6 }
+                - { flag: { water_tainted_resolved: true } }
+          some:
+            - chance: 55
+              text: Воду очистили как смогли — не идеально, но пить можно.
+              effects:
+                - { on: patient, health: -4 }
+                - { on: all, sanity: 3 }
+                - { flag: { water_tainted_resolved: true } }
+            - text: Без нужных знаний или реагентов попытка ни к чему не привела.
+              effects:
+                - { on: patient, health: -12 }
+                - { on: patient, status: { id: water_sickness, label: Отравление водой, stat: health, value: -5, months: 2 } }
+                - { flag: { water_tainted_resolved: true } }
+          none:
+            - text: Не определили, не очистили — {patient} слёг, остальные рискуют.
+              effects:
+                - { on: patient, health: -16 }
+                - { on: all, health: -6 }
+                - { on: patient, status: { id: water_sickness, label: Отравление водой, stat: health, value: -5, months: 2 } }
+                - { flag: { water_tainted_resolved: true } }
+      - id: water_reserve
+        label: Перейти на резервные запасы
+        description: Не трогать основной бак — пить только из неприкосновенного резерва.
+        effects:
+          - { on: patient, health: -6 }
+          - { food: -80 }
+          - { on: all, sanity: -3 }
+          - { flag: { water_tainted_resolved: true } }
+      - id: water_boil
+        label: Кипятить всё подряд
+        description: Кипячение не от всего спасёт, но лучше, чем ничего.
+        outcomes:
+          - chance: 50
+            text: Кипячение справилось — оказалось, обычная бактерия.
+            effects:
+              - { on: patient, health: -4 }
+              - { flag: { water_tainted_resolved: true } }
+          - text: Кипячение не помогло — зараза магическая. Несколько человек слегли.
+            effects:
+              - { on: patient, health: -12 }
+              - { on: random, health: -8 }
+              - { flag: { water_tainted_resolved: true } }

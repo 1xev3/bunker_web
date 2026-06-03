@@ -1,0 +1,75 @@
+# Конь захромал — выбор: лечить с расходом предметов, забить или выпустить.
+events:
+  - id: lame_horse
+    type: choice
+    weight: 1
+    when:
+      flag_unset: [horse_incident]
+    select:
+      kind: item
+      prompt_item: Выберите, чем лечить
+    vars:
+      horse: "{Верховая лошадь|Ездовой пони}"
+    title: "{event.horse} захромал"
+    text: >-
+      {event.horse} не встаёт на правую ногу — похоже, надломилось копыто
+      или потянул сухожилие. Без лечения животное будет мучиться.
+      Запасов на долгое выхаживание может не хватить.
+    options:
+      - id: horse_treat
+        label: Лечить
+        description: Потратить перевязочный материал и время. Есть шанс поставить на ноги.
+        requires: [item]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Конь пошёл на поправку — через несколько дней снова в строю.
+              effects:
+                - { on: all, sanity: 8 }
+                - { flag: { horse_incident: true } }
+          some:
+            - chance: 55
+              text: Поставили на ноги, но хромота осталась. Для тяжёлой работы уже не годен.
+              effects:
+                - { on: all, sanity: 3 }
+                - { flag: { horse_incident: true } }
+            - text: Лечение не помогло — конь не поднялся.
+              effects:
+                - { on: all, sanity: -10 }
+                - { food: 80 }
+                - { flag: { horse_incident: true } }
+          none:
+            - chance: 25
+              text: Конь выжил сам — видимо, не так серьёзно.
+              effects:
+                - { on: all, sanity: 4 }
+                - { flag: { horse_incident: true } }
+            - text: Без помощи конь пролежал трое суток и не поднялся.
+              effects:
+                - { on: all, sanity: -12 }
+                - { flag: { horse_incident: true } }
+      - id: horse_slaughter
+        label: Забить на мясо
+        description: Жестоко, но практично — голодные рты важнее.
+        effects:
+          - { food: 180 }
+          - { on: all, sanity: -10 }
+          - { flag: { horse_incident: true } }
+      - id: horse_release
+        label: Выпустить
+        description: Открыть ворота — может, выживет снаружи.
+        effects:
+          - { on: all, sanity: -4 }
+          - { flag: { horse_incident: true } }
+        schedule:
+          - { event: horse_returns, in: 3, chance: 25 }
+
+  - id: horse_returns
+    type: flavor
+    scheduled_only: true
+    title: Конь вернулся
+    text: >-
+      У ворот раздалось знакомое ржание. {Верховая лошадь|Ездовой пони} стоит
+      снаружи — хромает, но жив. Видимо, снаружи его ждало ещё меньше хорошего.
+    effects:
+      - { on: all, sanity: 8 }

@@ -141,6 +141,20 @@ function eventParticipantIds(event) {
   return event.participant_ids ?? [];
 }
 
+// Players whose response we actually wait for: alive AND (a bot or currently
+// connected). A disconnected-but-alive survivor must not block a vote/confirm
+// step — otherwise the event modal soft-locks for everyone until (if ever) they
+// return. Bots always count since they auto-respond.
+function activeRespondents(roomCode, room) {
+  const connected = wsManager.getConnected(roomCode);
+  return room.getActivePlayers().filter(p => p.is_bot || connected.has(p.id));
+}
+
+function allResponded(roomCode, room, set) {
+  const respondents = activeRespondents(roomCode, room);
+  return respondents.length > 0 && respondents.every(p => set.has(p.id));
+}
+
 // Effects for a flavor event: declarative effects + scheduled follow-ups.
 function buildFlavorEffects(event, room) {
   const def = event.__source ?? {};
@@ -470,8 +484,7 @@ function waitForOutcomeConfirmations(roomCode, action) {
     if (p.is_bot) room.outcomeConfirmations.add(p.id);
   }
   wsManager.broadcastState(roomCode, room);
-  const active = room.getActivePlayers();
-  if (active.length > 0 && active.every(p => room.outcomeConfirmations.has(p.id))) {
+  if (allResponded(roomCode, room, room.outcomeConfirmations)) {
     executeOutcomeAction(roomCode);
   }
 }
@@ -855,8 +868,7 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
   wsManager.broadcastState(roomCode, room);
 
   // Once everyone has voted, either resolve or wait for the council's pick.
-  const activePlayers = room.getActivePlayers();
-  if (activePlayers.every(p => room.choiceVotes[p.id])) {
+  if (allResponded(roomCode, room, new Set(Object.keys(room.choiceVotes)))) {
     finalizeChoiceVote(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
   }
 }
@@ -872,7 +884,7 @@ function finalizeChoiceVote(roomCode, winningOptionId) {
   const option = options.find(o => o.id === winningOptionId) ?? options[0];
   const missing = optionRequiredKinds(option).filter(k => !selectionHasKind(room, k));
 
-  const humans = room.getActivePlayers().filter(p => !p.is_bot);
+  const humans = activeRespondents(roomCode, room).filter(p => !p.is_bot);
   if (missing.length === 0 || humans.length === 0) {
     resolveChoiceEvent(roomCode, winningOptionId);
     return;
@@ -924,8 +936,7 @@ function handleResolveEvent(roomCode, playerId) {
   }
   wsManager.broadcastState(roomCode, room);
 
-  const active = room.getActivePlayers();
-  if (active.every(p => room.resolveConfirmations.has(p.id))) {
+  if (allResponded(roomCode, room, room.resolveConfirmations)) {
     if (event.event_type === 'flavor') resolveFlavorEvent(roomCode);
     else resolveFoodReplenishEvent(roomCode, room.activeEventSelection);
   }
@@ -940,39 +951,52 @@ function handleConfirmOutcome(roomCode, playerId) {
   room.outcomeConfirmations.add(playerId);
   wsManager.broadcastState(roomCode, room);
 
-  const active = room.getActivePlayers();
-  if (active.every(p => room.outcomeConfirmations.has(p.id))) {
+  if (allResponded(roomCode, room, room.outcomeConfirmations)) {
     executeOutcomeAction(roomCode);
   }
 }
 
+// A player just disconnected (already removed from wsManager). Any gate that was
+// only waiting on them should now be re-evaluated against the remaining
+// respondents so the event doesn't soft-lock for everyone still in the bunker.
 function handlePlayerMaybeUnblock(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.status !== 'bunker_life') return;
 
-  let unblocked = false;
-
-  if (room.activeEvent && room.resolveConfirmations && !room.resolveConfirmations.has(playerId)) {
-    room.resolveConfirmations.add(playerId);
-    const active = room.getActivePlayers();
-    if (active.every(p => room.resolveConfirmations.has(p.id))) {
-      const event = room.activeEvent;
-      if (event.event_type === 'flavor') { resolveFlavorEvent(roomCode); return; }
-      if (event.event_type === 'food_replenish') { resolveFoodReplenishEvent(roomCode, room.activeEventSelection); return; }
-    }
-    unblocked = true;
+  // Flavor / food-replenish "ready" gate.
+  if (room.activeEvent && room.resolveConfirmations && allResponded(roomCode, room, room.resolveConfirmations)) {
+    const event = room.activeEvent;
+    if (event.event_type === 'flavor') { resolveFlavorEvent(roomCode); return; }
+    if (event.event_type === 'food_replenish') { resolveFoodReplenishEvent(roomCode, room.activeEventSelection); return; }
   }
 
-  if (room.outcomeConfirmations && !room.outcomeConfirmations.has(playerId)) {
-    room.outcomeConfirmations.add(playerId);
-    const active = room.getActivePlayers();
-    if (active.every(p => room.outcomeConfirmations.has(p.id))) {
-      executeOutcomeAction(roomCode); return;
+  // Choice event still gathering votes.
+  if (room.activeEvent?.event_type === 'choice' && !room.choicePendingSelection && Array.isArray(room.activeEvent.options)) {
+    const optionIds = room.activeEvent.options.map(o => o.id);
+    if (allResponded(roomCode, room, new Set(Object.keys(room.choiceVotes ?? {})))) {
+      finalizeChoiceVote(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
+      return;
     }
-    unblocked = true;
   }
 
-  if (unblocked) wsManager.broadcastState(roomCode, room);
+  // Choice event waiting on the council to confirm a picker, but every remaining
+  // human is gone — resolve with whatever (possibly empty) selection stands.
+  if (room.activeEvent?.event_type === 'choice' && room.choicePendingSelection) {
+    const humans = activeRespondents(roomCode, room).filter(p => !p.is_bot);
+    if (humans.length === 0) {
+      const winningOptionId = room.choicePendingSelection;
+      room.choicePendingSelection = null;
+      resolveChoiceEvent(roomCode, winningOptionId);
+      return;
+    }
+  }
+
+  // Outcome modal gate.
+  if (room.outcomeConfirmations && allResponded(roomCode, room, room.outcomeConfirmations)) {
+    executeOutcomeAction(roomCode); return;
+  }
+
+  wsManager.broadcastState(roomCode, room);
 }
 
 module.exports = {

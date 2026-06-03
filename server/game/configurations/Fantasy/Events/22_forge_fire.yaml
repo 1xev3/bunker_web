@@ -1,0 +1,67 @@
+# Кузнечный горн перегрелся — срочный выбор с item+profession пикером.
+events:
+  - id: forge_overheating
+    type: choice
+    weight: 1
+    when:
+      flag_unset: [forge_fire_resolved]
+    select:
+      kinds: [item, profession]
+      prompt_item: Выберите чем сбить жар
+      prompt_profession: Кто возьмётся за тушение
+    title: Горн разгорелся
+    text: >-
+      Кузнечный горн не потушили с вечера — к утру стены вокруг него
+      раскалились, и от деревянного стеллажа потянуло дымком. Если не унять
+      жар в ближайшие минуты, займётся склад.
+    options:
+      - id: forge_douse
+        label: Залить и сбить
+        description: Использовать что есть под рукой — с умелым человеком быстрее и надёжнее.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Жар сбили чисто — горн цел, склад цел, все живы.
+              effects:
+                - { on: all, sanity: 5 }
+                - { flag: { forge_fire_resolved: true } }
+          some:
+            - chance: 65
+              text: Справились, но горн лопнул от резкого охлаждения — чинить придётся долго.
+              effects:
+                - { on: all, sanity: -2 }
+                - { flag: { forge_fire_resolved: true } }
+            - text: Не успели — огонь перекинулся на стеллаж. Часть запасов сгорела.
+              effects:
+                - { on: all, sanity: -8 }
+                - { food: "15%" }
+                - { flag: { forge_fire_resolved: true } }
+          none:
+            - text: Без подготовки бросились тушить голыми руками — ожоги и потеря запасов.
+              effects:
+                - { on: random, health: -20 }
+                - { on: all, health: -6, sanity: -10 }
+                - { food: "20%" }
+                - { flag: { forge_fire_resolved: true } }
+      - id: forge_abandon
+        label: Отступить и закрыть отсек
+        description: Пожертвовать горном, но спасти остальное.
+        effects:
+          - { on: all, sanity: -8 }
+          - { food: "10%" }
+          - { flag: { forge_fire_resolved: true } }
+      - id: forge_bucket_chain
+        label: Передавать вёдра по цепочке
+        description: Всем вместе — медленно, но без риска для одного человека.
+        outcomes:
+          - chance: 55
+            text: Общими усилиями сбили огонь до того, как занялось всерьёз.
+            effects:
+              - { on: all, health: -4, sanity: 4 }
+              - { flag: { forge_fire_resolved: true } }
+          - text: Не хватило воды — пока бегали, стеллаж занялся.
+            effects:
+              - { on: all, health: -6, sanity: -8 }
+              - { food: "12%" }
+              - { flag: { forge_fire_resolved: true } }
