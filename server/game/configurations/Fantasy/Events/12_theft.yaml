@@ -1,0 +1,78 @@
+# Кто-то таскает из общих запасов по ночам. Поймать вора, устроить слежку или
+# спустить на тормозах — и жить с последствиями.
+events:
+  - id: night_thief
+    type: choice
+    weight: 1
+    when:
+      min_month: 1
+      min_players: 3
+    participants:
+      thief: {}
+    vars:
+      missing: "{паёк|консервы|лекарства|канистра воды}"
+    title: Ночной вор
+    text: >-
+      Утром недосчитались: пропал {event.missing}. Кто-то ворует у своих под
+      покровом сна, и подозрение расползается по бункеру быстрее голода.
+    options:
+      - id: stake_out
+        label: Устроить засаду
+        description: Не спать ночь и подкараулить вора с поличным.
+        outcomes:
+          - chance: 65
+            text: На рассвете {thief} попался у склада с чужим пайком в руках.
+            effects:
+              - { on: thief, sanity: -8 }
+            schedule:
+              - { event: thief_caught, in: 1, carry: [thief] }
+          - text: Ночь прошла впустую — вор не показался, а люди вымотались.
+            effects:
+              - { on: all, health: -3, sanity: -4 }
+      - id: lock_up
+        label: Запереть склад
+        description: Повесить замок и выдавать паёк только при всех.
+        effects:
+          - { on: all, sanity: -3 }
+          - { flag: { storage_locked: true } }
+      - id: ignore
+        label: Закрыть глаза
+        description: Не сеять раздор — пусть совесть сама накажет.
+        outcomes:
+          - chance: 50
+            text: Кражи прекратились сами собой — видно, вору стало стыдно.
+            effects:
+              - { on: all, sanity: 1 }
+          - text: Безнаказанность развязала руки — запасы продолжили таять.
+            effects:
+              - { food: "20%" }
+              - { on: all, sanity: -5 }
+
+  - id: thief_caught
+    type: choice
+    scheduled_only: true
+    title: Вор пойман
+    text: >-
+      {thief} стоит перед всеми, пряча глаза. Вина доказана — теперь бункеру
+      решать, что делать с тем, кто обкрадывал своих.
+    options:
+      - id: forgive
+        label: Простить
+        description: Дать шанс искупить вину работой — все мы на пределе.
+        effects:
+          - { on: thief, sanity: 6 }
+          - { on: others, sanity: -2 }
+          - { on: thief, status: { id: indebted, label: В долгу перед всеми, stat: sanity, value: -2, months: 2 } }
+      - id: ration_cut
+        label: Урезать паёк
+        description: Пусть отрабатывает украденное полупустым желудком.
+        effects:
+          - { on: thief, health: -12, sanity: -6 }
+          - { on: others, sanity: 3 }
+      - id: cast_out
+        label: Изгнать
+        description: Вора — за дверь. Жестоко, но другим наука.
+        effects:
+          - { on: thief, kill: true }
+          - { on: all, sanity: -7 }
+          - { on: random, status: { id: haunted, label: Тяжёлая память, stat: sanity, value: -3, months: 3 } }

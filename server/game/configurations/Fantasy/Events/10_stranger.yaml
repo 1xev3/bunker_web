@@ -1,0 +1,217 @@
+# Чужак у люка. Впустить вслепую, осмотреть знающим человеком или прогнать —
+# и каждый путь тянет за собой свою цепочку: новосёл приживается и ведёт к
+# схрону, оказывается волком в овечьей шкуре, или возвращается тот, кого
+# когда-то не впустили.
+events:
+  - id: stranger_at_hatch
+    type: choice
+    weight: 1
+    when:
+      min_month: 2
+      min_players: 2
+      flag_unset: [stranger_resolved]
+    vars:
+      look: "{измождённый старик|молодая женщина с ребёнком на руках|раненый мужчина|подросток в лохмотьях}"
+      plea: "{умоляет впустить|хрипит, что замерзает|просит хотя бы глоток воды|молча смотрит прямо в глазок}"
+    title: Стук в люк
+    text: >-
+      Снаружи кто-то {колотит|скребётся|барабанит} в люк. В глазок видно —
+      {event.look}, {event.plea}. За дверью холод и неизвестность, внутри — и
+      так тесно. Решать нужно сейчас, пока он не ушёл или не привлёк чужого
+      внимания.
+    select:
+      kind: profession
+      prompt_profession: Кто осмотрит чужака у люка?
+    options:
+      - id: vet
+        label: Сначала осмотреть
+        description: Подпустить знающего человека — пусть оценит, не болен ли и не опасен ли гость.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Чужака осмотрели с порога: не ранен заразой, оружия нет. Впустили
+                спокойно — и не прогадали, он притащил кое-какие припасы.
+              effects:
+                - { food: 120 }
+                - { on: all, sanity: 6 }
+                - { flag: { stranger_resolved: true } }
+              schedule:
+                - { event: stranger_settles, in: 2, chance: 75 }
+          none:
+            - chance: 50
+              text: Без знающего глаза впустили наугад — и, по счастью, не ошиблись.
+              effects:
+                - { food: 90 }
+                - { on: all, sanity: 4 }
+                - { flag: { stranger_resolved: true } }
+              schedule:
+                - { event: stranger_settles, in: 2, chance: 55 }
+            - text: Впустили вслепую — и пригрели беду.
+              effects:
+                - { on: all, sanity: -2 }
+                - { flag: { stranger_resolved: true } }
+              schedule:
+                - { event: stranger_betrays, in: 1, chance: 100 }
+      - id: let_in
+        label: Впустить сразу
+        description: Не торговаться с совестью — открыть люк и впустить, будь что будет.
+        outcomes:
+          - chance: 50
+            text: Чужак оказался своим в доску и сходу взялся помогать.
+            effects:
+              - { food: 120 }
+              - { on: all, sanity: 5 }
+              - { flag: { stranger_resolved: true } }
+            schedule:
+              - { event: stranger_settles, in: 2, chance: 65 }
+          - chance: 30
+            text: Через пару дней стало ясно — он принёс с собой болезнь.
+            effects:
+              - { on: random, status: { id: outsider_fever, label: Лихорадка, stat: health, value: -8, months: 2 } }
+              - { on: all, sanity: -4 }
+              - { flag: { stranger_resolved: true } }
+          - text: Гость только и ждал, когда люк откроют, — и показал зубы.
+            effects:
+              - { on: all, sanity: -3 }
+              - { flag: { stranger_resolved: true } }
+            schedule:
+              - { event: stranger_betrays, in: 1, chance: 100 }
+      - id: turn_away
+        label: Прогнать
+        description: Своя шкура ближе. Но крик за дверью ещё долго будет стоять в ушах.
+        effects:
+          - { on: all, sanity: -7 }
+          - { on: random, status: { id: guilt, label: Чувство вины, stat: sanity, value: -4, months: 3 } }
+          - { flag: { stranger_resolved: true } }
+        schedule:
+          - { event: stranger_returns, in: 2, chance: 45 }
+
+  - id: stranger_settles
+    type: flavor
+    scheduled_only: true
+    title: Новосёл прижился
+    text: >-
+      Чужак освоился и взялся помогать по хозяйству — даже расчистил ещё один
+      угол под жильё. Стало чуть {легче|спокойнее|теплее}.
+    effects:
+      - { on: all, sanity: 4 }
+      - { add_room: true }
+    schedule:
+      - { event: stranger_knows_cache, in: 3, chance: 50 }
+
+  - id: stranger_knows_cache
+    type: choice
+    scheduled_only: true
+    title: Новосёл помнит схрон
+    text: >-
+      Прижившийся чужак рассказал, что неподалёку наверху осталась его заначка —
+      еда и медикаменты. Дойти можно, но снаружи холодно и неспокойно.
+    select:
+      kinds: [player, profession]
+      prompt: Кого отправить с ним за схроном?
+      prompt_profession: Кто поведёт вылазку?
+    options:
+      - id: send_team
+        label: Снарядить вылазку
+        description: Отправить человека покрепче и того, кто знает, как выжить наверху.
+        requires: [player, profession]
+        outcomes_by_selection:
+          all:
+            - text: Вылазка прошла как по нотам — схрон вынесли подчистую.
+              effects:
+                - { food: 200 }
+                - { on: all, sanity: 5 }
+          some:
+            - chance: 55
+              text: Схрон нашли, но обратно добирались тяжело.
+              effects:
+                - { food: 130 }
+                - { on: chosen, health: -10 }
+            - text: Наверху всё пошло наперекосяк — добытчик еле дополз обратно с пустыми руками.
+              effects:
+                - { on: chosen, health: -22, sanity: -8 }
+          none:
+            - text: Без снаряжения и сноровки вылазка обернулась бедой.
+              effects:
+                - { on: chosen, health: -25, sanity: -10 }
+      - id: stay
+        label: Не рисковать
+        description: Схрон того не стоит — наверх в такое время лучше не соваться.
+        effects:
+          - { on: all, sanity: -2 }
+
+  - id: stranger_betrays
+    type: choice
+    scheduled_only: true
+    title: Волк в овечьей шкуре
+    text: >-
+      Пригретый чужак показал истинное лицо: его застали ночью у склада с ножом и
+      набитым мешком. Он метнулся к люку — что делать?
+    select:
+      kind: profession
+      prompt_profession: Кто скрутит его?
+    options:
+      - id: subdue
+        label: Скрутить
+        description: Навалиться всем миром, пока не натворил беды.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Его сбили с ног и вышвырнули за люк — добро осталось при бункере.
+              effects:
+                - { on: all, sanity: 4 }
+          none:
+            - chance: 45
+              text: Скрутили, но в драке он успел пырнуть одного из наших.
+              effects:
+                - { on: random, health: -18 }
+                - { on: all, sanity: -4 }
+            - text: Чужак отбился, прихватил часть припасов и ушёл во тьму.
+              effects:
+                - { food: "25%" }
+                - { on: random, kill: true }
+                - { on: all, sanity: -8 }
+      - id: let_flee
+        label: Дать уйти
+        description: Не лезть под нож — пусть забирает что схватил и проваливает.
+        effects:
+          - { food: "20%" }
+          - { on: all, sanity: -6 }
+
+  - id: stranger_returns
+    type: choice
+    scheduled_only: true
+    title: Тот, кого не впустили
+    text: >-
+      У люка снова шум. Это вернулся тот самый чужак, которого когда-то
+      прогнали, — отощавший, чёрный от холода. На этот раз он не один: за его
+      спиной маячат ещё двое.
+    options:
+      - id: let_in_now
+        label: Впустить теперь
+        description: Искупить старую вину — открыть люк всем троим.
+        outcomes:
+          - chance: 60
+            text: Измученные, но безобидные, они влились в общину и принесли с собой поклажу.
+            effects:
+              - { food: 140 }
+              - { on: all, sanity: 6 }
+              - { add_room: true }
+          - text: Доброта вышла боком — пришлые принесли с собой хворь.
+            effects:
+              - { on: random, status: { id: outsider_fever, label: Лихорадка, stat: health, value: -8, months: 2 } }
+              - { on: all, sanity: -3 }
+      - id: turn_away_again
+        label: Снова прогнать
+        description: Один раз решили — нечего метаться. Не открывать.
+        outcomes:
+          - chance: 55
+            text: Поскребись и ушли в метель навсегда. Тишина давит сильнее прежнего.
+            effects:
+              - { on: all, sanity: -8 }
+              - { on: random, status: { id: guilt, label: Чувство вины, stat: sanity, value: -5, months: 3 } }
+          - text: Отчаявшись, они попытались вскрыть люк силой.
+            effects:
+              - { on: random, health: -15 }
+              - { on: all, sanity: -6 }

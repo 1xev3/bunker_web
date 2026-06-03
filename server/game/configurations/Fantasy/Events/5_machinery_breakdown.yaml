@@ -1,0 +1,105 @@
+# Поломка систем жизнеобеспечения: чинить или махнуть рукой. Брошенная без
+# присмотра поломка дорастает до полного отказа систем.
+events:
+  - id: machinery_breakdown
+    type: choice
+    weight: 2
+    when:
+      min_month: 2
+      min_players: 2
+    participants:
+      victim: {}
+    vars:
+      system: "{системы жизнеобеспечения|вентиляция|фильтры воздуха|насос подачи воды}"
+    title: Поломка систем жизнеобеспечения
+    text: >-
+      {event.system} заглохли в недрах бункера, воздух становится спёртым. Можно
+      посмотреть, что есть на складе, и найти того, кто разбирается в технике, —
+      или понадеяться на удачу.
+    select:
+      kinds: [item, profession]
+      prompt_item: Посмотрите, что есть на складе
+      prompt_profession: Кто возьмётся за ремонт
+    options:
+      - id: repair
+        label: Взяться за ремонт
+        description: >-
+          С нужным инструментом и мастером — почти наверняка. С чем-то одним — как
+          повезёт. С пустыми руками — наугад.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Инструмент в умелых руках — системы снова гудят ровно.
+              effects:
+                - { on: all, sanity: 6 }
+                - { flag: { life_support_fixed: true } }
+          some:
+            - chance: 50
+              text: Кое-как, но удалось запустить системы заново.
+              effects:
+                - { on: all, sanity: 3 }
+                - { flag: { life_support_fixed: true } }
+            - text: Без нужного сочетания инструмента и знаний ремонт не задался.
+              effects:
+                - { on: all, health: -8, sanity: -6 }
+              schedule:
+                - { event: system_collapse, in: 2, chance: 55 }
+          none:
+            - text: Голыми руками и наугад — стало только хуже.
+              effects:
+                - { on: all, health: -12, sanity: -8 }
+              schedule:
+                - { event: system_collapse, in: 2, chance: 70 }
+      - id: ignore
+        label: Не трогать
+        description: Понадеяться, что обойдётся само.
+        outcomes:
+          - chance: 35
+            text: Система кое-как восстановилась сама.
+            effects:
+              - { on: all, sanity: -3 }
+          - text: Без вмешательства стало совсем тяжело дышать.
+            effects:
+              - { on: all, health: -10, sanity: -6 }
+            schedule:
+              - { event: system_collapse, in: 2, chance: 60 }
+
+  - id: system_collapse
+    type: choice
+    scheduled_only: true
+    when:
+      flag_unset: [life_support_fixed]
+    title: Отказ систем
+    text: >-
+      Недочиненные системы встали окончательно: свет мигает, воздух густой и
+      тяжёлый, вода еле сочится. Тянуть больше нельзя.
+    select:
+      kind: profession
+      prompt_profession: Кто полезет в щитовую?
+    options:
+      - id: emergency_fix
+        label: Аварийный ремонт
+        description: Послать умельца в щитовую, пока ещё есть чем дышать.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Мастер вернул системы к жизни в последний момент.
+              effects:
+                - { on: all, sanity: 6 }
+                - { flag: { life_support_fixed: true } }
+          none:
+            - chance: 35
+              text: Кое-как, на одном упрямстве, системы удалось перезапустить.
+              effects:
+                - { on: all, health: -6 }
+                - { flag: { life_support_fixed: true } }
+            - text: Без специалиста щитовую не одолеть — бункер задыхается.
+              effects:
+                - { on: all, health: -16, sanity: -8 }
+                - { on: random, kill: true }
+      - id: evacuate_section
+        label: Бросить отсек
+        description: Запечатать мёртвую секцию и ужаться в живой части бункера.
+        effects:
+          - { on: all, sanity: -8, health: -6 }

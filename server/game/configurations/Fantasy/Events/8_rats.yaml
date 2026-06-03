@@ -1,0 +1,105 @@
+# Незваные жильцы у запасов: вывести или махнуть рукой. Расплодившись, они
+# не только жрут провизию, но и приносят заразу.
+events:
+  - id: rats_invasion
+    type: choice
+    weight: 2
+    when:
+      min_month: 1
+    vars:
+      animals: [крыс, мышей, тараканов, гнуса]
+    title: Незваные жильцы
+    text: >-
+      Несколько {event.animals} пробрались в убежище и теперь шныряют у запасов.
+      Если расплодятся — сожрут половину провизии.
+    select:
+      kinds: [item, profession]
+      prompt_item: Чем будем травить?
+      prompt_profession: Кто возьмётся вывести их?
+    options:
+      - id: exterminate
+        label: Вывести
+        description: С нужным средством и умельцем — наверняка. Иначе как выйдет.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: Травля сработала — от {event.animals} не осталось и следа.
+              effects:
+                - { on: all, sanity: 4 }
+                - { flag: { vermin_cleared: true } }
+          some:
+            - chance: 55
+              text: Большую часть {event.animals} удалось извести.
+              effects:
+                - { on: all, sanity: 2 }
+            - text: Полумеры не помогли — запасы всё же подъели.
+              effects:
+                - { food: "20%" }
+              schedule:
+                - { event: vermin_plague, in: 2, chance: 40 }
+          none:
+            - text: Голыми руками с {event.animals} не справиться — провизия тает на глазах.
+              effects:
+                - { food: "30%" }
+                - { on: all, sanity: -4 }
+              schedule:
+                - { event: vermin_plague, in: 2, chance: 55 }
+      - id: ignore
+        label: Не обращать внимания
+        description: Авось сами уйдут и не расплодятся.
+        outcomes:
+          - chance: 30
+            text: Похоже, {event.animals} ушли дальше по вентиляции.
+            effects:
+              - { on: all, sanity: 1 }
+          - text: За пару недель {event.animals} расплодились и сожрали часть припасов.
+            effects:
+              - { food: "25%" }
+              - { on: random, status: { id: vermin_sickness, label: Зараза, stat: health, value: -5, months: 2 } }
+            schedule:
+              - { event: vermin_plague, in: 2, chance: 60 }
+
+  - id: vermin_plague
+    type: choice
+    scheduled_only: true
+    when:
+      flag_unset: [vermin_cleared]
+    title: Грызуны принесли заразу
+    text: >-
+      Расплодившиеся твари притащили в бункер болезнь: у нескольких человек жар и
+      сыпь. Заражённый угол нужно вычистить, пока не слегли все.
+    select:
+      kind: profession
+      prompt_profession: Кто проведёт дезинфекцию?
+    options:
+      - id: purge
+        label: Выжечь заразу
+        description: Поручить дело знающему человеку и навести порядок.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Угол вычистили дочиста, больных отпоили — вспышку погасили.
+              effects:
+                - { on: all, sanity: 4 }
+                - { flag: { vermin_cleared: true } }
+          none:
+            - chance: 40
+              text: Своими силами кое-как навели порядок, но пара человек ещё хворает.
+              effects:
+                - { on: random, health: -8 }
+            - text: Без знающего человека зараза расползлась дальше.
+              effects:
+                - { on: random, kill: true }
+                - { on: all, health: -8, sanity: -6 }
+      - id: wait_out
+        label: Переждать
+        description: Изолировать больных и надеяться, что обойдётся.
+        outcomes:
+          - chance: 45
+            text: Болезнь сама отступила, потрепав, но не свалив бункер.
+            effects:
+              - { on: all, health: -5 }
+          - text: Вспышка разрослась — слегли почти все.
+            effects:
+              - { on: all, health: -14, sanity: -6 }

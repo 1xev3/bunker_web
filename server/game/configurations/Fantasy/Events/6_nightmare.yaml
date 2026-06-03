@@ -1,0 +1,82 @@
+# Дурной сон, разошедшийся по бункеру. Если человеку не помочь, дело может
+# дойти до настоящего срыва — вплоть до гибели.
+events:
+  - id: shared_nightmare
+    type: choice
+    weight: 2
+    when:
+      min_month: 1
+      min_players: 2
+    participants:
+      dreamer: {}
+    vars:
+      vision: "{горящий город|лица погибших|бесконечный тёмный коридор|воду, поднимающуюся к горлу}"
+    title: Дурной сон
+    text: >-
+      {dreamer} проснулся с криком — снова {event.vision}. Тяжёлый сон будто
+      передался остальным: к утру весь бункер разбит и взвинчен. Как поступить
+      с {dreamer}?
+    select:
+      kind: profession
+      prompt_profession: Кто попробует успокоить?
+    options:
+      - id: comfort
+        label: Успокоить
+        description: Найти того, кто умеет говорить с людьми, и привести {dreamer} в чувство.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Тихий разговор до самого утра — и {dreamer} наконец отпустило.
+              effects:
+                - { on: dreamer, sanity: 10 }
+                - { on: others, sanity: 1 }
+          none:
+            - chance: 45
+              text: Кое-как уговорили {dreamer} поспать, но осадок остался.
+              effects:
+                - { on: dreamer, sanity: -2 }
+            - text: Нужных слов не нашлось — {dreamer} замкнулся в себе.
+              effects:
+                - { on: dreamer, sanity: -8 }
+                - { on: dreamer, status: { id: insomnia, label: Бессонница, stat: sanity, value: -4, months: 2 } }
+              schedule:
+                - { event: breaking_point, in: 1, chance: 50, carry: [dreamer] }
+      - id: ignore
+        label: Не обращать внимания
+        description: У каждого свои кошмары — пусть справляется сам.
+        effects:
+          - { on: dreamer, sanity: -10 }
+          - { on: others, sanity: -3 }
+        schedule:
+          - { event: breaking_point, in: 1, chance: 40, carry: [dreamer] }
+
+  - id: breaking_point
+    type: choice
+    scheduled_only: true
+    title: На грани
+    text: >-
+      Недосып и страх доконали {dreamer}: руки трясутся, взгляд пустой, речь
+      бессвязная. Ещё немного — и человек сломается совсем.
+    select:
+      kind: item
+      prompt_item: Чем поддержать?
+    options:
+      - id: treat
+        label: Отпоить лекарствами
+        description: Потратить что-то со склада, чтобы вытащить {dreamer}.
+        requires: [item]
+        consume_items: true
+        effects:
+          - { on: dreamer, sanity: 14, clear_status: debuffs }
+      - id: let_be
+        label: Оставить как есть
+        description: Запасы не резиновые — будь что будет.
+        outcomes:
+          - chance: 50
+            text: "{dreamer} медленно пришёл в себя, но прежним уже не стал."
+            effects:
+              - { on: dreamer, sanity: -4 }
+          - text: Рассудок {dreamer} не выдержал — сердце остановилось во сне.
+            effects:
+              - { on: dreamer, kill: true }
+              - { on: others, sanity: -8 }

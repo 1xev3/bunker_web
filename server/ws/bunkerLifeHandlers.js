@@ -6,13 +6,12 @@ const {
   outcomeTone,
   selectionSuccessChance,
   getSelectKinds,
-  buildEventVars,
-  resolveInlineText,
 } = require('../game/config/yamlEvents');
 const {
   parseDurationMonths,
   pickRandomEvent,
   materializeScheduledEvent,
+  renderEventText,
 } = require('./eventHelpers');
 const { Player } = require('../game/entities/player');
 
@@ -215,7 +214,7 @@ function buildOptionEffects(event, option, room, selectedPlayerId, selection) {
   ];
   const def = event.__source ?? {};
   const message = resolved.text != null
-    ? resolveInlineText(resolved.text, def, buildEventVars(def))
+    ? renderEventText(resolved.text, def, roleMap, room)
     : null;
   return { effects, message };
 }

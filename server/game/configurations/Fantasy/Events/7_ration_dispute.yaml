@@ -1,0 +1,87 @@
+# Спор из-за пайков: рассудить, замять или наказать. Затаённая обида не
+# рассасывается — она тлеет и однажды вспыхивает.
+events:
+  - id: ration_dispute
+    type: choice
+    weight: 1
+    when:
+      min_players: 3
+    participants:
+      hoarder: {}
+      accuser: {}
+    title: Спор из-за пайков
+    text: >-
+      {accuser} в открытую обвиняет {hoarder} в том, что тот тайком берёт лишнее
+      из общих запасов. Голоса всё {громче|злее|надрывнее}, бункер замер в
+      ожидании.
+    options:
+      - id: side_accuser
+        label: Встать на сторону обвинителя
+        description: Обыскать и пристыдить — порядок важнее.
+        outcomes:
+          - chance: 60
+            text: Нашли заначку. Виновный пристыжён, остальные приободрились.
+            effects:
+              - { food: 80 }
+              - { on: hoarder, sanity: -10 }
+              - { on: others, sanity: 4 }
+              - { on: hoarder, status: { id: branded_thief, label: Клеймо вора, stat: sanity, value: -3, months: 2 } }
+          - text: Ничего не нашли — пустое обвинение лишь раскололо людей.
+            effects:
+              - { on: all, sanity: -6 }
+            schedule:
+              - { event: grudge_festers, in: 2, chance: 50, carry: [hoarder, accuser] }
+      - id: hush
+        label: Замять конфликт
+        description: Не раздувать — всем сейчас и без того тяжело.
+        effects:
+          - { on: accuser, sanity: -5 }
+          - { on: hoarder, sanity: 3 }
+        schedule:
+          - { event: grudge_festers, in: 2, chance: 45, carry: [hoarder, accuser] }
+      - id: punish_both
+        label: Урезать паёк обоим
+        description: Чтоб неповадно было склочничать — но это удар по двоим.
+        effects:
+          - { on: hoarder, health: -6 }
+          - { on: accuser, health: -6 }
+          - { on: all, sanity: -3 }
+
+  - id: grudge_festers
+    type: choice
+    scheduled_only: true
+    title: Старая обида
+    text: >-
+      Тот спор так и не забылся. {accuser} и {hoarder} снова сцепились — на этот
+      раз с кулаками, и бункер раскололся надвое. Как погасить ссору?
+    select:
+      kind: profession
+      prompt_profession: Кто разнимет и примирит?
+    options:
+      - id: mediate
+        label: Примирить
+        description: Найти того, кому оба поверят, и развести их по углам.
+        requires: [profession]
+        outcomes_by_selection:
+          all:
+            - text: Их усадили за один стол и заставили выговориться — вражда улеглась.
+              effects:
+                - { on: all, sanity: 5 }
+          none:
+            - chance: 40
+              text: Кое-как растащили, но мириться никто не стал.
+              effects:
+                - { on: accuser, sanity: -4 }
+                - { on: hoarder, sanity: -4 }
+            - text: Без посредника драка переросла в поножовщину.
+              effects:
+                - { on: hoarder, health: -18 }
+                - { on: accuser, health: -18 }
+                - { on: all, sanity: -6 }
+      - id: take_side
+        label: Изгнать зачинщика
+        description: Выставить одного из них из общей части — пусть остынет в одиночестве.
+        effects:
+          - { on: hoarder, health: -12, sanity: -10 }
+          - { on: accuser, sanity: 4 }
+          - { on: others, sanity: -4 }

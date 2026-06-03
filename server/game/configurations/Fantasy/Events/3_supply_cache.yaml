@@ -1,0 +1,54 @@
+# Найден забытый схрон: как поделить нежданную находку. Жадность и излишняя
+# бережливость могут аукнуться.
+events:
+  - id: supply_cache
+    type: choice
+    weight: 2
+    when:
+      flag_unset: [supply_cache_found]
+      min_players: 2
+    participants:
+      finder: {}
+    vars:
+      stash: "{старый аварийный ящик|запылённый паёк НЗ|чей-то схрон|армейский контейнер}"
+    title: Забытый ящик
+    text: >-
+      {finder} наткнулся на {event.stash} за фальшпанелью. Еды немало — но надо
+      решить, как поделить находку, пока не начались споры.
+    options:
+      - id: share
+        label: Разделить поровну
+        description: Всё в общий котёл — по справедливости.
+        effects:
+          - { food: 180 }
+          - { on: all, sanity: 6 }
+          - { flag: { supply_cache_found: true } }
+      - id: stockpile
+        label: Убрать в резерв
+        description: Не трогать сейчас, отложить на чёрный день.
+        effects:
+          - { food: 220 }
+          - { on: all, sanity: -2 }
+          - { flag: { supply_cache_found: true } }
+        schedule:
+          - { event: cache_spoiled, in: 3, chance: 40 }
+      - id: finder_keeps
+        label: Оставить нашедшему
+        description: "{finder} нашёл — {finder} и распоряжается."
+        effects:
+          - { food: 90 }
+          - { on: finder, sanity: 10 }
+          - { on: others, sanity: -6 }
+          - { on: finder, status: { id: envied, label: Зависть соседей, stat: sanity, value: -3, months: 2 } }
+          - { flag: { supply_cache_found: true } }
+
+  - id: cache_spoiled
+    type: flavor
+    scheduled_only: true
+    title: Резерв подвёл
+    text: >-
+      Когда до отложенного наконец добрались, половина {запасов отсырела|провизии
+      заплесневела|консервов вздулась}. Бережливость обернулась потерей.
+    effects:
+      - { food: "15%" }
+      - { on: all, sanity: -4 }

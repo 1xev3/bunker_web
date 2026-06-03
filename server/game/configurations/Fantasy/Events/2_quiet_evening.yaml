@@ -1,0 +1,56 @@
+# Редкая передышка: как распорядиться спокойным вечером. Веселье может
+# перерасти в общий подъём духа — или в похмельную ссору наутро.
+events:
+  - id: quiet_evening
+    type: choice
+    weight: 2
+    when:
+      min_players: 2
+    vars:
+      sound: "{кто-то напевал|звучала губная гармошка|травилась тихая байка|просто стояла тишина}"
+    title: Тихий вечер
+    text: >-
+      Впервые за долгое время в бункере спокойно. {event.sound}, и можно
+      наконец выдохнуть. Чем займём редкую передышку?
+    select:
+      kind: player
+      prompt: Кто задаст тон вечеру?
+    options:
+      - id: share_stories
+        label: Травить байки у лампы
+        description: Собраться вместе и вспомнить, какой была жизнь наверху.
+        requires: [player]
+        outcomes:
+          - chance: 70
+            text: "{chosen} вспоминал довоенную жизнь так живо, что все улыбались до полуночи."
+            effects:
+              - { on: all, sanity: 6 }
+              - { on: chosen, sanity: 4 }
+          - text: Воспоминания обернулись тоской — кто-то не сдержал слёз о тех, кого больше нет.
+            effects:
+              - { on: all, sanity: -2 }
+              - { on: chosen, status: { id: homesick, label: Тоска по дому, stat: sanity, value: -3, months: 2 } }
+      - id: celebrate
+        label: Устроить маленький праздник
+        description: Достать припрятанное, разделить на всех — поднять дух любой ценой.
+        effects:
+          - { on: all, sanity: 9 }
+          - { food: "10%" }
+        schedule:
+          - { event: morning_after, in: 1, chance: 45 }
+      - id: rest
+        label: Просто отдохнуть
+        description: Никаких разговоров — лечь и впервые за недели выспаться.
+        effects:
+          - { on: all, sanity: 4, health: 3 }
+
+  - id: morning_after
+    type: flavor
+    scheduled_only: true
+    title: Наутро после праздника
+    text: >-
+      Веселье аукнулось: припасов поубавилось, а кое-кто {ворчит|дуется|
+      срывается} — мол, разбазарили общее ради одного вечера.
+    effects:
+      - { on: all, sanity: -3 }
+      - { on: random, sanity: -4 }

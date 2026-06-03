@@ -1,0 +1,73 @@
+# Ночная лихорадка: лечить со всем тщанием или переждать. Запущенная болезнь
+# расползается по тесному бункеру.
+events:
+  - id: fever
+    type: choice
+    weight: 2
+    when:
+      min_players: 1
+    participants:
+      patient: {}
+    vars:
+      symptom: "{горит в жару|бьётся в ознобе|бредит и не узнаёт своих}"
+    title: Ночная лихорадка
+    text: >-
+      {patient} {event.symptom}. Можно посмотреть, что есть на складе, и найти
+      того, кто выходит больного, — или понадеяться, что организм справится сам.
+    select:
+      kinds: [item, profession]
+      prompt_item: Посмотрите, что есть на складе
+      prompt_profession: Кто выходит больного?
+    options:
+      - id: medicate
+        label: Лечить
+        description: >-
+          С лекарством и врачом — почти наверняка на ноги. С чем-то одним — как
+          выйдет. С пустыми руками — наугад.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: "{Жар сбили|Кризис сняли} к утру — {patient} идёт на поправку."
+              effects:
+                - { on: patient, health: 16, sanity: 4, clear_status: debuffs }
+          some:
+            - chance: 60
+              text: Помогло не сразу, но {patient} всё же выкарабкался.
+              effects:
+                - { on: patient, health: 8, clear_status: debuffs }
+            - text: Полумеры не справились с болезнью.
+              effects:
+                - { on: patient, health: -10 }
+                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+          none:
+            - text: Без лекарств и знаний с жаром не совладать — стало только хуже.
+              effects:
+                - { on: patient, health: -14 }
+                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+      - id: wait
+        label: Переждать
+        description: Ничего не тратить — но это риск.
+        outcomes:
+          - chance: 40
+            text: "{Жар отступил сам собой|Кризис миновал к утру|Организм справился}."
+            effects:
+              - { on: patient, health: 4 }
+          - text: Стало хуже — началось воспаление.
+            effects:
+              - { on: patient, health: -16 }
+              - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+            schedule:
+              - { event: fever_spreads, in: 1, chance: 50, carry: [patient] }
+
+  - id: fever_spreads
+    type: flavor
+    scheduled_only: true
+    title: Зараза пошла по бункеру
+    text: >-
+      Болезнь {patient} не осталась в одиночку: в тесноте {кашель|жар|озноб}
+      перекинулся на других. Лазарет переполнен.
+    effects:
+      - { on: random, health: -10 }
+      - { on: random, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+      - { on: all, sanity: -4 }

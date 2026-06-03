@@ -28,24 +28,27 @@ function formatParticipantList(names) {
 // Renders {role}, {role.attribute} and {participants} against a role->player map.
 // `ctx` ({ def, vars }) lets the text first resolve inline alternatives
 // ("{a|b|c}") and event self-references ("{event.<name>}").
-function renderRoleText(template, roleMap, ctx) {
+// `wrap` decorates substituted names — highlight() for title/text (the client
+// renders the markers), identity for option labels/outcome messages (rendered
+// as plain text, so markers must not leak).
+function renderRoleText(template, roleMap, ctx, wrap = highlight) {
   if (typeof template !== 'string') return template;
   if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') {
-      return highlight(formatParticipantList(Object.values(roleMap).map(p => p.name)));
+      return wrap(formatParticipantList(Object.values(roleMap).map(p => p.name)));
     }
     const dotIdx = key.indexOf('.');
     if (dotIdx !== -1) {
       const player = roleMap[key.slice(0, dotIdx)];
       if (player) {
         const label = getPlayerAttributeLabel(player, key.slice(dotIdx + 1));
-        if (label != null) return highlight(label);
+        if (label != null) return wrap(label);
       }
       return match;
     }
     const player = roleMap[key];
-    return player ? highlight(player.name) : match;
+    return player ? wrap(player.name) : match;
   });
 }
 
@@ -88,12 +91,15 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function publicOptions(def) {
+// `render` substitutes role placeholders ({finder}, {man}, …) and inline
+// alternatives in option label/description, mirroring how title/text are
+// rendered. Without it, placeholders would leak to the client verbatim.
+function publicOptions(def, render = (t) => t) {
   if (!Array.isArray(def.options)) return undefined;
   return def.options.map(o => ({
     id: o.id,
-    label: o.label,
-    description: o.description ?? null,
+    label: render(o.label),
+    description: o.description != null ? render(o.description) : null,
     requires: Array.isArray(o.requires) ? o.requires.filter(k => ['player', 'item', 'profession'].includes(k)) : [],
     ...optionOdds(o),
   }));
@@ -122,7 +128,7 @@ function materializeEvent(def, roleMap) {
     description: renderRoleText(def.text, roleMap, ctx),
     participants: Object.values(roleMap).map(p => p.name),
     participant_ids: Object.values(roleMap).map(p => p.id),
-    options: publicOptions(def),
+    options: publicOptions(def, t => renderRoleText(t, roleMap, ctx, v => v)),
     select: publicSelect(def),
     __source: def,
     __roles: Object.fromEntries(Object.entries(roleMap).map(([role, player]) => [role, player.id])),
@@ -148,22 +154,22 @@ function pickRandomEvent(config, room) {
 
 // Renders text for a scheduled event using carried role names (a player may be
 // gone by the time the follow-up fires).
-function renderScheduledText(template, roleNames, roleMap, room, ctx) {
+function renderScheduledText(template, roleNames, roleMap, room, ctx, wrap = highlight) {
   if (typeof template !== 'string') return template;
   if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
   return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
-    if (key === 'participants') return highlight(formatParticipantList(Object.values(roleNames)));
+    if (key === 'participants') return wrap(formatParticipantList(Object.values(roleNames)));
     const dotIdx = key.indexOf('.');
     if (dotIdx !== -1) {
       const role = key.slice(0, dotIdx);
       const player = roleMap[role] ? room.getPlayer(roleMap[role]) : null;
       if (player) {
         const label = getPlayerAttributeLabel(player, key.slice(dotIdx + 1));
-        if (label != null) return highlight(label);
+        if (label != null) return wrap(label);
       }
-      return roleNames[role] != null ? highlight(roleNames[role]) : match;
+      return roleNames[role] != null ? wrap(roleNames[role]) : match;
     }
-    return roleNames[key] != null ? highlight(roleNames[key]) : match;
+    return roleNames[key] != null ? wrap(roleNames[key]) : match;
   });
 }
 
@@ -185,17 +191,30 @@ function materializeScheduledEvent(def, context, room) {
     description: renderScheduledText(def.text, roleNames, roleMap, room, ctx),
     participants: Object.values(roleNames),
     participant_ids: activeIds,
-    options: publicOptions(def),
+    options: publicOptions(def, t => renderScheduledText(t, roleNames, roleMap, room, ctx, v => v)),
     select: publicSelect(def),
     __source: def,
     __roles: roleMap,
   };
 }
 
+// Renders an outcome's result text: inline alternatives, {event.x} vars, and
+// role placeholders ({thief}, {chosen}, …). `roleMap` is role->playerId (e.g.
+// event.__roles plus `chosen`); names/attributes are looked up live from `room`.
+function renderEventText(template, def, roleMap, room) {
+  const roleNames = {};
+  for (const [role, id] of Object.entries(roleMap || {})) {
+    const player = room.getPlayer(id);
+    if (player) roleNames[role] = player.name;
+  }
+  return renderScheduledText(template, roleNames, roleMap || {}, room, { def, vars: buildEventVars(def) }, v => v);
+}
+
 module.exports = {
   parseDurationMonths,
   pickRandomEvent,
   materializeScheduledEvent,
+  renderEventText,
   EVENT_HIGHLIGHT_START,
   EVENT_HIGHLIGHT_END,
 };
