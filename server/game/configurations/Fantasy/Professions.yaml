@@ -88,7 +88,7 @@ PROFESSION_ABILITIES:
       item: Набор инструментов
     publicMessage: "{actor} использовал личную способность."
 
-  Арканист:
+  Маг:
     groups: [magic, intellectual]
     title: Чародейский опыт
     description: Случайно меняет здоровье или фобию выбранного игрока на другое значение.
@@ -126,7 +126,7 @@ PROFESSION_ABILITIES:
       value: worse
     publicMessage: "{actor} поразил молнией игрока {target}."
 
-  Мастер водоводов:
+  Мастер водопроводов:
     groups: [craftsman, builder]
     title: Порча водовода
     description: Ухудшает здоровье выбранного игрока.
@@ -190,7 +190,7 @@ PROFESSION_ABILITIES:
           value: worse
     publicMessage: "{actor} применил алхимический состав на игроке {target}."
 
-  Артефактор:
+  Вор:
     groups: [craftsman, magic]
     title: Разбор артефакта
     description: "Забирает инвентарь выбранного игрока себе, тому ставит «Разряжен»."
@@ -261,17 +261,7 @@ PROFESSION_ABILITIES:
       attribute: additional
     publicMessage: "{actor} подкупил игрока {target}."
 
-  Хранитель хартий:
-    groups: [intellectual, social]
-    title: Перепись хроник
-    description: Случайно заменяет доп. факт выбранного игрока на другой.
-    targetType: other
-    effect:
-      type: randomize_attribute
-      attribute: additional
-    publicMessage: "{actor} переписал биографию игрока {target}."
-
-  Зодчий:
+  Разведчик:
     groups: [intellectual, builder]
     title: Чтение планов
     description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.

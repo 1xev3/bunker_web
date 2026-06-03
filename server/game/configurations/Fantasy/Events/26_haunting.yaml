@@ -65,7 +65,7 @@ events:
         label: Попробовать договориться
         description: Нечисть редко приходит без причины — может, у неё есть дело.
         outcomes:
-          - chance: 25
+          - chance: 40
             text: >-
               Оказалось, дух искал конкретную вещь. Отдали — ушёл тихо,
               оставив запас там, где раньше стояла пустота.
@@ -83,8 +83,20 @@ events:
       - id: haunting_ignore
         label: Не обращать внимания
         description: Не провоцировать — может, уйдёт само.
-        effects:
-          - { on: victim, health: -20, sanity: -25 }
-          - { on: all, health: -8, sanity: -18 }
-          - { on: all, status: { id: haunted_long, label: Ужас по ночам, stat: sanity, value: -5, months: 4 } }
-          - { flag: { haunting_resolved: true } }
+        outcomes:
+          - chance: 20
+            text: >-
+              Дух поскучал без зрителей и убрался сам — несколько тихих ночей,
+              и убежище наконец выспалось.
+            effects:
+              - { on: all, sanity: 10 }
+              - { on: victim, health: 5, sanity: 8 }
+              - { flag: { haunting_resolved: true } }
+          - text: >-
+              Молчание лишь раззадорило нечисть. {victim} извёлся вконец,
+              а по ночам убежище глаз не смыкало.
+            effects:
+              - { on: victim, health: -20, sanity: -25 }
+              - { on: all, health: -8, sanity: -18 }
+              - { on: all, status: { id: haunted_long, label: Ужас по ночам, stat: sanity, value: -5, months: 4 } }
+              - { flag: { haunting_resolved: true } }

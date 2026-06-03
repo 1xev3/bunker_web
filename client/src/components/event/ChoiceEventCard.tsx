@@ -1,5 +1,5 @@
 import { AlertTriangle, Users, UserRound } from 'lucide-react';
-import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, EventSelection, EventOption, OutcomeOdds } from '../../types/game';
+import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, EventSelection, EventOption, OutcomeOdds, OutcomeEffectChip } from '../../types/game';
 import {
   renderEventText,
   getItemKey,
@@ -39,48 +39,79 @@ function VoterDots({ voters, activePlayers }: { voters: Player[]; activePlayers:
   );
 }
 
-const TONE_BAR: Record<OutcomeOdds['tone'], string> = {
+type Tone = OutcomeOdds['tone'];
+
+const TONE_BAR: Record<Tone, string> = {
   good: 'bg-emerald-500',
   bad: 'bg-red-500',
   neutral: 'bg-zinc-500',
 };
-const TONE_TEXT: Record<OutcomeOdds['tone'], string> = {
-  good: 'text-emerald-300',
-  bad: 'text-red-300',
-  neutral: 'text-zinc-400',
+const BADGE_TONE: Record<Tone, string> = {
+  good: 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/60',
+  bad: 'bg-red-950/70 text-red-300 border border-red-800/60',
+  neutral: 'bg-zinc-800 text-zinc-300 border border-zinc-700',
 };
-const TONE_LABEL: Record<OutcomeOdds['tone'], string> = {
-  good: 'удача',
-  bad: 'риск',
-  neutral: 'нейтрально',
+const CHIP_TONE: Record<Tone, string> = {
+  good: 'bg-emerald-950/50 text-emerald-300/90 border border-emerald-900/50',
+  bad: 'bg-red-950/50 text-red-300/90 border border-red-900/50',
+  neutral: 'bg-zinc-800/70 text-zinc-400 border border-zinc-700/70',
 };
 
-// Collapses outcomes that share a tone into one segment, so the indicator reads
-// as "good vs bad" odds rather than repeating the same label per outcome.
-function aggregateByTone(odds: OutcomeOdds[]): OutcomeOdds[] {
-  const order: OutcomeOdds['tone'][] = ['good', 'neutral', 'bad'];
-  return order
+// A slim "good vs bad" bar collapsing outcomes by tone — an at-a-glance read
+// above the detailed per-outcome breakdown.
+function OddsBar({ odds }: { odds: OutcomeOdds[] }) {
+  const order: Tone[] = ['good', 'neutral', 'bad'];
+  const merged = order
     .map(tone => ({ tone, chance: odds.filter(o => o.tone === tone).reduce((s, o) => s + o.chance, 0) }))
     .filter(o => o.chance > 0);
+  const total = merged.reduce((s, o) => s + o.chance, 0) || 1;
+  if (merged.length <= 1) return null;
+  return (
+    <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-zinc-800">
+      {merged.map((o, i) => (
+        <div key={i} className={TONE_BAR[o.tone]} style={{ width: `${(o.chance / total) * 100}%` }} />
+      ))}
+    </div>
+  );
 }
 
-function OddsBar({ odds }: { odds: OutcomeOdds[] }) {
-  const merged = aggregateByTone(odds);
-  const total = merged.reduce((s, o) => s + o.chance, 0) || 1;
+function EffectChips({ chips }: { chips?: OutcomeEffectChip[] }) {
+  if (!chips || chips.length === 0) return null;
   return (
-    <div className="mt-2">
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-zinc-800">
-        {merged.map((o, i) => (
-          <div key={i} className={TONE_BAR[o.tone]} style={{ width: `${(o.chance / total) * 100}%` }} />
-        ))}
-      </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-        {merged.map((o, i) => (
-          <span key={i} className={`text-[10px] font-medium ${TONE_TEXT[o.tone]}`}>
-            {TONE_LABEL[o.tone]} {o.chance}%
-          </span>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-1">
+      {chips.map((c, i) => (
+        <span key={i} className={`rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${CHIP_TONE[c.tone]}`}>
+          {c.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// One outcome row: a chance/label badge plus the consequence chips describing
+// what actually happens. `badge` overrides the percentage (e.g. "точно",
+// "успех") for guaranteed or not-yet-decided branches.
+function OutcomeRow({ tone, chips, badge }: { tone: Tone; chips?: OutcomeEffectChip[]; badge: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg bg-zinc-900/70 px-2 py-1.5">
+      <span className={`mt-px shrink-0 rounded px-1.5 py-0.5 text-center text-[10px] font-bold ${BADGE_TONE[tone]}`} style={{ minWidth: '2.75rem' }}>
+        {badge}
+      </span>
+      {chips && chips.length > 0
+        ? <EffectChips chips={chips} />
+        : <span className="text-[10px] leading-tight text-zinc-500">без последствий</span>}
+    </div>
+  );
+}
+
+// The full consequence breakdown for an option: every possible outcome with its
+// chance and effects. Guaranteed single outcomes read "точно" instead of 100%.
+function OutcomesBreakdown({ odds }: { odds: OutcomeOdds[] }) {
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      {odds.map((o, i) => (
+        <OutcomeRow key={i} tone={o.tone} chips={o.effects} badge={o.guaranteed ? 'точно' : `${o.chance}%`} />
+      ))}
     </div>
   );
 }
@@ -149,13 +180,14 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
   const diverse = resourceKinds.length > 0 && resourceKinds.every(k => (k === 'item' ? selectedItems.length > 0 : selectedProfessions.length > 0));
   const successChance = selectionStrength <= 0 ? 0 : Math.min(diverse ? 100 : SELECTION_MAX_PARTIAL, Math.round(selectionStrength * SELECTION_PER_RESOURCE));
 
-  // The scaled bar is meaningful only while this option's pickers are open;
-  // elsewhere the odds aren't decided yet, so we show a hint instead.
-  const scaledOddsFor = (option: EventOption): OutcomeOdds[] | undefined => {
-    if (!option.odds_scaled) return undefined;
+  // Live scaled odds, shown once this option's pickers are open and at least one
+  // resource is selected. Before that the chance isn't decided, so the card
+  // shows success/failure consequences without a percentage instead.
+  const scaledOddsFor = (option: EventOption): OutcomeOdds[] => {
+    const s = option.odds_scaled!;
     return [
-      { chance: successChance, tone: option.odds_scaled.good_tone },
-      { chance: 100 - successChance, tone: option.odds_scaled.bad_tone },
+      { chance: successChance, tone: s.good_tone, effects: s.success_effects },
+      { chance: 100 - successChance, tone: s.bad_tone, effects: s.fail_effects },
     ].filter(o => o.chance > 0);
   };
 
@@ -186,7 +218,8 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
               const mine = myVote === option.id;
               const won = pending && choicePendingSelection === option.id;
               const isActive = activeOption?.id === option.id;
-              const scaledOdds = scaledOddsFor(option);
+              const s = option.odds_scaled;
+              const scaledActive = isActive && selectionStrength > 0;
               return (
                 <button
                   key={option.id}
@@ -204,11 +237,24 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                     <VoterDots voters={voters} activePlayers={activePlayers} />
                   </div>
                   {option.description && <p className="mt-1 text-xs leading-relaxed text-zinc-500">{option.description}</p>}
-                  {option.odds && option.odds.length >= 1 && <OddsBar odds={option.odds} />}
-                  {option.odds_scaled && (
-                    isActive && selectionStrength > 0 && scaledOdds
-                      ? <OddsBar odds={scaledOdds} />
-                      : <p className="mt-2 text-[10px] text-zinc-500">Шанс зависит от выбранных предметов и профессий.</p>
+                  {option.odds && option.odds.length >= 1 && (
+                    <>
+                      <OddsBar odds={option.odds} />
+                      <OutcomesBreakdown odds={option.odds} />
+                    </>
+                  )}
+                  {s && (
+                    scaledActive
+                      ? <OutcomesBreakdown odds={scaledOddsFor(option)} />
+                      : (
+                        <>
+                          <p className="mt-2 text-[10px] text-zinc-500">Шанс зависит от выбранных предметов и профессий:</p>
+                          <div className="mt-1 flex flex-col gap-1">
+                            <OutcomeRow tone={s.good_tone} chips={s.success_effects} badge="успех" />
+                            <OutcomeRow tone={s.bad_tone} chips={s.fail_effects} badge="провал" />
+                          </div>
+                        </>
+                      )
                   )}
                 </button>
               );

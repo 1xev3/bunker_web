@@ -845,15 +845,28 @@ function resolveChoiceEvent(roomCode, optionId) {
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
-  if (!room || room.status !== 'bunker_life' || !room.activeEvent) return;
+  if (!room || room.status !== 'bunker_life' || !room.activeEvent) {
+    console.log(`[ws] cast_choice_vote ignored: room=${!!room} status=${room?.status} activeEvent=${!!room?.activeEvent}`);
+    return;
+  }
   const player = room.getPlayer(playerId);
-  if (!player || !player.is_active) return;
+  if (!player || !player.is_active) {
+    console.log(`[ws] cast_choice_vote ignored: player=${!!player} is_active=${player?.is_active}`);
+    return;
+  }
   const event = room.activeEvent;
-  if (event.event_type !== 'choice' || !Array.isArray(event.options)) return;
+  if (event.event_type !== 'choice' || !Array.isArray(event.options)) {
+    console.log(`[ws] cast_choice_vote ignored: event_type=${event.event_type} options=${Array.isArray(event.options) ? event.options.length : 'not-array'}`);
+    return;
+  }
 
   const optionIds = event.options.map(o => o.id);
   const optionId = typeof msg?.option_id === 'string' && optionIds.includes(msg.option_id) ? msg.option_id : null;
-  if (!optionId) return;
+  if (!optionId) {
+    console.log(`[ws] cast_choice_vote ignored: option_id='${msg?.option_id}' not in [${optionIds.join(', ')}]`);
+    return;
+  }
+  console.log(`[ws] cast_choice_vote accepted: player=${playerId} option=${optionId}`);
 
   room.choiceVotes[playerId] = optionId;
 
@@ -868,8 +881,13 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
   wsManager.broadcastState(roomCode, room);
 
   // Once everyone has voted, either resolve or wait for the council's pick.
-  if (allResponded(roomCode, room, new Set(Object.keys(room.choiceVotes)))) {
-    finalizeChoiceVote(roomCode, tallyWinningOption(room.choiceVotes, optionIds));
+  const responded = new Set(Object.keys(room.choiceVotes));
+  const all = allResponded(roomCode, room, responded);
+  console.log(`[ws] cast_choice_vote tally: voted=${responded.size} allResponded=${all}`);
+  if (all) {
+    const winner = tallyWinningOption(room.choiceVotes, optionIds);
+    console.log(`[ws] finalizeChoiceVote winner=${winner}`);
+    finalizeChoiceVote(roomCode, winner);
   }
 }
 

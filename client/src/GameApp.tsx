@@ -12,6 +12,11 @@ import BunkerEndScreen from './components/BunkerEndScreen';
 const HEARTBEAT_INTERVAL_MS = 10000;
 const HEARTBEAT_TIMEOUT_MS = 15000;
 
+const WS_DEBUG = true;
+function wsLog(...args: unknown[]) {
+  if (WS_DEBUG) console.log('[ws]', ...args);
+}
+
 function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -77,7 +82,10 @@ export default function GameApp({ onOpenPackEditor }: Props) {
 
   const send = useCallback((msg: ClientMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsLog(`send type=${msg.type}`);
       wsRef.current.send(JSON.stringify(msg));
+    } else {
+      wsLog(`send DROPPED type=${msg.type} (socket not open, readyState=${wsRef.current?.readyState ?? 'null'})`);
     }
   }, []);
 
@@ -88,10 +96,17 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     clearTimeout(reconnectRef.current);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    // In dev, connect straight to the Node server instead of routing through the
+    // Vite proxy — its ws upgrade is flaky (half-open sockets where the client
+    // reports OPEN but frames never reach the server). In prod we share the host.
+    const host = import.meta.env.DEV ? `${window.location.hostname}:3001` : window.location.host;
+    const url = `${protocol}//${host}/ws`;
+    wsLog(`connect() opening ${url} auth=${authMsg.type}`);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      wsLog(`onopen — sending auth=${authMsg.type}`);
       intentionalCloseRef.current = false;
       setIsConnectionLost(false);
       startHeartbeat();
@@ -166,17 +181,22 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       handleMessage(msg);
     };
 
-    ws.onerror = () => {
+    ws.onerror = (e) => {
+      wsLog('onerror', e);
       setIsConnectionLost(true);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      wsLog(`onclose code=${e.code} reason=${e.reason || '-'} clean=${e.wasClean} intentional=${intentionalCloseRef.current}`);
       clearHeartbeat();
       if (intentionalCloseRef.current) return;
       const token = localStorage.getItem('bunker_token');
       if (token) {
+        wsLog('connection lost — scheduling rejoin in 2s');
         setIsConnectionLost(true);
         reconnectRef.current = setTimeout(() => connect({ type: 'rejoin', token }), 2000);
+      } else {
+        wsLog('closed with no token — not reconnecting');
       }
     };
   }, [clearHeartbeat, handleMessage, markHeartbeat, myPlayerIdRef, showFlashMessage, startHeartbeat]);

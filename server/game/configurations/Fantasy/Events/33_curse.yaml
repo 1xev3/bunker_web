@@ -92,12 +92,24 @@ events:
           - { event: curse_fades, in: 3, chance: 45 }
       - id: curse_accept
         label: Жить с этим
-        description: Принять как есть — проклятые тоже люди.
-        effects:
-          - { on: cursed, sanity: 8 }
-          - { on: all, health: -8, sanity: -12 }
-          - { on: all, status: { id: cursed_contagion, label: Страх заражения, stat: sanity, value: -4, months: 4 } }
-          - { flag: { curse_resolved: true } }
+        description: Принять как есть — проклятые тоже люди. Может, само сойдёт.
+        outcomes:
+          - chance: 20
+            text: >-
+              Проклятие, не встретив ни страха, ни сопротивления, выдохлось само.
+              {cursed} снова стал собой, а убежище — только сплочённее.
+            effects:
+              - { on: cursed, clear_status: cursed_aura, health: 12, sanity: 18 }
+              - { on: all, sanity: 8 }
+              - { flag: { curse_resolved: true } }
+          - text: >-
+              Приняли — но проклятие никуда не делось. Страх заражения пополз
+              по убежищу, отравляя каждый день.
+            effects:
+              - { on: cursed, sanity: 8 }
+              - { on: all, health: -8, sanity: -12 }
+              - { on: all, status: { id: cursed_contagion, label: Страх заражения, stat: sanity, value: -4, months: 4 } }
+              - { flag: { curse_resolved: true } }
 
   - id: curse_fades
     type: flavor

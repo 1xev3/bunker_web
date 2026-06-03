@@ -45,12 +45,19 @@ events:
                 - { event: breaking_point, in: 1, chance: 65, carry: [dreamer] }
       - id: ignore
         label: Не обращать внимания
-        description: У каждого свои кошмары — пусть справляется сам.
-        effects:
-          - { on: dreamer, health: -12, sanity: -18 }
-          - { on: others, health: -5, sanity: -8 }
-        schedule:
-          - { event: breaking_point, in: 1, chance: 60, carry: [dreamer] }
+        description: У каждого свои кошмары — пусть справляется сам. Может, обойдётся.
+        outcomes:
+          - chance: 20
+            text: "{dreamer} отоспался сам и к утру был как новенький — морок отступил, и убежище выдохнуло вместе с ним."
+            effects:
+              - { on: dreamer, health: 5, sanity: 12 }
+              - { on: others, sanity: 5 }
+          - text: Без поддержки кошмар вымотал {dreamer} вконец, и тревога расползлась по убежищу.
+            effects:
+              - { on: dreamer, health: -12, sanity: -18 }
+              - { on: others, health: -5, sanity: -8 }
+            schedule:
+              - { event: breaking_point, in: 1, chance: 60, carry: [dreamer] }
 
   - id: breaking_point
     type: choice

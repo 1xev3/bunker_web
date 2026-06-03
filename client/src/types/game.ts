@@ -124,9 +124,16 @@ export interface ScheduledEvent {
   context: Record<string, unknown>;
 }
 
+export interface OutcomeEffectChip {
+  text: string;
+  tone: 'good' | 'bad' | 'neutral';
+}
+
 export interface OutcomeOdds {
   chance: number;
   tone: 'good' | 'bad' | 'neutral';
+  effects?: OutcomeEffectChip[];
+  guaranteed?: boolean;
 }
 
 export interface EventOption {
@@ -135,7 +142,12 @@ export interface EventOption {
   description?: string | null;
   requires?: ('player' | 'item' | 'profession')[];
   odds?: OutcomeOdds[];
-  odds_scaled?: { good_tone: OutcomeOdds['tone']; bad_tone: OutcomeOdds['tone'] };
+  odds_scaled?: {
+    good_tone: OutcomeOdds['tone'];
+    bad_tone: OutcomeOdds['tone'];
+    success_effects?: OutcomeEffectChip[];
+    fail_effects?: OutcomeEffectChip[];
+  };
 }
 
 export interface GameEvent {

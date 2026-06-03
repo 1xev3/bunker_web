@@ -173,14 +173,14 @@ function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirma
   const rows: ReactNode[] = [];
   if (outcome.food_change !== undefined && outcome.food_change !== 0)
     rows.push(<OutcomeRow key="food" icon={<Utensils size={14} className="text-amber-400" />} label="Запасы еды" value={`${outcome.food_change > 0 ? '+' : ''}${outcome.food_change}`} valueColor={outcome.food_change > 0 ? 'text-emerald-400' : 'text-red-400'} />);
-  for (const c of healthChanges)
-    rows.push(<OutcomeRow key={`hp-${c.name}`} icon={<HeartPulse size={14} className="text-red-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />);
-  for (const c of sanityChanges)
-    rows.push(<OutcomeRow key={`san-${c.name}`} icon={<Brain size={14} className="text-sky-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />);
-  for (const p of outcome.players_killed ?? [])
-    rows.push(<OutcomeRow key={`killed-${p.id}`} icon={<Skull size={14} className="text-red-400" />} label={p.name} valueColor="text-red-400" />);
-  for (const p of outcome.players_added ?? [])
-    rows.push(<OutcomeRow key={`added-${p.id}`} icon={<Baby size={14} className="text-blue-400" />} label={p.name} />);
+  healthChanges.forEach((c, i) =>
+    rows.push(<OutcomeRow key={`hp-${i}-${c.name}`} icon={<HeartPulse size={14} className="text-red-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />));
+  sanityChanges.forEach((c, i) =>
+    rows.push(<OutcomeRow key={`san-${i}-${c.name}`} icon={<Brain size={14} className="text-sky-400" />} label={c.name} value={`${c.delta > 0 ? '+' : ''}${c.delta}`} valueColor={c.delta > 0 ? 'text-emerald-400' : 'text-red-400'} />));
+  (outcome.players_killed ?? []).forEach((p, i) =>
+    rows.push(<OutcomeRow key={`killed-${i}-${p.id}`} icon={<Skull size={14} className="text-red-400" />} label={p.name} valueColor="text-red-400" />));
+  (outcome.players_added ?? []).forEach((p, i) =>
+    rows.push(<OutcomeRow key={`added-${i}-${p.id}`} icon={<Baby size={14} className="text-blue-400" />} label={p.name} />));
   if (outcome.room_changed)
     rows.push(<OutcomeRow key="room" icon={<DoorOpen size={14} className="text-zinc-400" />} label="Бункер изменился" />);
 
@@ -237,8 +237,8 @@ function BuffDebuffSnackbar({ statusChanges = [], healthChanges = [], sanityChan
       <div className="mx-auto max-w-4xl px-3 pb-3">
         <div className="rounded-2xl border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 shadow-2xl backdrop-blur-sm">
           <div className="flex flex-wrap gap-1.5">
-            {added.map(c => (
-              <OutcomeChip key={`add-${c.id}`} color="border-amber-800/60 bg-amber-950/50 text-amber-200">
+            {added.map((c, i) => (
+              <OutcomeChip key={`add-${c.id}-${c.status_id ?? i}`} color="border-amber-800/60 bg-amber-950/50 text-amber-200">
                 <Sparkles size={11} /> {c.name}: {c.status!.label}
               </OutcomeChip>
             ))}
