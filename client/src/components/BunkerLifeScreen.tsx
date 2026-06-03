@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles, Send } from 'lucide-react';
+import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles, Send, Package, Backpack } from 'lucide-react';
 import type { ClientMessage, Player, RoomState, StatusChange, VitalChange } from '../types/game';
 import EventModal from './EventModal';
+import BunkerMap from './BunkerMap';
 
 interface EventOutcome {
   outcome: string;
@@ -43,89 +44,129 @@ function MonthProgressBar({ progress }: { progress: number }) {
   );
 }
 
-function StatMeter({ icon, label, value, tone }: { icon: ReactNode; label: string; value: number; tone: 'health' | 'sanity' }) {
+function attrDisplay(player: Player, key: 'gender' | 'profession') {
+  return player.attributes[key]?.display ?? 'Не раскрыто';
+}
+
+function StatMeter({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   const color = value >= 70 ? 'bg-emerald-500' : value >= 40 ? 'bg-amber-500' : value >= 20 ? 'bg-orange-500' : 'bg-red-500';
   const text = value >= 70 ? 'text-emerald-300' : value >= 40 ? 'text-amber-300' : value >= 20 ? 'text-orange-300' : 'text-red-300';
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs">
         <span className="flex items-center gap-1.5 uppercase tracking-widest text-zinc-500">{icon}{label}</span>
         <span className={`font-mono font-bold ${text}`}>{value}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
-      <p className="mt-1 text-[11px] text-zinc-600">{tone === 'health' ? 'физическое состояние' : 'устойчивость психики'}</p>
     </div>
   );
-}
-
-function attrDisplay(player: Player, key: 'gender' | 'profession') {
-  return player.attributes[key]?.display ?? 'Не раскрыто';
 }
 
 function SurvivorCard({ player, isMe }: { player: Player; isMe: boolean }) {
   const vital = player.vital_status ?? { health: 100, sanity: 100, statuses: [] };
   const statuses = vital.statuses ?? [];
+  const inDanger = vital.health <= 25 || vital.sanity <= 25;
 
   return (
-    <article className={`relative overflow-hidden rounded-2xl border p-4 shadow-2xl ${
-      isMe ? 'border-amber-500/45 bg-amber-950/10' : 'border-zinc-800/90 bg-zinc-950/75'
+    <article className={`relative overflow-hidden rounded-xl border px-3 py-3 shadow-lg ${
+      isMe ? 'border-amber-500/55 bg-amber-950/10' : 'border-zinc-800/90 bg-zinc-950/75'
     }`}>
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-bold ${
-            isMe ? 'border-amber-400/40 bg-amber-500/15 text-amber-200' : 'border-zinc-700 bg-zinc-900 text-zinc-300'
-          }`}>
-            {player.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-bold text-zinc-100">{player.name}</h3>
-            <p className="text-xs uppercase tracking-widest text-zinc-600">{isMe ? 'это вы' : 'выживший'}</p>
-          </div>
-        </div>
-        {(vital.health <= 25 || vital.sanity <= 25) && <Skull size={18} className="text-red-400" />}
+      <div className="min-w-0">
+        <h3 className="flex items-center gap-1.5 truncate text-sm font-bold uppercase tracking-wide text-zinc-100">
+          {inDanger && <Skull size={13} className="shrink-0 text-red-400" />}
+          {player.name}
+        </h3>
+        <p className="flex items-center gap-1.5 truncate text-[11px] text-zinc-500">
+          <Briefcase size={10} className="shrink-0" /> {attrDisplay(player, 'profession')}
+          <span className="text-zinc-700">·</span>
+          <User size={10} className="shrink-0" /> {attrDisplay(player, 'gender')}
+        </p>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/45 px-3 py-2">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500"><User size={12} /> Пол</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-200">{attrDisplay(player, 'gender')}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/45 px-3 py-2">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500"><Briefcase size={12} /> Профессия</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-200">{attrDisplay(player, 'profession')}</p>
-        </div>
+      <div className="mt-3 grid gap-2">
+        <StatMeter icon={<HeartPulse size={12} className="text-red-400" />} label="Здоровье" value={vital.health} />
+        <StatMeter icon={<Brain size={12} className="text-sky-400" />} label="Рассудок" value={vital.sanity} />
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <StatMeter icon={<HeartPulse size={12} className="text-red-400" />} label="Здоровье" value={vital.health} tone="health" />
-        <StatMeter icon={<Brain size={12} className="text-sky-400" />} label="Рассудок" value={vital.sanity} tone="sanity" />
-      </div>
+      {statuses.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {statuses.map(status => (
+            <span
+              key={`${status.id}:${status.stat}`}
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                status.type === 'buff'
+                  ? 'border-emerald-700/50 bg-emerald-950/30 text-emerald-300'
+                  : 'border-red-800/50 bg-red-950/30 text-red-300'
+              }`}
+              title={`${status.delta > 0 ? '+' : ''}${status.delta} к ${status.stat === 'health' ? 'здоровью' : 'рассудку'} каждый месяц`}
+            >
+              {status.label} · {status.months} мес.
+            </span>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
 
-      <div className="mt-3 min-h-8">
-        {statuses.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-zinc-800 px-3 py-2 text-xs text-zinc-600">Нет активных баффов или дебаффов</p>
+function BunkerItemsPanel({ bunker, players }: { bunker: RoomState['bunker']; players: Player[] }) {
+  const bunkerItems = bunker?.items ?? [];
+
+  return (
+    <div className="card flex flex-col gap-4 px-4 py-4">
+      <div>
+        <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+          <Package size={13} className="text-amber-400" /> Имущество бункера
+        </p>
+        {bunkerItems.length === 0 ? (
+          <p className="text-sm text-zinc-600">Пусто</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {statuses.map(status => (
-              <span
-                key={`${status.id}:${status.stat}`}
-                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                  status.type === 'buff'
-                    ? 'border-emerald-700/50 bg-emerald-950/30 text-emerald-300'
-                    : 'border-red-800/50 bg-red-950/30 text-red-300'
-                }`}
-                title={`${status.delta > 0 ? '+' : ''}${status.delta} к ${status.stat === 'health' ? 'здоровью' : 'рассудку'} каждый месяц`}
-              >
-                {status.label} · {status.months} мес.
+            {bunkerItems.map((item, i) => (
+              <span key={`${item.id}-${i}`} className="rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-xs text-zinc-300">
+                {item.label}
               </span>
             ))}
           </div>
         )}
       </div>
-    </article>
+
+      <div className="border-t border-zinc-800/80 pt-3">
+        <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+          <Backpack size={13} className="text-sky-400" /> Инвентарь выживших
+        </p>
+        <div className="flex flex-col gap-3">
+          {players.map(player => {
+            const inventory = player.attributes.inventory?.display;
+            const backpack = player.attributes.backpack?.value ?? [];
+            const hasAny = Boolean(inventory) || backpack.length > 0;
+            return (
+              <div key={player.id}>
+                <p className="truncate text-xs font-semibold text-zinc-300">{player.name}</p>
+                {hasAny ? (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {inventory && (
+                      <span className="rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-xs text-zinc-300">
+                        {inventory}
+                      </span>
+                    )}
+                    {backpack.map((item, i) => (
+                      <span key={`${item.id}-${i}`} className="rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-xs text-zinc-300">
+                        {item.label}{item.quantity > 1 && <span className="ml-1 text-zinc-500">×{item.quantity}</span>}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-zinc-600">нет предметов</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -271,6 +312,8 @@ function BuffDebuffSnackbar({ statusChanges = [], healthChanges = [], sanityChan
 
 export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, outcomeConfirmations, onDismissEventOutcome, monthlyNotice, isConnectionLost }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
+  const myPlayer = roomState.players.find(p => p.id === myPlayerId);
+  const isEliminated = !myPlayer?.is_active;
   const hasEvent = Boolean(roomState.active_event);
   const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
   const monthlyConsumption = Math.max(1, activePlayers.length * foodConsumptionPerPlayer);
@@ -364,10 +407,30 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {activePlayers.map(player => (
-            <SurvivorCard key={player.id} player={player} isMe={player.id === myPlayerId} />
-          ))}
+        <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(260px,320px)_1fr] xl:grid-cols-[minmax(260px,320px)_1fr_minmax(260px,340px)]">
+          <div className="flex flex-col gap-2.5">
+            <p className="flex items-center gap-2 px-1 text-xs uppercase tracking-widest text-zinc-500">
+              <User size={13} /> Выжившие · {activePlayers.length}
+            </p>
+            {activePlayers.map(player => (
+              <SurvivorCard key={player.id} player={player} isMe={player.id === myPlayerId} />
+            ))}
+          </div>
+
+          <div className="card flex flex-col gap-3 px-4 py-4">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+              <DoorOpen size={13} /> Карта бункера
+            </p>
+            {roomState.bunker?.grid ? (
+              <div className="mx-auto w-full max-w-xl">
+                <BunkerMap grid={roomState.bunker.grid} />
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600">Карта недоступна</p>
+            )}
+          </div>
+
+          <BunkerItemsPanel bunker={roomState.bunker} players={activePlayers} />
         </section>
       </main>
 
@@ -383,7 +446,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           resolveConfirmations={roomState.resolve_confirmations ?? []}
           myPlayerId={myPlayerId}
           send={send}
-          disabled={isConnectionLost}
+          disabled={isConnectionLost || isEliminated}
         />
       )}
 
@@ -394,7 +457,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           myPlayerId={myPlayerId}
           outcomeConfirmations={outcomeConfirmations}
           send={send}
-          disabled={isConnectionLost}
+          disabled={isConnectionLost || isEliminated}
         />
       )}
 
