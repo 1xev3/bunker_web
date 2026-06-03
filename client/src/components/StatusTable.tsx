@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, User, Globe, Dumbbell, Sparkles, Briefcase, Heart, Gamepad2, AlertTriangle, Package, Backpack, Plus } from 'lucide-react';
+import { User, Globe, Dumbbell, Sparkles, Briefcase, Heart, Gamepad2, AlertTriangle, Package, Backpack, Plus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
@@ -64,11 +64,7 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
 }
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
-  const myPlayer = players.find(p => p.id === myPlayerId);
   const activePlayers = players.filter(player => player.is_active);
-  const hasAnyUnrevealed = myPlayer
-    ? ATTRIBUTE_KEYS.some(k => !myPlayer.revealed_attributes[k])
-    : false;
 
   return (
     <div className="card overflow-x-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
@@ -107,26 +103,19 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
             return [
               <tr
                 key={player.id}
-                className={`border-b border-zinc-800/40 transition-colors ${
-                  isMe
-                    ? 'status-row-me'
-                    : 'hover:bg-zinc-900/40'
-                }`}
+                className="border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40"
               >
                 <td className="px-3 py-3 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
                 <td className="px-3 py-3 align-top">
                   <div className="flex items-start gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
-                      isMe ? 'status-avatar-me' : 'bg-zinc-800 text-zinc-400'
-                    }`}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 bg-zinc-800 text-zinc-400">
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <span className={`font-semibold break-words leading-snug text-sm ${
-                        isMe ? 'status-name-me' : 'text-zinc-100'
-                      }`}>
+                      <span className="font-semibold break-words leading-snug text-sm text-zinc-100">
                         {player.name}
                       </span>
+                      {isMe && <span className="ml-1 text-xs status-name-me">(Вы)</span>}
                     </div>
                   </div>
                 </td>
@@ -163,20 +152,6 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                 })}
               </tr>,
 
-              isMe && hasAnyUnrevealed && (
-                <tr key={player.id + '_ctrl'} className="border-b border-zinc-800/30 status-ctrl-row">
-                  <td className="px-3 py-1.5" />
-                  <td className="px-3 py-1.5" colSpan={1}>
-                    <span
-                      className="text-xs text-zinc-600 status-ctrl-btn transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
-                      onClick={() => send({ type: 'reveal_all' })}
-                    >
-                      <Eye size={11} className="text-zinc-600" /> открыть всё
-                    </span>
-                  </td>
-                  {ATTRIBUTE_KEYS.map(key => <td key={key} className="px-3 py-1.5" />)}
-                </tr>
-              ),
             ];
           })}
         </tbody>

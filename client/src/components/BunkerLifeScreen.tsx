@@ -146,17 +146,10 @@ function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirma
     outcome.room_changed ||
     Boolean(outcome.message);
 
-  const title = outcome.event_id === 'month_tick' ? 'Итоги месяца' : 'Событие завершено';
-
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm animate-fade-in-up">
       <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-700/70 bg-zinc-950 shadow-2xl">
-        <div className="border-b border-zinc-800 px-5 py-4">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">Результат</p>
-          <h2 className="mt-1 text-xl font-bold text-zinc-100">{title}</h2>
-        </div>
-
-        <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+        <div className="max-h-[65vh] overflow-y-auto px-5 pt-5 pb-4">
           {!hasAny ? (
             <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">Ничего заметного не произошло.</p>
           ) : (

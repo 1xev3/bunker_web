@@ -115,6 +115,9 @@ function validateSchedule(schedule, scope, errors) {
     if (s.carry !== undefined && !(Array.isArray(s.carry) && s.carry.every(r => typeof r === 'string'))) {
       errors.push(`${scope}[${i}].carry: ожидается массив имён ролей`);
     }
+    if (s.chance !== undefined && (typeof s.chance !== 'number' || s.chance < 0 || s.chance > 100)) {
+      errors.push(`${scope}[${i}].chance: ожидается число от 0 до 100`);
+    }
   });
 }
 
@@ -281,15 +284,18 @@ function buildEffectPrimitives(effects, roleMap, room, participantIds) {
 }
 
 function buildSchedulePrimitives(schedule, roleMap, room) {
-  return (schedule ?? []).map(s => {
+  const out = [];
+  for (const s of schedule ?? []) {
+    if (s.chance != null && Math.random() * 100 >= s.chance) continue;
     const roles = {};
     for (const role of s.carry ?? []) {
       const id = roleMap?.[role];
       const player = id ? room.getPlayer(id) : null;
       if (player) roles[role] = { id: player.id, name: player.name };
     }
-    return { type: 'schedule_event', event_id: s.event, delay_months: s.in ?? 1, roles };
-  });
+    out.push({ type: 'schedule_event', event_id: s.event, delay_months: s.in ?? 1, roles });
+  }
+  return out;
 }
 
 // Picks one outcome by cumulative chance. An outcome without `chance` is the
