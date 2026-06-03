@@ -2,7 +2,7 @@
 events:
   - id: night_together
     type: flavor
-    weight: 1
+    weight: 1000
     when:
       min_players: 2
     participants:
@@ -18,6 +18,8 @@ events:
     effects:
       - { on: man, sanity: 12 }
       - { on: woman, sanity: 12 }
+      - { on: man, status: { id: pleasure, label: Наслаждение, stat: sanity, value: 3, months: 1 } }
+      - { on: woman, status: { id: pleasure, label: Наслаждение, stat: sanity, value: 3, months: 1 } }
     schedule:
       - { event: morning_rumors, in: 1, chance: 40, carry: [man, woman] }
       - { event: pregnancy, in: 1, chance: 80, carry: [woman] }
