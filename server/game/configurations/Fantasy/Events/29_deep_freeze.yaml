@@ -1,4 +1,4 @@
-# Аномальный мороз пробрался внутрь — согреться запасами или мёрзнуть вместе.
+# Аномальный мороз пробрался внутрь — согреться запасами или замёрзнуть насмерть.
 events:
   - id: deep_freeze
     type: choice
@@ -7,60 +7,74 @@ events:
       flag_unset: [deep_freeze_survived]
     title: Аномальный мороз
     text: >-
-      Магический холод пришёл ночью — к утру пар изо рта, вода в ведре
-      покрылась плёнкой льда, а рунный обогрев едва тянет. Можно поднять
-      всё, что держит тепло, — или просто стиснуть зубы и ждать.
+      Магический холод пришёл ночью — к утру пар изо рта, вода в вёдрах
+      покрылась льдом, рунный обогрев захлёбывается. Пара часов — и начнут
+      замерзать насмерть. Можно поднять всё, что держит тепло, — или
+      стиснуть зубы и надеяться, что рассветёт быстро.
     select:
       kind: item
-      prompt_item: Поднять запасы топлива и тёплых вещей
+      prompt_item: Поднять топливо, тёплые вещи и артефакты из запасов
     options:
       - id: freeze_warm
         label: Согреть убежище
         description: >-
-          Дрова, масло, камни тепла, тёплая одежда — чем богаче запасы,
-          тем мягче переживёте волну.
+          Дрова, уголь, масло, камни тепла, магический обогреватель, тёплая
+          одежда — чем богаче запасы, тем мягче переживёте волну.
         requires: [item]
         consume_items: true
         outcomes_by_selection:
           all:
-            - text: Переждали в тепле — мороз отступил к полудню, все целы.
+            - text: >-
+                Переждали в тепле — мороз отступил к полудню. Все живы,
+                никто серьёзно не отморозился.
               effects:
-                - { on: all, sanity: 6 }
+                - { on: all, health: 5, sanity: 10 }
                 - { flag: { deep_freeze_survived: true } }
           some:
-            - chance: 60
-              text: Согрелись не все — кто-то отморозил пальцы, но в целом выстояли.
+            - chance: 55
+              text: >-
+                Согрелись не все — кто-то отморозил пальцы и уши.
+                В целом выстояли, но заплатили здоровьем.
               effects:
-                - { on: all, health: -5 }
-                - { on: random, status: { id: frostbite, label: Обморожение, stat: health, value: -4, months: 1 } }
+                - { on: all, health: -15, sanity: -8 }
+                - { on: random, status: { id: frostbite, label: Обморожение, stat: health, value: -6, months: 2 } }
                 - { flag: { deep_freeze_survived: true } }
-            - text: Запасов хватило ненадолго — мороз всё равно добрался до всех.
+            - text: >-
+                Запасов хватило ненадолго — мороз всё равно добрался до всех.
+                Несколько человек слегли, один не поднялся.
               effects:
-                - { on: all, health: -12, sanity: -6 }
+                - { on: all, health: -30, sanity: -15 }
+                - { kill_random: true }
                 - { flag: { deep_freeze_survived: true } }
           none:
-            - text: Мёрзли всю ночь без подготовки. Несколько человек слегли.
+            - text: >-
+                Мёрзли всю ночь без ничего. К рассвету двое уже не дышали —
+                замёрзли во сне.
               effects:
-                - { on: all, health: -16, sanity: -8 }
-                - { on: random, status: { id: hypothermia_deep, label: Переохлаждение, stat: health, value: -6, months: 2 } }
+                - { on: all, health: -45, sanity: -20 }
+                - { kill_random: true }
                 - { flag: { deep_freeze_survived: true } }
       - id: freeze_huddle
-        label: Согреваться теплом тел
-        description: Собраться всем в одном отсеке — тратить нечего, но помёрзнете.
+        label: Собраться всем в одном отсеке
+        description: >-
+          Ничего не тратить — греться теплом тел. Тяжело, но вместе.
         effects:
-          - { on: all, health: -8 }
-          - { on: all, sanity: 4 }
+          - { on: all, health: -18, sanity: 6 }
+          - { on: random, status: { id: hypothermia_light, label: Переохлаждение, stat: health, value: -5, months: 1 } }
           - { flag: { deep_freeze_survived: true } }
       - id: freeze_endure
-        label: Перетерпеть по одному
-        description: Каждый сам по себе — авось к рассвету отпустит.
+        label: Каждый сам по себе
+        description: Ничего не делать, каждый в своей норе.
         outcomes:
-          - chance: 35
-            text: К рассвету потеплело — все живы, хоть и продрогли насквозь.
+          - chance: 25
+            text: К рассвету потеплело — живы, хоть и продрогли до костей.
             effects:
-              - { on: all, health: -6 }
+              - { on: all, health: -20, sanity: -10 }
               - { flag: { deep_freeze_survived: true } }
-          - text: К рассвету не потеплело. Полдня оттаивали.
+          - text: >-
+              К рассвету не потеплело. Кто-то уже не откликался — замёрз
+              в одиночестве.
             effects:
-              - { on: all, health: -16, sanity: -8 }
+              - { on: all, health: -40, sanity: -20 }
+              - { kill_random: true }
               - { flag: { deep_freeze_survived: true } }

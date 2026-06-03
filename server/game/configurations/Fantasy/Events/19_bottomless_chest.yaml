@@ -20,8 +20,8 @@ events:
       не клал. Сундук не открывали несколько дней. У него точно нет второго
       дна — или всё-таки есть?
     effects:
-      - { on: finder, sanity: -5 }
-      - { on: all, sanity: -2 }
+      - { on: finder, health: -5, sanity: -12 }
+      - { on: all, health: -4, sanity: -6 }
     schedule:
       - { event: chest_choice, in: 1, carry: [finder] }
 
@@ -38,41 +38,43 @@ events:
         label: Оставить ответный знак
         description: Положить что-то своё и посмотреть, что будет.
         outcomes:
-          - chance: 40
+          - chance: 35
             text: >-
               Через день в сундуке лежал запас еды и короткая записка:
               «Ещё придём».
             effects:
-              - { food: 100 }
-              - { on: all, sanity: 5 }
+              - { food: 120 }
+              - { on: all, health: 5, sanity: 8 }
               - { flag: { chest_mystery_resolved: true } }
           - text: >-
-              Ответный знак исчез, но следующая «посылка» оказалась
-              пустым черепом.
+              Ответный знак исчез. Следующей ночью у {finder} остановилось сердце —
+              без видимых причин.
             effects:
-              - { on: all, sanity: -12 }
+              - { on: finder, kill: true }
+              - { on: all, health: -10, sanity: -22 }
               - { flag: { chest_mystery_resolved: true } }
       - id: chest_seal
         label: Запечатать сундук рунами
         description: Накрыть защитными рунами — чтобы ничего больше не появлялось.
         effects:
-          - { on: all, sanity: 5 }
-          - { on: finder, sanity: 8 }
+          - { on: all, health: 4, sanity: 8 }
+          - { on: finder, sanity: 10 }
           - { flag: { chest_mystery_resolved: true } }
       - id: chest_watch
         label: Устроить засаду
         description: Кто-то дежурит у сундука всю ночь.
         outcomes:
-          - chance: 35
+          - chance: 30
             text: >-
               Дежурный задремал — наутро снова нашли посылку.
-              Бдительности не хватило.
+              Но на этот раз внутри была еда.
             effects:
-              - { on: all, sanity: -5 }
+              - { food: 80 }
+              - { on: all, health: -6, sanity: -8 }
               - { flag: { chest_mystery_resolved: true } }
           - text: >-
-              Дежурный увидел, как вещь появляется ниоткуда — сундук мигнул
-              синим, и всё. Теперь дежурный боится темноты.
+              Дежурный увидел, как рука вылезает изнутри — из пустого сундука.
+              Он не говорит с тех пор.
             effects:
-              - { on: all, sanity: -8 }
+              - { on: all, health: -12, sanity: -25 }
               - { flag: { chest_mystery_resolved: true } }

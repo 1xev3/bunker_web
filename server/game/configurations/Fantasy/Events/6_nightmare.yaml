@@ -28,27 +28,29 @@ events:
           all:
             - text: Тихий разговор до самого утра — и {dreamer} наконец отпустило.
               effects:
-                - { on: dreamer, sanity: 10 }
-                - { on: others, sanity: 1 }
+                - { on: dreamer, health: 5, sanity: 15 }
+                - { on: others, sanity: 5 }
           none:
             - chance: 45
               text: Кое-как уговорили {dreamer} поспать, но осадок остался.
               effects:
-                - { on: dreamer, sanity: -2 }
-            - text: Нужных слов не нашлось — {dreamer} замкнулся в себе.
+                - { on: dreamer, health: -5, sanity: -10 }
+                - { on: others, sanity: -4 }
+            - text: Нужных слов не нашлось — {dreamer} замкнулся в себе совсем.
               effects:
-                - { on: dreamer, sanity: -8 }
-                - { on: dreamer, status: { id: insomnia, label: Бессонница, stat: sanity, value: -4, months: 2 } }
+                - { on: dreamer, health: -10, sanity: -18 }
+                - { on: dreamer, status: { id: insomnia, label: Бессонница, stat: sanity, value: -5, months: 2 } }
+                - { on: others, health: -5, sanity: -8 }
               schedule:
-                - { event: breaking_point, in: 1, chance: 50, carry: [dreamer] }
+                - { event: breaking_point, in: 1, chance: 65, carry: [dreamer] }
       - id: ignore
         label: Не обращать внимания
         description: У каждого свои кошмары — пусть справляется сам.
         effects:
-          - { on: dreamer, sanity: -10 }
-          - { on: others, sanity: -3 }
+          - { on: dreamer, health: -12, sanity: -18 }
+          - { on: others, health: -5, sanity: -8 }
         schedule:
-          - { event: breaking_point, in: 1, chance: 40, carry: [dreamer] }
+          - { event: breaking_point, in: 1, chance: 60, carry: [dreamer] }
 
   - id: breaking_point
     type: choice
@@ -67,16 +69,18 @@ events:
         requires: [item]
         consume_items: true
         effects:
-          - { on: dreamer, sanity: 14, clear_status: debuffs }
+          - { on: dreamer, health: 8, sanity: 18, clear_status: debuffs }
+          - { on: others, sanity: 4 }
       - id: let_be
         label: Оставить как есть
         description: Запасы не резиновые — будь что будет.
         outcomes:
-          - chance: 50
+          - chance: 40
             text: "{dreamer} медленно пришёл в себя, но прежним уже не стал."
             effects:
-              - { on: dreamer, sanity: -4 }
+              - { on: dreamer, health: -15, sanity: -12 }
+              - { on: others, sanity: -5 }
           - text: Рассудок {dreamer} не выдержал — сердце остановилось во сне.
             effects:
               - { on: dreamer, kill: true }
-              - { on: others, sanity: -8 }
+              - { on: others, health: -5, sanity: -18 }

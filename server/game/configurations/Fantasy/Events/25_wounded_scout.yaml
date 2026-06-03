@@ -1,4 +1,4 @@
-# Разведчик вернулся с тяжёлой магической раной — лечить снаряжением и умениями или ждать.
+# Разведчик вернулся умирающим — лечить немедленно или потерять его.
 events:
   - id: wounded_scout
     type: choice
@@ -8,57 +8,65 @@ events:
     participants:
       scout: {}
     vars:
-      wound: "{глубокий порез с рунным ожогом|отравленная стрела в плече|магический ожог на груди|укус твари с гниющей краями раной}"
-    title: Разведчик вернулся раненым
+      wound: "{глубокий разрыв с рунным ожогом|отравленная стрела, обломившаяся в плече|магический ожог, разъедающий грудь|укус твари с чернеющей краями раной}"
+    title: Разведчик умирает
     text: >-
-      {scout} добрался до ворот и рухнул — {event.wound}. Без помощи до утра
-      может не дотянуть. Можно перебрать запасы снадобий и найти того, кто
-      умеет лечить, — или понадеяться, что организм справится сам.
+      {scout} дополз до ворот и рухнул — {event.wound}. Кровь не останавливается,
+      дыхание рваное. Без помощи до утра точно не доживёт. Можно поднять все
+      лечебные запасы и найти того, кто умеет — или смириться.
     select:
       kinds: [item, profession]
-      prompt_item: Перебрать лечебные запасы
-      prompt_profession: Кто возьмётся за лечение
+      prompt_item: Поднять зелья, кристаллы, перевязочное из запасов
+      prompt_profession: Кто возьмётся вытащить {scout}
     options:
       - id: scout_treat
-        label: Лечить
+        label: Лечить немедленно
         description: >-
-          Зелья, кристаллы, руны — чем богаче набор и опытнее целитель, тем
-          лучше исход.
+          Лечебные кристаллы, руны стабилизации, зелья — каждый предмет
+          и каждый опытный целитель повышают шанс.
         requires: [item, profession]
         consume_items: true
         outcomes_by_selection:
           all:
             - text: >-
-                К утру {scout} уже сидел и ругался на свою неосторожность.
-                Рана затянулась чисто.
+                К рассвету {scout} уже ругался на свою неосторожность.
+                Рана затянулась чисто — как будто и не было.
               effects:
-                - { on: scout, health: 18, sanity: 6 }
-                - { on: others, sanity: 5 }
+                - { on: scout, health: 25, sanity: 12 }
+                - { on: others, sanity: 8 }
           some:
             - chance: 60
-              text: Кое-как стабилизировали. {scout} выживет, но восстановление долгое.
+              text: >-
+                Кое-как стабилизировали. {scout} выживет, но несколько недель
+                будет лежать — рана живая.
               effects:
-                - { on: scout, health: 8 }
-                - { on: scout, status: { id: slow_recovery, label: Медленное восстановление, stat: health, value: -4, months: 2 } }
-            - text: Ни снаряжение, ни руки не справились с такой раной.
+                - { on: scout, health: -10, sanity: -8 }
+                - { on: scout, status: { id: slow_recovery, label: Гниющая рана, stat: health, value: -8, months: 3 } }
+            - text: >-
+                Ни снаряжения, ни умений не хватило — {scout} угасал на глазах
+                всю ночь, и спасти его не удалось.
               effects:
-                - { on: scout, health: -18 }
-                - { on: scout, status: { id: wound_rot, label: Гниющая рана, stat: health, value: -7, months: 3 } }
+                - { on: scout, kill: true }
+                - { on: others, sanity: -20 }
           none:
-            - text: Без помощи рана воспалилась к рассвету. {scout} горит в жару.
+            - text: >-
+                Без помощи рана воспалилась к рассвету. {scout} умер так и не
+                придя в сознание.
               effects:
-                - { on: scout, health: -20 }
-                - { on: scout, status: { id: wound_fever, label: Раневая лихорадка, stat: health, value: -6, months: 2 } }
-                - { on: others, sanity: -6 }
+                - { on: scout, kill: true }
+                - { on: others, health: -5, sanity: -25 }
       - id: scout_wait
-        label: Переждать
-        description: Ничего не тратить — организм справится или нет.
+        label: Переждать — может, сам выживет
+        description: Ничего не тратить. Организм или справится, или нет.
         outcomes:
-          - chance: 35
-            text: К утру рана затихла — тело справилось само.
+          - chance: 25
+            text: >-
+              К утру рана затихла — тело справилось. Выжил чудом и сам это
+              понимает.
             effects:
-              - { on: scout, health: 4 }
-          - text: Стало хуже. Рана воспалилась, начался жар.
+              - { on: scout, health: -15, sanity: -10 }
+          - text: >-
+              Не справился. {scout} умер до рассвета — один, без помощи.
             effects:
-              - { on: scout, health: -18 }
-              - { on: scout, status: { id: wound_fever, label: Раневая лихорадка, stat: health, value: -6, months: 2 } }
+              - { on: scout, kill: true }
+              - { on: others, health: -5, sanity: -25 }

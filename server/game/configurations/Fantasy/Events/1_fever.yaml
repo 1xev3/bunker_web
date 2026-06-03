@@ -30,35 +30,38 @@ events:
           all:
             - text: "{Жар сбили|Скверну унял отвар} к утру — {patient} идёт на поправку."
               effects:
-                - { on: patient, health: 16, sanity: 4, clear_status: debuffs }
+                - { on: patient, health: 20, sanity: 8, clear_status: debuffs }
+                - { on: others, sanity: 4 }
           some:
             - chance: 60
               text: Помогло не сразу, но {patient} всё же выкарабкался.
               effects:
-                - { on: patient, health: 8, clear_status: debuffs }
+                - { on: patient, health: 10, sanity: -4 }
+                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
             - text: Полумеры не справились с хворью.
               effects:
-                - { on: patient, health: -10 }
-                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+                - { on: patient, health: -20, sanity: -10 }
+                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -8, months: 3 } }
           none:
             - text: Без зелий и знаний со скверной не совладать — стало только хуже.
               effects:
-                - { on: patient, health: -14 }
-                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+                - { on: patient, health: -28, sanity: -15 }
+                - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -8, months: 3 } }
+                - { on: others, sanity: -5 }
       - id: wait
         label: Переждать
         description: Ничего не тратить — но это риск.
         outcomes:
-          - chance: 40
+          - chance: 35
             text: "{Жар отступил сам собой|Хворь миновала к утру|Тело справилось}."
             effects:
-              - { on: patient, health: 4 }
-          - text: Стало хуже — началось воспаление.
+              - { on: patient, health: -5, sanity: -4 }
+          - text: Стало хуже — началось воспаление, перекинулось на других.
             effects:
-              - { on: patient, health: -16 }
-              - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
+              - { on: patient, health: -25, sanity: -12 }
+              - { on: patient, status: { id: infection, label: Воспаление, stat: health, value: -8, months: 3 } }
             schedule:
-              - { event: fever_spreads, in: 1, chance: 50, carry: [patient] }
+              - { event: fever_spreads, in: 1, chance: 65, carry: [patient] }
 
   - id: fever_spreads
     type: flavor
@@ -68,6 +71,6 @@ events:
       Скверна {patient} не осталась в одиночку: в тесноте {кашель|жар|озноб}
       перекинулся на других. Лазарет переполнен.
     effects:
-      - { on: random, health: -10 }
-      - { on: random, status: { id: infection, label: Воспаление, stat: health, value: -6, months: 2 } }
-      - { on: all, sanity: -4 }
+      - { on: random, health: -18, sanity: -8 }
+      - { on: random, status: { id: infection, label: Воспаление, stat: health, value: -8, months: 2 } }
+      - { on: all, health: -8, sanity: -6 }

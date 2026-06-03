@@ -13,7 +13,7 @@ events:
     text: >-
       Кузнечный горн не потушили с вечера — к утру стены вокруг него
       раскалились, и от деревянного стеллажа потянуло дымком. Если не унять
-      жар в ближайшие минуты, займётся склад.
+      жар в ближайшие минуты, займётся склад и выход.
     options:
       - id: forge_douse
         label: Залить и сбить
@@ -24,44 +24,45 @@ events:
           all:
             - text: Жар сбили чисто — горн цел, склад цел, все живы.
               effects:
-                - { on: all, sanity: 5 }
+                - { on: all, health: 5, sanity: 8 }
                 - { flag: { forge_fire_resolved: true } }
           some:
-            - chance: 65
-              text: Справились, но горн лопнул от резкого охлаждения — чинить придётся долго.
+            - chance: 60
+              text: Справились, но горн лопнул от резкого охлаждения — несколько человек обожглись.
               effects:
-                - { on: all, sanity: -2 }
+                - { on: all, health: -12, sanity: -8 }
                 - { flag: { forge_fire_resolved: true } }
             - text: Не успели — огонь перекинулся на стеллаж. Часть запасов сгорела.
               effects:
-                - { on: all, sanity: -8 }
-                - { food: "15%" }
+                - { on: all, health: -20, sanity: -12 }
+                - { food: "20%" }
                 - { flag: { forge_fire_resolved: true } }
           none:
-            - text: Без подготовки бросились тушить голыми руками — ожоги и потеря запасов.
+            - text: Без подготовки бросились тушить голыми руками — пожар пошёл по всему складу.
               effects:
-                - { on: random, health: -20 }
-                - { on: all, health: -6, sanity: -10 }
-                - { food: "20%" }
+                - { on: all, health: -30, sanity: -18 }
+                - { food: "30%" }
+                - { kill_random: true }
                 - { flag: { forge_fire_resolved: true } }
       - id: forge_abandon
         label: Отступить и закрыть отсек
         description: Пожертвовать горном, но спасти остальное.
         effects:
-          - { on: all, sanity: -8 }
-          - { food: "10%" }
+          - { on: all, health: -15, sanity: -12 }
+          - { food: "15%" }
           - { flag: { forge_fire_resolved: true } }
       - id: forge_bucket_chain
         label: Передавать вёдра по цепочке
         description: Всем вместе — медленно, но без риска для одного человека.
         outcomes:
-          - chance: 55
+          - chance: 50
             text: Общими усилиями сбили огонь до того, как занялось всерьёз.
             effects:
-              - { on: all, health: -4, sanity: 4 }
+              - { on: all, health: -8, sanity: 5 }
               - { flag: { forge_fire_resolved: true } }
-          - text: Не хватило воды — пока бегали, стеллаж занялся.
+          - text: Воды не хватило — стеллаж занялся, кто-то не успел отбежать.
             effects:
-              - { on: all, health: -6, sanity: -8 }
-              - { food: "12%" }
+              - { on: all, health: -22, sanity: -14 }
+              - { food: "18%" }
+              - { kill_random: true }
               - { flag: { forge_fire_resolved: true } }

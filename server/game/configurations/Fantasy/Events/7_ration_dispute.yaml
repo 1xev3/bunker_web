@@ -23,29 +23,30 @@ events:
             text: Нашли заначку. Виновный пристыжён, остальные приободрились.
             effects:
               - { food: 80 }
-              - { on: hoarder, sanity: -10 }
-              - { on: others, sanity: 4 }
-              - { on: hoarder, status: { id: branded_thief, label: Клеймо вора, stat: sanity, value: -3, months: 2 } }
+              - { on: hoarder, health: -5, sanity: -15 }
+              - { on: others, sanity: 6 }
+              - { on: hoarder, status: { id: branded_thief, label: Клеймо вора, stat: sanity, value: -4, months: 3 } }
           - text: Ничего не нашли — пустое обвинение лишь раскололо людей.
             effects:
-              - { on: all, sanity: -6 }
+              - { on: all, health: -5, sanity: -10 }
             schedule:
-              - { event: grudge_festers, in: 2, chance: 50, carry: [hoarder, accuser] }
+              - { event: grudge_festers, in: 2, chance: 65, carry: [hoarder, accuser] }
       - id: hush
         label: Замять конфликт
         description: Не раздувать — всем сейчас и без того тяжело.
         effects:
-          - { on: accuser, sanity: -5 }
-          - { on: hoarder, sanity: 3 }
+          - { on: accuser, health: -5, sanity: -8 }
+          - { on: hoarder, sanity: 4 }
+          - { on: others, sanity: -4 }
         schedule:
-          - { event: grudge_festers, in: 2, chance: 45, carry: [hoarder, accuser] }
+          - { event: grudge_festers, in: 2, chance: 55, carry: [hoarder, accuser] }
       - id: punish_both
         label: Урезать паёк обоим
         description: Чтоб неповадно было склочничать — но это удар по двоим.
         effects:
-          - { on: hoarder, health: -6 }
-          - { on: accuser, health: -6 }
-          - { on: all, sanity: -3 }
+          - { on: hoarder, health: -20, sanity: -12 }
+          - { on: accuser, health: -20, sanity: -12 }
+          - { on: all, sanity: -6 }
 
   - id: grudge_festers
     type: choice
@@ -66,22 +67,23 @@ events:
           all:
             - text: Их усадили за один стол и заставили выговориться — вражда улеглась.
               effects:
-                - { on: all, sanity: 5 }
+                - { on: all, health: 4, sanity: 8 }
           none:
             - chance: 40
               text: Кое-как растащили, но мириться никто не стал.
               effects:
-                - { on: accuser, sanity: -4 }
-                - { on: hoarder, sanity: -4 }
-            - text: Без посредника драка переросла в поножовщину.
+                - { on: accuser, health: -8, sanity: -8 }
+                - { on: hoarder, health: -8, sanity: -8 }
+                - { on: others, sanity: -5 }
+            - text: Без посредника драка переросла в поножовщину — один не выживет.
               effects:
-                - { on: hoarder, health: -18 }
-                - { on: accuser, health: -18 }
-                - { on: all, sanity: -6 }
+                - { on: hoarder, kill: true }
+                - { on: accuser, health: -30, sanity: -20 }
+                - { on: all, health: -5, sanity: -12 }
       - id: take_side
         label: Изгнать зачинщика
         description: Выставить одного из них из общей части — пусть остынет в одиночестве.
         effects:
-          - { on: hoarder, health: -12, sanity: -10 }
-          - { on: accuser, sanity: 4 }
-          - { on: others, sanity: -4 }
+          - { on: hoarder, health: -20, sanity: -18 }
+          - { on: accuser, sanity: 6 }
+          - { on: others, health: -5, sanity: -8 }

@@ -1,4 +1,4 @@
-# Кто-то из выживших проклят — снять алхимией и магией или изолировать.
+# Кто-то проклят — снять ритуалом или жить с этим, пока не станет хуже.
 events:
   - id: curse_appears
     type: flavor
@@ -9,20 +9,19 @@ events:
     participants:
       cursed: {}
     vars:
-      sign: [
-        "вещи рвутся в его руках, замки перестают открываться",
-        "за ним гаснут светильники, а стены покрываются инеем",
-        "у него кровоточат ладони без видимых ран",
-        "всё, к чему он прикасается, вскоре ломается или гниёт"
-      ]
-    title: Проклятие
+      sign:
+        - "вещи рвутся в его руках, замки перестают открываться, a по ночам из его угла слышен плач"
+        - "за ним гаснут светильники, вода в его кружке чернеет, и он не помнит половины дней"
+        - "у него кровоточат ладони без видимых ран — ровно в полночь"
+        - "всё, к чему он прикасается, вскоре ломается или гниёт — уже третий человек заметил"
+    title: "{cursed} проклят"
     text: >-
-      {cursed} проклят — {event.sign}. Сам он это понял последним. Убежище
-      начинает это замечать, и молчать долго не получится.
+      {cursed} проклят — {event.sign}. Сам он это понял последним.
+      Убежище начинает сторониться его, и молчать дальше не получится.
     effects:
-      - { on: cursed, sanity: -10 }
-      - { on: all, sanity: -4 }
-      - { on: cursed, status: { id: cursed_aura, label: Проклятие, stat: health, value: -3, months: 3 } }
+      - { on: cursed, health: -10, sanity: -18 }
+      - { on: all, sanity: -8 }
+      - { on: cursed, status: { id: cursed_aura, label: Проклятие, stat: health, value: -5, months: 3 } }
     schedule:
       - { event: curse_choice, in: 1, carry: [cursed] }
 
@@ -31,62 +30,73 @@ events:
     scheduled_only: true
     title: Что делать с проклятием {cursed}?
     text: >-
-      Ждать больше нельзя — проклятие уже задело чужие вещи. Можно поднять
-      всё магическое и попытаться снять, — или отгородить {cursed} от
-      остальных и надеяться, что само развеется.
+      Проклятие уже задело чужие вещи и чужое здоровье. {cursed} сам просит
+      помочь — или прекратить. Можно поднять всё магическое и попробовать
+      снять, — или принять решение.
     select:
       kinds: [item, profession]
-      prompt_item: Собрать магические артефакты для ритуала
-      prompt_profession: Кто проведёт ритуал снятия
+      prompt_item: Собрать магические артефакты для ритуала снятия
+      prompt_profession: Кто проведёт ритуал
     options:
       - id: curse_lift
         label: Снять проклятие
         description: >-
-          Охранные руны, амулеты, алхимия, свитки — чем полнее набор и
-          опытнее маг, тем чище снятие.
+          Охранные руны, амулеты, стол зачарования, свитки — чем полнее
+          набор и опытнее маг, тем чище снятие.
         requires: [item, profession]
         consume_items: true
         outcomes_by_selection:
           all:
-            - text: Проклятие ушло чисто — {cursed} почувствовал, как с плеч свалился груз.
+            - text: >-
+                Проклятие ушло с треском — {cursed} почувствовал, как с плеч
+                сорвали невидимые цепи. Давно не выглядел так живым.
               effects:
-                - { on: cursed, clear_status: cursed_aura, sanity: 18 }
-                - { on: all, sanity: 8 }
+                - { on: cursed, clear_status: cursed_aura, health: 20, sanity: 25 }
+                - { on: all, health: 8, sanity: 12 }
                 - { flag: { curse_resolved: true } }
           some:
             - chance: 50
-              text: Проклятие ослабили, но не сняли полностью. {cursed} легче, но знак остался.
+              text: >-
+                Ослабили, но не сняли полностью. {cursed} легче,
+                однако знак остался — бледный, но живой.
               effects:
-                - { on: cursed, sanity: 8 }
-                - { on: cursed, status: { id: cursed_aura, label: Слабое проклятие, stat: health, value: -1, months: 3 } }
+                - { on: cursed, health: -8, sanity: 10 }
+                - { on: cursed, status: { id: weak_curse, label: Остаток проклятия, stat: health, value: -3, months: 2 } }
+                - { on: all, sanity: -5 }
                 - { flag: { curse_resolved: true } }
-            - text: Ритуал не справился — и, кажется, разбудил что-то в проклятии.
+            - text: >-
+                Ритуал не справился и разбудил что-то в проклятии.
+                {cursed} потерял сознание прямо в круге.
               effects:
-                - { on: cursed, health: -14, sanity: -10 }
-                - { on: all, sanity: -6 }
+                - { on: cursed, health: -45, sanity: -30 }
+                - { on: all, health: -12, sanity: -15 }
                 - { flag: { curse_resolved: true } }
           none:
-            - text: Без артефактов и знаний ритуал не состоялся. Проклятие продолжает расти.
+            - text: >-
+                Без нужных артефактов ритуал не состоялся — но проклятие
+                почувствовало попытку. Ответило.
               effects:
-                - { on: cursed, health: -10, sanity: -12 }
-                - { on: all, sanity: -6 }
+                - { on: cursed, kill: true }
+                - { on: all, health: -20, sanity: -20 }
                 - { flag: { curse_resolved: true } }
       - id: curse_isolate
         label: Изолировать {cursed}
-        description: Отдельный отсек, подальше от общих запасов — пока само не пройдёт.
+        description: >-
+          Отдельный отсек, подальше от общих запасов — пока само не пройдёт
+          или пока не решат иначе.
         effects:
-          - { on: cursed, sanity: -20 }
-          - { on: others, sanity: -4 }
+          - { on: cursed, health: -15, sanity: -30 }
+          - { on: others, health: -5, sanity: -10 }
           - { flag: { curse_resolved: true } }
         schedule:
-          - { event: curse_fades, in: 3, chance: 50 }
+          - { event: curse_fades, in: 3, chance: 45 }
       - id: curse_accept
         label: Жить с этим
         description: Принять как есть — проклятые тоже люди.
         effects:
-          - { on: cursed, sanity: 6 }
-          - { on: all, sanity: -3 }
-          - { on: all, status: { id: cursed_contagion, label: Тревога от проклятия, stat: sanity, value: -2, months: 3 } }
+          - { on: cursed, sanity: 8 }
+          - { on: all, health: -8, sanity: -12 }
+          - { on: all, status: { id: cursed_contagion, label: Страх заражения, stat: sanity, value: -4, months: 4 } }
           - { flag: { curse_resolved: true } }
 
   - id: curse_fades
@@ -94,8 +104,8 @@ events:
     scheduled_only: true
     title: Проклятие спало
     text: >-
-      Изоляция, видимо, помогла — или срок проклятия вышел сам собой.
-      {cursed} вернулся в общий отсек молча. Принял без объятий.
+      Изоляция помогла — или срок проклятия вышел сам собой. {cursed}
+      вернулся в общий отсек молча. Принял без объятий.
     effects:
-      - { on: cursed, clear_status: cursed_aura, sanity: 8 }
-      - { on: all, sanity: 4 }
+      - { on: cursed, clear_status: cursed_aura, health: 12, sanity: 15 }
+      - { on: all, sanity: 6 }

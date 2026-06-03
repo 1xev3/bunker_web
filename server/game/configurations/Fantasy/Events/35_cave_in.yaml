@@ -1,0 +1,75 @@
+# Внезапный обвал секции — откапывать выживших или запечатать навсегда.
+events:
+  - id: cave_in
+    type: choice
+    weight: 1
+    when:
+      min_players: 3
+      min_month: 2
+    participants:
+      trapped: {}
+    title: Обвал
+    text: >-
+      Грохот без предупреждения — секция рухнула. {trapped} был там.
+      Завал плотный, слышны слабые удары изнутри — живой, но не надолго.
+      Можно поднять всё, чем можно копать, — или признать, что не успеть.
+    select:
+      kinds: [item, profession]
+      prompt_item: Поднять инструменты для разбора завала
+      prompt_profession: Кто возглавит спасательные работы
+    options:
+      - id: cave_dig
+        label: Откапывать
+        description: >-
+          Ломики, лопаты, сварочный жезл, рунные пластины для укрепления —
+          чем больше инструментов и умелее руководитель, тем быстрее доберутся.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Откопали — {trapped} жив, хотя и плохо помнит, как провёл эти
+                часы под завалом.
+              effects:
+                - { on: trapped, health: -20, sanity: -25 }
+                - { on: others, health: -5, sanity: 10 }
+          some:
+            - chance: 55
+              text: >-
+                Добрались, но поздно — {trapped} был уже без сознания.
+                Несколько рёбер сломаны, нога придавлена.
+              effects:
+                - { on: trapped, health: -45, sanity: -20 }
+                - { on: trapped, status: { id: crushed, label: Травма завала, stat: health, value: -8, months: 3 } }
+                - { on: others, health: -8, sanity: -8 }
+            - text: >-
+                Инструментов или умения не хватило — стена над {trapped}
+                просела ещё раз, когда до него оставалось полметра.
+              effects:
+                - { on: trapped, kill: true }
+                - { on: others, health: -10, sanity: -25 }
+      - id: cave_seal
+        label: Запечатать завал
+        description: >-
+          Признать, что не успеть, — и укрепить вход, чтобы не рухнуло
+          остальное.
+        effects:
+          - { on: trapped, kill: true }
+          - { on: others, health: -8, sanity: -30 }
+      - id: cave_bare_hands
+        label: Копать без инструментов
+        description: Руками, зубами — только бы добраться.
+        outcomes:
+          - chance: 20
+            text: >-
+              Чудом успели — завал оказался рыхлым. {trapped} вытащили
+              в крови и пыли, но живым.
+            effects:
+              - { on: trapped, health: -30, sanity: -20 }
+              - { on: others, health: -15, sanity: 5 }
+          - text: >-
+              Руками гранит не взять. Завал просел ещё раз — теперь даже
+              ударов не слышно.
+            effects:
+              - { on: trapped, kill: true }
+              - { on: others, health: -15, sanity: -28 }

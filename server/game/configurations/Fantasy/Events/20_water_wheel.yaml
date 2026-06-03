@@ -20,28 +20,27 @@ events:
         requires: [player]
         description: Холодно, темно, но другого способа нет.
         outcomes:
-          - chance: 65
+          - chance: 60
             text: >-
               {chosen} нашёл затор — корень, намотавшийся на ось.
               Прочищено. Колесо снова вертится.
             effects:
-              - { on: chosen, health: -6, sanity: 10 }
-              - { on: others, sanity: 6 }
+              - { on: chosen, health: -10, sanity: 12 }
+              - { on: others, health: 4, sanity: 8 }
               - { flag: { wheel_incident: true } }
           - text: >-
-              {chosen} нырнул, но не рассчитал — течение прижало к решётке.
-              Едва вытащили.
+              {chosen} нырнул, но течение прижало к решётке. Вытащили, но поздно.
             effects:
-              - { on: chosen, health: -22 }
-              - { on: chosen, status: { id: hypothermia, label: Переохлаждение, stat: health, value: -5, months: 1 } }
-              - { on: others, sanity: -8 }
+              - { on: chosen, health: -45, sanity: -20 }
+              - { on: chosen, status: { id: hypothermia, label: Переохлаждение, stat: health, value: -8, months: 2 } }
+              - { on: others, health: -8, sanity: -15 }
               - { flag: { wheel_incident: true } }
       - id: wheel_manual
         label: Перейти на ручной насос
         description: Таскать воду вёдрами — тяжело, но живы будем.
         effects:
-          - { on: all, sanity: -5 }
-          - { on: all, status: { id: water_hauling, label: Усталость от воды, stat: sanity, value: -3, months: 2 } }
+          - { on: all, health: -10, sanity: -10 }
+          - { on: all, status: { id: water_hauling, label: Усталость от воды, stat: sanity, value: -4, months: 2 } }
           - { flag: { wheel_incident: true } }
         schedule:
           - { event: wheel_fixed_itself, in: 3, chance: 40 }
@@ -49,16 +48,16 @@ events:
         label: Попробовать шестом
         description: Не нырять — зацепить затор снаружи.
         outcomes:
-          - chance: 30
+          - chance: 25
             text: >-
               С третьей попытки шест зацепил что-то — рывок, и колесо снова
               завертелось.
             effects:
-              - { on: all, sanity: 5 }
+              - { on: all, health: 4, sanity: 8 }
               - { flag: { wheel_incident: true } }
-          - text: Шест сломался, колесо стоит. Потеряли время.
+          - text: Шест сломался, колесо стоит. Потеряли время — вода кончается.
             effects:
-              - { on: all, sanity: -4 }
+              - { on: all, health: -15, sanity: -12 }
               - { flag: { wheel_incident: true } }
 
   - id: wheel_fixed_itself
@@ -69,4 +68,4 @@ events:
       Поток наконец вымыл затор — колесо дёрнулось и закрутилось. Вода снова
       течёт. Судьба решила не добивать.
     effects:
-      - { on: all, sanity: 6 }
+      - { on: all, health: 5, sanity: 8 }

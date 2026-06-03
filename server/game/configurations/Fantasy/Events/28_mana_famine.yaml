@@ -1,4 +1,4 @@
-# Мана в рунах убежища иссякла — пополнить кристаллами или обесточить системы.
+# Мана иссякает — пополнить кристаллами или гаснуть вместе с убежищем.
 events:
   - id: mana_famine
     type: choice
@@ -8,13 +8,13 @@ events:
       flag_unset: [mana_famine_resolved]
     title: Мана иссякает
     text: >-
-      Рунные системы убежища гаснут одна за другой — мана в накопителях
-      подходит к концу. Можно поднять все кристаллы и пластины, какие есть,
-      и попытаться продержаться, — или методично отключать системы, пока
-      есть из чего выбирать.
+      Рунные системы гаснут одна за другой — свет мерцает, вентиляция хрипит,
+      насос подачи воды встал. Убежище умирает тихо. Можно отдать все кристаллы
+      и пластины в накопители — или методично отключать системы, пока ещё есть
+      из чего выбирать.
     select:
       kinds: [item, profession]
-      prompt_item: Сдать кристаллы и рунные пластины в накопители
+      prompt_item: Сдать манакристаллы и рунные пластины в накопители
       prompt_profession: Кто займётся перераспределением маны
     options:
       - id: mana_recharge
@@ -26,43 +26,56 @@ events:
         consume_items: true
         outcomes_by_selection:
           all:
-            - text: Рунная сеть снова светится ровно — запаса хватит надолго.
+            - text: >-
+                Рунная сеть снова светится ровно — запаса хватит надолго.
+                Убежище вздохнуло.
               effects:
-                - { on: all, sanity: 8 }
+                - { on: all, health: 8, sanity: 12 }
                 - { flag: { mana_famine_resolved: true } }
           some:
             - chance: 55
-              text: Хватило ненадолго, но критический момент миновал.
+              text: >-
+                Хватило ненадолго, но критический момент миновал.
+                Несколько систем по-прежнему дышат на ладан.
               effects:
-                - { on: all, sanity: 3 }
-                - { on: all, status: { id: dim_runes, label: Тусклые руны, stat: sanity, value: -2, months: 2 } }
+                - { on: all, health: -10, sanity: -10 }
+                - { on: all, status: { id: dim_runes, label: Тусклые руны, stat: health, value: -4, months: 2 } }
                 - { flag: { mana_famine_resolved: true } }
-            - text: Кристаллы ушли, а толку нет — руны поглотили их и не зажглись.
+            - text: >-
+                Кристаллы ушли, а толку нет — руны поглотили их и не зажглись.
+                Стало только хуже.
               effects:
-                - { on: all, health: -8, sanity: -8 }
+                - { on: all, health: -25, sanity: -18 }
                 - { flag: { mana_famine_resolved: true } }
           none:
-            - text: Без подпитки руны погасли. Убежище — тёмная холодная нора.
+            - text: >-
+                Без подпитки руны погасли полностью. Воздух, тепло, вода — всё
+                встало. Те, у кого было слабее здоровье, не пережили ночи.
               effects:
-                - { on: all, health: -12, sanity: -10 }
+                - { on: all, health: -35, sanity: -22 }
+                - { kill_random: true }
                 - { flag: { mana_famine_resolved: true } }
       - id: mana_shutdown
         label: Отключать системы по одной
-        description: Жертвовать удобством — но не критическими функциями.
+        description: >-
+          Жертвовать удобством ради выживания — но держать людей живыми.
         effects:
-          - { on: all, sanity: -7 }
-          - { on: all, status: { id: manual_mode, label: Ручной режим, stat: sanity, value: -3, months: 3 } }
+          - { on: all, health: -12, sanity: -15 }
+          - { on: all, status: { id: manual_mode, label: Ручной режим, stat: sanity, value: -4, months: 3 } }
           - { flag: { mana_famine_resolved: true } }
       - id: mana_pray
         label: Ничего не делать
-        description: Может, руны запасли больше, чем кажется.
+        description: Может, руны нашли скрытый контур и продержатся сами.
         outcomes:
-          - chance: 25
-            text: Откуда-то взялся запасной контур — руны держатся.
+          - chance: 20
+            text: Откуда-то взялся резервный контур — руны держатся.
             effects:
               - { on: all, sanity: 4 }
               - { flag: { mana_famine_resolved: true } }
-          - text: Не запасли. Системы встали одна за одной в самый неудобный момент.
+          - text: >-
+              Резерва не было. Системы встали одна за другой — люди умирали
+              медленно в темноте и духоте.
             effects:
-              - { on: all, health: -14, sanity: -10 }
+              - { on: all, health: -40, sanity: -25 }
+              - { kill_random: true }
               - { flag: { mana_famine_resolved: true } }

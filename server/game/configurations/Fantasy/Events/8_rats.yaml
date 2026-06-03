@@ -11,7 +11,7 @@ events:
     title: Незваные твари
     text: >-
       Несколько {event.animals} пробрались в убежище и теперь шныряют у запасов.
-      Если расплодятся — сожрут половину провизии.
+      Если расплодятся — сожрут половину провизии и принесут заразу.
     select:
       kinds: [item, profession]
       prompt_item: Чем будем травить?
@@ -26,39 +26,41 @@ events:
           all:
             - text: Травля сработала — от {event.animals} не осталось и следа.
               effects:
-                - { on: all, sanity: 4 }
+                - { on: all, health: 4, sanity: 6 }
                 - { flag: { vermin_cleared: true } }
           some:
             - chance: 55
               text: Большую часть {event.animals} удалось извести.
               effects:
-                - { on: all, sanity: 2 }
-            - text: Полумеры не помогли — запасы всё же подъели.
+                - { on: all, sanity: 3 }
+            - text: Полумеры не помогли — запасы всё же подъели, кое-кто заразился.
               effects:
                 - { food: "20%" }
+                - { on: random, health: -10, sanity: -5 }
               schedule:
-                - { event: vermin_plague, in: 2, chance: 40 }
+                - { event: vermin_plague, in: 2, chance: 50 }
           none:
-            - text: Голыми руками с {event.animals} не справиться — провизия тает на глазах.
+            - text: Голыми руками с {event.animals} не справиться — провизия тает, люди болеют.
               effects:
                 - { food: "30%" }
-                - { on: all, sanity: -4 }
+                - { on: all, health: -6, sanity: -6 }
               schedule:
-                - { event: vermin_plague, in: 2, chance: 55 }
+                - { event: vermin_plague, in: 2, chance: 70 }
       - id: ignore
         label: Не обращать внимания
         description: Авось сами уйдут и не расплодятся.
         outcomes:
-          - chance: 30
+          - chance: 25
             text: Похоже, {event.animals} ушли дальше по ходам.
             effects:
-              - { on: all, sanity: 1 }
+              - { on: all, sanity: 2 }
           - text: За пару недель {event.animals} расплодились и сожрали часть припасов.
             effects:
               - { food: "25%" }
-              - { on: random, status: { id: vermin_sickness, label: Зараза, stat: health, value: -5, months: 2 } }
+              - { on: random, health: -12, sanity: -6 }
+              - { on: random, status: { id: vermin_sickness, label: Зараза, stat: health, value: -6, months: 2 } }
             schedule:
-              - { event: vermin_plague, in: 2, chance: 60 }
+              - { event: vermin_plague, in: 2, chance: 70 }
 
   - id: vermin_plague
     type: choice
@@ -67,8 +69,8 @@ events:
       flag_unset: [vermin_cleared]
     title: Твари принесли заразу
     text: >-
-      Расплодившиеся твари притащили в убежище хворь: у нескольких человек жар и
-      сыпь. Заражённый угол нужно вычистить, пока не слегли все.
+      Расплодившиеся твари притащили в убежище хворь: у нескольких человек жар,
+      сыпь, рвота. Заражённый угол нужно вычистить, пока не слегли все.
     select:
       kind: profession
       prompt_profession: Кто проведёт очищение?
@@ -81,25 +83,27 @@ events:
           all:
             - text: Угол вычистили дочиста, больных отпоили — вспышку погасили.
               effects:
-                - { on: all, sanity: 4 }
+                - { on: all, health: 6, sanity: 6 }
                 - { flag: { vermin_cleared: true } }
           none:
             - chance: 40
               text: Своими силами кое-как навели порядок, но пара человек ещё хворает.
               effects:
-                - { on: random, health: -8 }
-            - text: Без знающего человека зараза расползлась дальше.
+                - { on: random, health: -20, sanity: -8 }
+                - { on: all, health: -6 }
+            - text: Без знающего человека зараза расползлась дальше — убежище валится с ног.
               effects:
-                - { on: random, kill: true }
-                - { on: all, health: -8, sanity: -6 }
+                - { kill_random: true }
+                - { on: all, health: -20, sanity: -12 }
       - id: wait_out
         label: Переждать
         description: Изолировать больных и надеяться, что обойдётся.
         outcomes:
-          - chance: 45
+          - chance: 40
             text: Хворь сама отступила, потрепав, но не свалив убежище.
             effects:
-              - { on: all, health: -5 }
-          - text: Вспышка разрослась — слегли почти все.
+              - { on: all, health: -12, sanity: -6 }
+          - text: Вспышка разрослась — слегли почти все, кто-то не поднялся.
             effects:
-              - { on: all, health: -14, sanity: -6 }
+              - { kill_random: true }
+              - { on: all, health: -25, sanity: -15 }

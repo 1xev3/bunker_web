@@ -19,7 +19,8 @@ events:
       {watcher} дежурил у зеркала дальнего взгляда и увидел {event.sight}.
       Люди, животные или что-то ещё — не разглядеть. Движение точно есть.
     effects:
-      - { on: watcher, sanity: -3 }
+      - { on: watcher, health: -4, sanity: -8 }
+      - { on: all, sanity: -4 }
     schedule:
       - { event: mirror_contact_choice, in: 1, carry: [watcher] }
 
@@ -35,22 +36,23 @@ events:
         label: Подать сигнал
         description: Обозначить своё присутствие — вдруг выгодный контакт.
         outcomes:
-          - chance: 40
+          - chance: 35
             text: Через день к воротам пришли двое с едой и предложением торговли.
             effects:
-              - { food: 100 }
-              - { on: all, sanity: 12 }
+              - { food: 120 }
+              - { on: all, health: 8, sanity: 15 }
               - { flag: { mirror_contact: true } }
-          - text: Сигнал заметили не те — ночью у ворот слышали шорохи и скрежет.
+          - text: Сигнал заметили не те — ночью ворвались. Не всех успели остановить.
             effects:
-              - { on: all, sanity: -10 }
+              - { on: all, health: -25, sanity: -18 }
+              - { kill_random: true }
               - { flag: { mirror_contact: true } }
       - id: mirror_observe
         label: Продолжать наблюдать
         description: Не обнаруживать себя — изучить, прежде чем решать.
         effects:
-          - { on: watcher, sanity: 5 }
-          - { on: all, sanity: 2 }
+          - { on: watcher, health: 4, sanity: 8 }
+          - { on: all, sanity: 4 }
           - { flag: { mirror_contact: true } }
         schedule:
           - { event: strangers_arrive, in: 2, chance: 35 }
@@ -58,7 +60,8 @@ events:
         label: Заглушить зеркало
         description: Отключить наблюдение — меньше знаешь, крепче спишь.
         effects:
-          - { on: all, sanity: -3 }
+          - { on: all, health: -6, sanity: -10 }
+          - { on: watcher, health: -8, sanity: -15 }
           - { flag: { mirror_contact: true } }
 
   - id: strangers_arrive
@@ -70,5 +73,5 @@ events:
       оказалось зеркало. К воротам пришёл один человек без оружия с запиской:
       «Поговорим?»
     effects:
-      - { on: all, sanity: 5 }
-      - { food: 60 }
+      - { on: all, health: 6, sanity: 8 }
+      - { food: 80 }

@@ -25,22 +25,24 @@ events:
           - chance: 60
             text: "{Пролом заделали|Лаз закрыли|Трещину запечатали рунами} — воздух снова чист."
             effects:
-              - { on: chosen, health: -4, sanity: 8 }
+              - { on: chosen, health: -8, sanity: 12 }
+              - { on: others, sanity: 6 }
               - { flag: { breach_sealed: true } }
           - text: Доброволец застрял и едва выбрался; всех зацепило просочившейся скверной.
             effects:
-              - { on: chosen, health: -22, sanity: -10 }
-              - { on: chosen, status: { id: cramped_chest, label: Сдавленная грудь, stat: health, value: -5, months: 2 } }
-              - { on: others, status: { id: stale_air, label: Дыхание скверны, stat: health, value: -3, months: 2 } }
+              - { on: chosen, health: -35, sanity: -15 }
+              - { on: chosen, status: { id: cramped_chest, label: Сдавленная грудь, stat: health, value: -6, months: 2 } }
+              - { on: others, health: -10, sanity: -12 }
+              - { on: others, status: { id: stale_air, label: Дыхание скверны, stat: health, value: -5, months: 2 } }
       - id: seal_off
         label: Запечатать отсек
         description: Никого не рисковать, но убежище станет теснее и холоднее.
         effects:
-          - { on: all, sanity: -6 }
-          - { on: all, status: { id: cold, label: Холод, stat: health, value: -4, months: 2 } }
+          - { on: all, health: -10, sanity: -10 }
+          - { on: all, status: { id: cold, label: Холод, stat: health, value: -5, months: 2 } }
           - { flag: { breach_sealed: true } }
         schedule:
-          - { event: sealed_draft, in: 2, chance: 50 }
+          - { event: sealed_draft, in: 2, chance: 55 }
 
   - id: sealed_draft
     type: flavor
@@ -51,5 +53,5 @@ events:
       разошлись. Люди кутаются плотнее и недобро косятся на тех, кто решил его
       заложить.
     effects:
-      - { on: all, sanity: -4 }
-      - { on: random, health: -6 }
+      - { on: all, health: -8, sanity: -8 }
+      - { on: random, health: -12, sanity: -6 }

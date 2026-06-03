@@ -20,7 +20,8 @@ events:
       по себе произнёс: {event.phrase}. Никто из остальных не был рядом,
       и теперь трудно сказать, привиделось ли это.
     effects:
-      - { on: listener, sanity: -6 }
+      - { on: listener, health: -5, sanity: -12 }
+      - { on: all, sanity: -5 }
     schedule:
       - { event: archive_decision, in: 1, carry: [listener] }
 
@@ -36,36 +37,38 @@ events:
         label: Проверить слова архива
         description: Последовать подсказке буквально — вдруг в ней правда.
         outcomes:
-          - chance: 45
+          - chance: 40
             text: Нашли. За третьей плитой был запас, о котором все забыли.
             effects:
-              - { food: 120 }
-              - { on: all, sanity: 6 }
+              - { food: 140 }
+              - { on: all, health: 5, sanity: 10 }
               - { flag: { archive_voice_resolved: true } }
-          - text: Ничего не нашли. Зато трое подрались из-за того, кто слышал что не то.
+          - text: Ничего не нашли. Пока искали, убежище без присмотра — кто-то пострадал.
             effects:
-              - { on: all, sanity: -6 }
+              - { on: all, health: -12, sanity: -12 }
+              - { on: random, health: -15 }
               - { flag: { archive_voice_resolved: true } }
       - id: archive_seal
         label: Отключить архив
         description: Слишком тревожно — лучше заглушить это.
         effects:
-          - { on: all, sanity: -3 }
-          - { on: listener, sanity: -8 }
+          - { on: all, health: -6, sanity: -10 }
+          - { on: listener, health: -8, sanity: -15 }
           - { flag: { archive_voice_resolved: true } }
       - id: archive_talk_back
         label: Заговорить с ним
         description: Ответить архиву — может, он ждёт диалога.
         outcomes:
-          - chance: 35
+          - chance: 30
             text: >-
               Архив ответил. Что именно — {listener} не стал пересказывать,
               но выглядел потрясённым и спал крепче остальных.
             effects:
-              - { on: listener, sanity: 20 }
-              - { on: others, sanity: -4 }
+              - { on: listener, health: 8, sanity: 22 }
+              - { on: others, sanity: -6 }
               - { flag: { archive_voice_resolved: true } }
-          - text: Тишина. Только эхо. Хуже, чем если бы ответил.
+          - text: Тишина. Только эхо. А {listener} с тех пор не разговаривает.
             effects:
-              - { on: all, sanity: -5 }
+              - { on: listener, health: -15, sanity: -25 }
+              - { on: all, health: -5, sanity: -10 }
               - { flag: { archive_voice_resolved: true } }

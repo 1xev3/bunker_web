@@ -26,49 +26,51 @@ events:
           all:
             - text: Кристалл успокоен — теперь светит ровно и даже ярче, чем прежде.
               effects:
-                - { on: all, sanity: 10 }
+                - { on: all, health: 8, sanity: 12 }
                 - { flag: { crystal_resolved: true } }
           some:
             - chance: 60
-              text: Резонанс подавили, но кристалл немного потускнел. Справились.
+              text: Резонанс подавили, но кристалл потускнел. Справились — едва.
               effects:
-                - { on: all, sanity: 4 }
+                - { on: all, health: -8, sanity: -8 }
                 - { flag: { crystal_resolved: true } }
-            - text: Попытка лишь усилила пульсацию — пришлось срочно отступить.
+            - text: Попытка усилила пульсацию — взрывная волна прошла по отсеку.
               effects:
-                - { on: all, sanity: -8 }
-                - { on: random, health: -10 }
+                - { on: all, health: -25, sanity: -15 }
+                - { on: random, health: -20 }
                 - { flag: { crystal_resolved: true } }
           none:
-            - text: Без подготовки прикоснулись не к тому — вспышка ослепила полубункера.
+            - text: Без подготовки прикоснулись не к тому — кристалл рванул.
               effects:
-                - { on: all, health: -8, sanity: -10 }
+                - { on: all, health: -35, sanity: -20 }
+                - { kill_random: true }
                 - { flag: { crystal_resolved: true } }
       - id: crystal_evacuate
         label: Отступить и ждать
         description: Освободить зону и надеяться, что само утихнет.
         outcomes:
-          - chance: 55
-            text: Пульсация затихла сама — кристалл стабилизировался. Повезло.
+          - chance: 50
+            text: Пульсация затихла сама — повезло.
             effects:
-              - { on: all, sanity: 3 }
+              - { on: all, health: -5, sanity: -5 }
               - { flag: { crystal_resolved: true } }
           - text: Кристалл рванул — взрывная волна прошла через несколько отсеков.
             effects:
-              - { on: all, health: -12, sanity: -8 }
+              - { on: all, health: -30, sanity: -20 }
+              - { kill_random: true }
               - { flag: { crystal_resolved: true } }
       - id: crystal_absorb
         label: Высосать в зарядные камни
         description: Направить выброс в накопители — рискованно, но выгодно.
         outcomes:
-          - chance: 40
+          - chance: 35
             text: Энергия ушла в камни — запасы маны пополнились сверх нормы.
             effects:
-              - { on: all, sanity: 8 }
-              - { food: 60 }
+              - { on: all, health: 5, sanity: 10 }
+              - { food: 80 }
               - { flag: { crystal_resolved: true } }
-          - text: Камни не выдержали перегрузки и взорвались. Осколки задели нескольких.
+          - text: Камни взорвались от перегрузки. Осколки задели нескольких насмерть.
             effects:
-              - { on: all, health: -10 }
-              - { on: random, health: -15 }
+              - { on: all, health: -30, sanity: -18 }
+              - { kill_random: true }
               - { flag: { crystal_resolved: true } }

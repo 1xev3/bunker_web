@@ -1,0 +1,103 @@
+# Магический мор расползается по убежищу — карантин или смерть нескольких человек.
+events:
+  - id: plague_first
+    type: flavor
+    weight: 1
+    when:
+      min_players: 3
+      min_month: 3
+      flag_unset: [plague_resolved]
+    participants:
+      patient_zero: {}
+    title: Первый заболел
+    text: >-
+      {patient_zero} слёг с температурой, синими пятнами на коже и бредом.
+      Это не простая хворь — запах из его угла узнаваем: магический мор.
+      Он заразен. Убежище тесное. Сколько уже надышались рядом с ним — неизвестно.
+    effects:
+      - { on: patient_zero, health: -20, sanity: -15 }
+      - { on: all, sanity: -10 }
+      - { on: patient_zero, status: { id: plague, label: Мор, stat: health, value: -10, months: 2 } }
+    schedule:
+      - { event: plague_spreading, in: 1, carry: [patient_zero] }
+
+  - id: plague_spreading
+    type: choice
+    scheduled_only: true
+    select:
+      kinds: [item, profession]
+      prompt_item: Достать лечебные запасы и антидоты
+      prompt_profession: Кто возьмётся лечить и организовать карантин
+    title: Мор расходится
+    text: >-
+      {patient_zero} ещё дышит, но уже двое кашляют с кровью. Если не
+      остановить сейчас — убежище вымрет за несколько недель. Можно
+      поднять все лечебные запасы и организовать карантин — или уповать
+      на то, что иммунитет спасёт.
+    options:
+      - id: plague_quarantine
+        label: Карантин и лечение
+        description: >-
+          Зелья, антидоты, лечебные кристаллы, руны стабилизации —
+          с опытным целителем и хорошим запасом можно остановить мор.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Мор остановлен — карантин сработал, больных вылечили.
+                {patient_zero} медленно, но идёт на поправку.
+              effects:
+                - { on: patient_zero, clear_status: plague, health: 10, sanity: 8 }
+                - { on: all, health: 5, sanity: 10 }
+                - { flag: { plague_resolved: true } }
+          some:
+            - chance: 50
+              text: >-
+                Мор замедлили, но не остановили — ещё трое слегли перед тем,
+                как зелья подействовали. {patient_zero} выжил едва.
+              effects:
+                - { on: patient_zero, health: -15, sanity: -10 }
+                - { on: all, health: -20, sanity: -15 }
+                - { kill_random: true }
+                - { flag: { plague_resolved: true } }
+            - text: >-
+                Лечение и карантин не справились с этим мором — он слишком
+                магический. Убежище выкосило за несколько дней.
+              effects:
+                - { on: patient_zero, kill: true }
+                - { on: all, health: -35, sanity: -25 }
+                - { kill_random: true }
+                - { kill_random: true }
+                - { flag: { plague_resolved: true } }
+          none:
+            - text: >-
+                Без средств и знания мор прошёлся по убежищу как коса.
+                Выжившие считают потери.
+              effects:
+                - { on: patient_zero, kill: true }
+                - { on: all, health: -45, sanity: -30 }
+                - { kill_random: true }
+                - { kill_random: true }
+                - { kill_random: true }
+                - { flag: { plague_resolved: true } }
+      - id: plague_hope
+        label: Надеяться на иммунитет
+        description: Ничего не делать — может, большинство само перенесёт.
+        outcomes:
+          - chance: 20
+            text: >-
+              Большинство и правда перенесло — мор оказался слабее, чем казалось.
+              {patient_zero} выжил, остальные отделались хворью.
+            effects:
+              - { on: patient_zero, health: -25, sanity: -15 }
+              - { on: all, health: -20, sanity: -12 }
+              - { flag: { plague_resolved: true } }
+          - text: >-
+              Иммунитета оказалось мало. Убежище вымирало тихо и долго.
+            effects:
+              - { on: patient_zero, kill: true }
+              - { on: all, health: -50, sanity: -30 }
+              - { kill_random: true }
+              - { kill_random: true }
+              - { flag: { plague_resolved: true } }

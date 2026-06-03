@@ -1,0 +1,95 @@
+# Ритуал вышел из-под контроля — сдержать взрыв маны или погибнуть всем вместе.
+events:
+  - id: ritual_gone_wrong
+    type: choice
+    weight: 1
+    when:
+      min_players: 2
+      min_month: 2
+      flag_unset: [ritual_resolved]
+    participants:
+      caster: {}
+    title: Ритуал вышел из-под контроля
+    text: >-
+      {caster} пытался провести ритуал без разрешения — что-то укрепить,
+      что-то вызвать, что-то узнать. Не вышло: рунный круг полыхнул белым,
+      стены трещат, из трещин бьёт сырая мана. Если не сдержать за ближайшие
+      минуты — убежище разнесёт изнутри.
+    select:
+      kinds: [item, profession]
+      prompt_item: Поднять артефакты для гашения маны
+      prompt_profession: Кто возьмётся сдержать выброс
+    options:
+      - id: ritual_contain
+        label: Сдержать выброс
+        description: >-
+          Стабилизаторы маны, рунные пластины, барьерные кристаллы, охранные
+          руны — чем больше и чем опытнее маг, тем выше шанс выжить всем.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Выброс погасили — рунный круг схлопнулся в точку и потух.
+                {caster} отделался ожогами и стыдом.
+              effects:
+                - { on: caster, health: -20, sanity: -15 }
+                - { on: others, health: 5, sanity: 8 }
+                - { flag: { ritual_resolved: true } }
+          some:
+            - chance: 50
+              text: >-
+                Удержали с трудом — часть выброса прошла через убежище
+                как волна. Кого-то отбросило о стену.
+              effects:
+                - { on: caster, health: -35, sanity: -20 }
+                - { on: all, health: -20, sanity: -15 }
+                - { flag: { ritual_resolved: true } }
+            - text: >-
+                Сдержать не успели — волна маны прокатилась по всем
+                отсекам. {caster} исчез в эпицентре.
+              effects:
+                - { on: caster, kill: true }
+                - { on: all, health: -35, sanity: -25 }
+                - { kill_random: true }
+                - { flag: { ritual_resolved: true } }
+          none:
+            - text: >-
+                Без артефактов и знаний никто не успел даже отступить.
+                Убежище тряхнуло так, что рухнула внутренняя перегородка.
+              effects:
+                - { on: caster, kill: true }
+                - { on: all, health: -50, sanity: -30 }
+                - { kill_random: true }
+                - { kill_random: true }
+                - { flag: { ritual_resolved: true } }
+      - id: ritual_run
+        label: Бежать из зоны
+        description: >-
+          Бросить {caster} и уйти как можно дальше вглубь убежища.
+        outcomes:
+          - chance: 45
+            text: >-
+              Взрыв ограничился одним отсеком — {caster} выжил, хотя
+              и потерял половину волос и половину рассудка.
+            effects:
+              - { on: caster, health: -60, sanity: -35 }
+              - { on: others, health: -10, sanity: -15 }
+              - { food: "15%" }
+              - { flag: { ritual_resolved: true } }
+          - text: >-
+              Взрыв нагнал всех — волна маны не знает стен. Один человек
+              растворился в ней без следа.
+            effects:
+              - { on: caster, kill: true }
+              - { on: all, health: -40, sanity: -25 }
+              - { kill_random: true }
+              - { flag: { ritual_resolved: true } }
+      - id: ritual_sacrifice
+        label: Вытолкнуть {caster} в эпицентр
+        description: >-
+          Пусть тот, кто устроил — и расплачивается. Жертва поглотит выброс.
+        effects:
+          - { on: caster, kill: true }
+          - { on: others, health: -8, sanity: -20 }
+          - { flag: { ritual_resolved: true } }
