@@ -57,6 +57,25 @@ const CHIP_TONE: Record<Tone, string> = {
   neutral: 'bg-zinc-800/70 text-zinc-400 border border-zinc-700/70',
 };
 
+// A success-vs-failure bar for the council's chosen option: green is the chance
+// of success, red the chance of failure, sized to the live odds.
+function SuccessFailureBar({ success }: { success: number }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(success)));
+  const fail = 100 - clamped;
+  return (
+    <div className="w-full">
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
+        {fail > 0 && <div className="bg-red-500" style={{ width: `${fail}%` }} />}
+        {clamped > 0 && <div className="bg-emerald-500" style={{ width: `${clamped}%` }} />}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] font-semibold">
+        <span className="text-red-400">провал {fail}%</span>
+        <span className="text-emerald-400">успех {clamped}%</span>
+      </div>
+    </div>
+  );
+}
+
 // A slim "good vs bad" bar collapsing outcomes by tone — an at-a-glance read
 // above the detailed per-outcome breakdown.
 function OddsBar({ odds }: { odds: OutcomeOdds[] }) {
@@ -190,6 +209,19 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
       { chance: 100 - successChance, tone: s.bad_tone, effects: s.fail_effects },
     ].filter(o => o.chance > 0);
   };
+
+  // Live success chance for the council's chosen option, used by the confirm
+  // bar. Scaled options track the current selection; fixed-odds options collapse
+  // their outcomes to the share of "good" tone chances.
+  const activeSuccessChance = (() => {
+    if (!activeOption) return 0;
+    if (activeOption.odds_scaled) return successChance;
+    const odds = activeOption.odds ?? [];
+    const total = odds.reduce((s, o) => s + o.chance, 0);
+    if (total <= 0) return 0;
+    const good = odds.filter(o => o.tone === 'good').reduce((s, o) => s + o.chance, 0);
+    return (good / total) * 100;
+  })();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
@@ -326,9 +358,7 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
         <div className="border-t border-zinc-800 p-5">
           {pending ? (
             <div className="flex flex-col items-center gap-3">
-              <p className="text-center text-xs text-zinc-500">
-                Совет выбрал. Сделайте выбор и подтвердите — иначе он останется пустым.
-              </p>
+              <SuccessFailureBar success={activeSuccessChance} />
               <div className="flex items-center gap-2">
                 <button
                   type="button"

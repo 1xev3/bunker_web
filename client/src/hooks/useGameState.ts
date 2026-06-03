@@ -8,9 +8,11 @@ type Action =
   | { type: 'PLAYER_RECONNECTED'; player_id: string }
   | { type: 'ADMIN_CHANGED'; new_admin_id: string }
   | { type: 'VOTING_RESULT'; eliminated: Player | null }
-  | { type: 'GAME_ENDED' };
+  | { type: 'GAME_ENDED' }
+  | { type: 'RESET' };
 
 function reducer(state: RoomState | null, action: Action): RoomState | null {
+  if (action.type === 'RESET') return null;
   if (!state) {
     if (action.type === 'SET_STATE') return action.payload;
     return null;
@@ -83,5 +85,7 @@ export function useGameState() {
     }
   }, []);
 
-  return { roomState, handleMessage, myPlayerIdRef };
+  const resetState = useCallback(() => dispatch({ type: 'RESET' }), []);
+
+  return { roomState, handleMessage, myPlayerIdRef, resetState };
 }

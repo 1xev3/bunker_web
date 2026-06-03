@@ -36,16 +36,20 @@ const PORT = process.env.PORT || 3001;
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
 let eaddrinuseRetries = 0;
+const MAX_EADDRINUSE_RETRIES = 20; // ~10s total with the backoff below
 function handleStartupError(error) {
   if (error?.code === 'EADDRINUSE') {
-    // On a `--watch` restart the replacement process can boot a few hundred ms
-    // before the old one (which shuts down gracefully below) releases the
-    // socket. A couple of short retries cover that race. If the port is still
-    // held after that it's a foreign/zombie process — bail with a clear message
-    // rather than spinning.
-    if (IS_DEV && eaddrinuseRetries < 3) {
+    // On a `--watch` restart the replacement process can boot before the old one
+    // (which shuts down gracefully below) releases the socket. On Windows this is
+    // worse: saving several files at once fires back-to-back restarts, and the OS
+    // can hold the socket in TIME_WAIT for a second or more. Retry persistently
+    // with a small backoff so the rebind succeeds as soon as the port frees,
+    // rather than giving up after a fraction of a second. Only a genuinely
+    // foreign process holding the port for the whole window bails out.
+    if (IS_DEV && eaddrinuseRetries < MAX_EADDRINUSE_RETRIES) {
       eaddrinuseRetries += 1;
-      setTimeout(() => { try { server.close(); } catch {} server.listen(PORT); }, 300);
+      const delay = Math.min(250 + eaddrinuseRetries * 100, 750);
+      setTimeout(() => { try { server.close(); } catch {} server.listen(PORT); }, delay);
       return;
     }
     console.error(`Port ${PORT} is already in use by another process. Free it and restart, or start with a different PORT.`);

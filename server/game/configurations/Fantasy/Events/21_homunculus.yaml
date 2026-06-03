@@ -1,76 +1,114 @@
-# Малый гомункул начал говорить — флейвор, потом выбор его судьбы с последствиями.
 events:
-  - id: homunculus_speaks
+  - id: homunculus_emerges
     type: flavor
     weight: 1
     when:
       min_players: 2
       flag_unset: [homunculus_resolved]
     participants:
-      witness: {}
-    title: Гомункул заговорил
+      finder: {}
+    vars:
+      origin:
+        - "за трубами теплообменника"
+        - "в замурованной нише под лестницей"
+        - "внутри пустого котла на кухне"
+        - "под сломанным верстаком в мастерской"
+        - "в щели между стеной и баком с водой"
+    title: Нечто из темноты
     text: >-
-      {witness} застал малого гомункула у окошка отсека — тот смотрел в
-      темноту коридора и что-то бормотал. Когда его окликнули, он обернулся
-      и чётко произнёс: «Я хочу имя». Потом замолчал и больше не отвечает.
+      {finder} заметил движение {event.origin}. Оттуда выбралось существо
+      размером с кошку — тёплое, с человеческими глазами. Оно посмотрело прямо
+      на {finder} и не убежало. Откуда оно взялось — непонятно: ничего подобного
+      в бункере раньше не было.
     effects:
-      - { on: witness, health: -5, sanity: -10 }
-      - { on: all, health: -4, sanity: -6 }
+      - { on: finder, sanity: -12 }
+      - { on: all, sanity: -5 }
     schedule:
-      - { event: homunculus_choice, in: 1, carry: [witness] }
+      - { event: homunculus_dilemma, in: 1, carry: [finder] }
 
-  - id: homunculus_choice
+  - id: homunculus_dilemma
     type: choice
     scheduled_only: true
-    title: Гомункул ждёт ответа
+    title: Существо никуда не уходит
     text: >-
-      Гомункул теперь смотрит на каждого, кто входит. Не двигается, не
-      работает — просто ждёт. {witness} говорит, что в его глазах что-то
-      появилось, чего раньше не было.
+      К утру существо обосновалось в углу общего отсека. Оно не агрессивно,
+      но смотрит на каждого входящего. {finder} говорит, что оно явно понимает,
+      о чём говорят рядом. Нужно что-то решить.
     options:
-      - id: homunculus_name
-        label: Дать ему имя
-        description: Признать его личностью — как бы странно это ни звучало.
-        effects:
-          - { on: all, health: 6, sanity: 12 }
-          - { on: witness, sanity: 10 }
-          - { flag: { homunculus_resolved: true } }
+      - id: homunculus_feed
+        label: Покормить и оставить
+        description: Дать ему еды — пусть живёт, если не мешает.
+        outcomes:
+          - chance: 55
+            effects:
+              - { on: all, health: 4, sanity: 8 }
+              - { food: -20 }
+              - { flag: { homunculus_resolved: true } }
+          - effects:
+              - { on: all, sanity: -8 }
+              - { food: -70 }
+              - { flag: { homunculus_resolved: true } }
         schedule:
-          - { event: homunculus_gift, in: 2, chance: 60 }
-      - id: homunculus_reset
-        label: Сбросить настройки
-        description: Стереть это поведение — слишком тревожно.
-        effects:
-          - { on: witness, health: -10, sanity: -22 }
-          - { on: others, health: -5, sanity: -5 }
-          - { flag: { homunculus_resolved: true } }
-      - id: homunculus_ignore
-        label: Сделать вид, что ничего нет
-        description: Просто подождать — само пройдёт.
-        effects:
-          - { on: all, health: -8, sanity: -12 }
-          - { flag: { homunculus_resolved: true } }
-        schedule:
-          - { event: homunculus_leaves, in: 2, chance: 55 }
+          - { event: homunculus_guardian, in: 2, chance: 40 }
 
-  - id: homunculus_gift
+      - id: homunculus_observe
+        label: Не трогать, понаблюдать
+        description: Подождать — может, само станет ясно, опасно оно или нет.
+        outcomes:
+          - chance: 45
+            effects:
+              - { on: all, sanity: -4 }
+              - { flag: { homunculus_resolved: true } }
+          - effects:
+              - { on: all, health: -5, sanity: -10 }
+              - { flag: { homunculus_resolved: true } }
+        schedule:
+          - { event: homunculus_leaves_quiet, in: 2, chance: 55 }
+
+      - id: homunculus_expel
+        label: Выставить за дверь
+        description: Снаружи его проблемы, не наши.
+        outcomes:
+          - chance: 60
+            effects:
+              - { on: finder, health: -5, sanity: -8 }
+              - { on: others, sanity: -5 }
+              - { flag: { homunculus_resolved: true } }
+          - effects:
+              - { on: all, health: -7, sanity: -14 }
+              - { flag: { homunculus_resolved: true } }
+        schedule:
+          - { event: homunculus_returns, in: 2, chance: 35 }
+
+  - id: homunculus_guardian
     type: flavor
     scheduled_only: true
-    title: Благодарность гомункула
+    title: Необычный сосед
     text: >-
-      Гомункул, которому дали имя, принёс к чьей-то койке горстку орехов и
-      свёрнутое одеяло. Потом встал рядом и замер — так, как охраняют.
+      Существо освоилось. Оно таскает мелкий мусор от входа, складывает инструменты
+      по местам — будто отплачивает за еду. Несколько раз будило дежурного, когда
+      в коридоре что-то двигалось. Непонятно, кто оно такое, но стало частью бункера.
     effects:
-      - { on: all, health: 8, sanity: 10 }
-      - { food: 60 }
+      - { on: all, health: 6, sanity: 10 }
+      - { food: 50 }
 
-  - id: homunculus_leaves
+  - id: homunculus_leaves_quiet
     type: flavor
     scheduled_only: true
-    title: Гомункул ушёл
+    title: Исчезновение
     text: >-
-      Утром его не нашли нигде. Дверь заперта изнутри — значит, он всё же
-      научился открывать засовы. Или никогда и не был заперт. Из его угла
-      пахнет чем-то горелым.
+      Существа больше нет. Ни следа, ни запаха — только примятая ветошь в углу,
+      где оно спало. Дверь заперта изнутри. Как оно вышло — никто не понимает.
     effects:
-      - { on: all, health: -10, sanity: -15 }
+      - { on: all, sanity: -8 }
+
+  - id: homunculus_returns
+    type: flavor
+    scheduled_only: true
+    title: Оно вернулось
+    text: >-
+      Ночью кто-то услышал царапанье у двери. Существо стоит снаружи —
+      исхудавшее, с ранами. Смотрит в щель и молчит. Его выгнали, но оно выжило.
+      Теперь все это знают.
+    effects:
+      - { on: all, health: -8, sanity: -18 }

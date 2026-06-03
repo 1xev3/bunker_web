@@ -56,10 +56,15 @@ events:
       - id: chest_seal
         label: Запечатать сундук рунами
         description: Накрыть защитными рунами — чтобы ничего больше не появлялось.
-        effects:
-          - { on: all, health: 4, sanity: 8 }
-          - { on: finder, sanity: 10 }
-          - { flag: { chest_mystery_resolved: true } }
+        outcomes:
+          - chance: 65
+            effects:
+              - { on: all, sanity: 6 }
+              - { on: finder, sanity: 8 }
+              - { flag: { chest_mystery_resolved: true } }
+          - effects:
+              - { on: all, health: -8, sanity: -12 }
+              - { flag: { chest_mystery_resolved: true } }
       - id: chest_watch
         label: Устроить засаду
         description: Кто-то дежурит у сундука всю ночь.

@@ -81,9 +81,15 @@ events:
                 - { on: accuser, health: -30, sanity: -20 }
                 - { on: all, health: -5, sanity: -12 }
       - id: take_side
-        label: Изгнать зачинщика
-        description: Выставить одного из них из общей части — пусть остынет в одиночестве.
-        effects:
-          - { on: hoarder, health: -20, sanity: -18 }
-          - { on: accuser, sanity: 6 }
-          - { on: others, health: -5, sanity: -8 }
+        label: Поддержать одну из сторон
+        description: Встать за кого-то — пусть конфликт получит исход, а не тлеет.
+        outcomes:
+          - chance: 45
+            effects:
+              - { on: hoarder, sanity: -14 }
+              - { on: accuser, sanity: 6 }
+              - { on: others, sanity: -3 }
+          - effects:
+              - { on: hoarder, health: -14, sanity: -14 }
+              - { on: accuser, sanity: -8 }
+              - { on: others, health: -4, sanity: -10 }

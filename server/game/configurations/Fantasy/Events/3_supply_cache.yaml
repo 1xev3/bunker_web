@@ -17,30 +17,43 @@ events:
       немало — но надо решить, как поделить находку, пока не начались споры.
     options:
       - id: share
-        label: Разделить поровну
-        description: Всё в общий котёл — по справедливости.
-        effects:
-          - { food: 180 }
-          - { on: all, sanity: 6 }
-          - { flag: { supply_cache_found: true } }
+        label: Разделить немедленно
+        description: Всё в общий котёл — пока не начались споры.
+        outcomes:
+          - chance: 65
+            effects:
+              - { food: 180 }
+              - { on: all, sanity: 8 }
+              - { flag: { supply_cache_found: true } }
+          - effects:
+              - { food: 140 }
+              - { on: all, sanity: -5 }
+              - { flag: { supply_cache_found: true } }
       - id: stockpile
         label: Убрать в резерв
-        description: Не трогать сейчас, отложить на чёрный день.
+        description: Не трогать сейчас — пригодится в трудный час.
         effects:
           - { food: 220 }
           - { on: all, sanity: -2 }
           - { flag: { supply_cache_found: true } }
         schedule:
           - { event: cache_spoiled, in: 3, chance: 40 }
-      - id: finder_keeps
-        label: Оставить нашедшему
-        description: "{finder} нашёл — {finder} и распоряжается."
-        effects:
-          - { food: 90 }
-          - { on: finder, sanity: 10 }
-          - { on: others, sanity: -6 }
-          - { on: finder, status: { id: envied, label: Зависть соседей, stat: sanity, value: -3, months: 2 } }
-          - { flag: { supply_cache_found: true } }
+      - id: finder_decides
+        label: Пусть нашедший решает
+        description: "{finder} нашёл — его слово первое."
+        outcomes:
+          - chance: 40
+            effects:
+              - { food: 160 }
+              - { on: finder, sanity: 8 }
+              - { on: others, sanity: 4 }
+              - { flag: { supply_cache_found: true } }
+          - effects:
+              - { food: 90 }
+              - { on: finder, sanity: 10 }
+              - { on: others, sanity: -7 }
+              - { on: finder, status: { id: envied, label: Зависть соседей, stat: sanity, value: -3, months: 2 } }
+              - { flag: { supply_cache_found: true } }
 
   - id: cache_spoiled
     type: flavor

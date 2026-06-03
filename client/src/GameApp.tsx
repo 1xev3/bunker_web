@@ -35,7 +35,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const intentionalCloseRef = useRef(false);
 
-  const { roomState, handleMessage, myPlayerIdRef } = useGameState();
+  const { roomState, handleMessage, myPlayerIdRef, resetState } = useGameState();
   const [isConnectionLost, setIsConnectionLost] = useState(false);
   const [showBunkerIntro, setShowBunkerIntro] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
@@ -123,10 +123,19 @@ export default function GameApp({ onOpenPackEditor }: Props) {
 
       if (msg.type === 'error') {
         if (msg.message === 'Invalid or expired token') {
+          // The room is gone (e.g. server restarted). Stop the reconnect loop,
+          // drop the dead session, and fall back to the welcome screen with a
+          // clear notice — otherwise the UI freezes behind the "reconnecting"
+          // overlay because myPlayerIdRef is a ref and roomState is never reset.
+          intentionalCloseRef.current = true;
+          clearTimeout(reconnectRef.current);
           localStorage.removeItem('bunker_token');
           localStorage.removeItem('bunker_room');
           localStorage.removeItem('bunker_player_id');
           myPlayerIdRef.current = null;
+          setIsConnectionLost(false);
+          resetState();
+          showFlashMessage('error', 'Сессия истекла или комната больше не существует. Подключитесь заново.');
         } else {
           showFlashMessage('error', msg.message);
         }
@@ -199,7 +208,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         wsLog('closed with no token — not reconnecting');
       }
     };
-  }, [clearHeartbeat, handleMessage, markHeartbeat, myPlayerIdRef, showFlashMessage, startHeartbeat]);
+  }, [clearHeartbeat, handleMessage, markHeartbeat, myPlayerIdRef, resetState, showFlashMessage, startHeartbeat]);
 
   useEffect(() => {
     if (roomState?.status === 'running' && roomState.bunker) {

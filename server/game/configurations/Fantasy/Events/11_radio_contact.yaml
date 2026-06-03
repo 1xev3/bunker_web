@@ -45,8 +45,8 @@ events:
         label: Заглушить камень
         description: Меньше знаешь — крепче спишь. Оборвать связь совсем.
         effects:
-          - { on: operator, sanity: -8 }
-          - { on: all, sanity: -3 }
+          - { on: operator, sanity: -5 }
+          - { on: all, sanity: 2 }
 
   - id: convoy_arrives
     type: choice
@@ -59,22 +59,37 @@ events:
       - id: welcome
         label: Впустить
         description: Разделить кров и припасы — вместе выжить легче.
-        effects:
-          - { food: 200 }
-          - { on: all, sanity: 8 }
-          - { add_room: true }
+        outcomes:
+          - chance: 55
+            effects:
+              - { food: 200 }
+              - { on: all, sanity: 8 }
+              - { add_room: true }
+          - effects:
+              - { food: 60 }
+              - { on: all, health: -8, sanity: -10 }
       - id: trade_only
         label: Только сменять
         description: На порог не пускать, но обменяться у ворот.
-        effects:
-          - { food: 120 }
-          - { on: operator, sanity: 4 }
+        outcomes:
+          - chance: 65
+            effects:
+              - { food: 120 }
+              - { on: operator, sanity: 4 }
+          - effects:
+              - { food: 50 }
+              - { on: all, sanity: -4 }
       - id: turn_away
         label: Прогнать
         description: Лишние рты ни к чему. Захлопнуть ворота.
-        effects:
-          - { on: all, sanity: -6 }
-          - { on: operator, status: { id: guilt, label: Чувство вины, stat: sanity, value: -4, months: 3 } }
+        outcomes:
+          - chance: 60
+            effects:
+              - { on: all, sanity: -4 }
+              - { on: operator, status: { id: guilt, label: Чувство вины, stat: sanity, value: -3, months: 2 } }
+          - effects:
+              - { on: all, health: -10, sanity: -8 }
+              - { on: operator, status: { id: guilt, label: Чувство вины, stat: sanity, value: -4, months: 3 } }
 
   - id: raiders_arrive
     type: choice

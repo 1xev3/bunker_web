@@ -54,25 +54,45 @@ events:
     title: Вор пойман
     text: >-
       {thief} стоит перед всеми, пряча глаза. Вина доказана — теперь убежищу
-      решать, что делать с тем, кто обкрадывал своих.
+      решать, что с этим делать.
     options:
-      - id: forgive
-        label: Простить
-        description: Дать шанс искупить вину работой — все мы на пределе.
-        effects:
-          - { on: thief, sanity: 6 }
-          - { on: others, sanity: -2 }
-          - { on: thief, status: { id: indebted, label: В долгу перед всеми, stat: sanity, value: -2, months: 2 } }
-      - id: ration_cut
-        label: Урезать паёк
-        description: Пусть отрабатывает украденное полупустым желудком.
-        effects:
-          - { on: thief, health: -12, sanity: -6 }
-          - { on: others, sanity: 3 }
-      - id: cast_out
-        label: Изгнать
-        description: Вора — за дверь. Жестоко, но другим наука.
-        effects:
-          - { on: thief, kill: true }
-          - { on: all, sanity: -7 }
-          - { on: random, status: { id: haunted, label: Тяжёлая память, stat: sanity, value: -3, months: 3 } }
+      - id: hear_out
+        label: Выслушать наедине
+        description: Поговорить без чужих ушей — может, за этим что-то стоит.
+        outcomes:
+          - chance: 50
+            effects:
+              - { on: thief, sanity: 8 }
+              - { on: others, sanity: 3 }
+              - { on: thief, status: { id: indebted, label: В долгу перед всеми, stat: sanity, value: -2, months: 2 } }
+          - effects:
+              - { on: thief, sanity: -6 }
+              - { on: others, sanity: -5 }
+              - { food: -40 }
+      - id: public_shame
+        label: Объявить прилюдно
+        description: Пусть все знают — тайное всегда выходит наружу.
+        outcomes:
+          - chance: 55
+            effects:
+              - { on: thief, health: -8, sanity: -8 }
+              - { on: others, sanity: 5 }
+          - effects:
+              - { on: thief, health: -14, sanity: -14 }
+              - { on: others, sanity: -4 }
+              - { on: thief, status: { id: broken, label: Надломлен, stat: health, value: -3, months: 2 } }
+      - id: open_vote
+        label: Отдать на суд всем
+        description: Пусть каждый скажет слово — это дело общее.
+        outcomes:
+          - chance: 35
+            effects:
+              - { on: all, sanity: 4 }
+          - chance: 40
+            effects:
+              - { on: thief, health: -10, sanity: -10 }
+              - { on: others, sanity: 2 }
+          - effects:
+              - { on: thief, kill: true }
+              - { on: all, sanity: -8 }
+              - { on: random, status: { id: haunted, label: Тяжёлая память, stat: sanity, value: -3, months: 3 } }

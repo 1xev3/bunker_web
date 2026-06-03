@@ -51,16 +51,27 @@ events:
       - id: horse_slaughter
         label: Забить на мясо
         description: Жестоко, но практично — голодные рты важнее.
-        effects:
-          - { food: 200 }
-          - { on: all, health: -5, sanity: -14 }
-          - { flag: { horse_incident: true } }
+        outcomes:
+          - chance: 65
+            effects:
+              - { food: 200 }
+              - { on: all, health: -3, sanity: -12 }
+              - { flag: { horse_incident: true } }
+          - effects:
+              - { food: 80 }
+              - { on: all, health: -6, sanity: -20 }
+              - { flag: { horse_incident: true } }
       - id: horse_release
         label: Выпустить
         description: Открыть ворота — может, выживет снаружи.
-        effects:
-          - { on: all, health: -5, sanity: -8 }
-          - { flag: { horse_incident: true } }
+        outcomes:
+          - chance: 60
+            effects:
+              - { on: all, sanity: -6 }
+              - { flag: { horse_incident: true } }
+          - effects:
+              - { on: all, health: -5, sanity: -12 }
+              - { flag: { horse_incident: true } }
         schedule:
           - { event: horse_returns, in: 3, chance: 25 }
 

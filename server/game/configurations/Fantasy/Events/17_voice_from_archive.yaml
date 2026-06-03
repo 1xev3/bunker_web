@@ -52,8 +52,8 @@ events:
         label: Отключить архив
         description: Слишком тревожно — лучше заглушить это.
         effects:
-          - { on: all, health: -6, sanity: -10 }
-          - { on: listener, health: -8, sanity: -15 }
+          - { on: all, sanity: -4 }
+          - { on: listener, sanity: -10 }
           - { flag: { archive_voice_resolved: true } }
       - id: archive_talk_back
         label: Заговорить с ним
