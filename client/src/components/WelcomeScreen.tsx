@@ -4,10 +4,11 @@ import type { ClientMessage, RoomListing, PackListing } from '../types/game';
 
 interface Props {
   onConnect: (msg: ClientMessage) => void;
+  onOpenPackEditor: (packId: string) => void;
   serverError?: string;
 }
 
-export default function WelcomeScreen({ onConnect, serverError }: Props) {
+export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError }: Props) {
   const [nickname, setNickname] = useState(() => localStorage.getItem('bunker_nickname') ?? '');
   const [roomCode, setRoomCode] = useState('');
   const [rooms, setRooms] = useState<RoomListing[]>([]);
@@ -162,6 +163,14 @@ export default function WelcomeScreen({ onConnect, serverError }: Props) {
                 onClick={handleCreate}
               >
                 <Plus size={15} /> Создать комнату
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => selectedPack && onOpenPackEditor(selectedPack)}
+                disabled={!selectedPack}
+              >
+                Редактировать выбранный пак
               </button>
             </div>
           ) : (

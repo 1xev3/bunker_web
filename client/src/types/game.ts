@@ -188,6 +188,24 @@ export interface PackListing {
   meta: PackMeta;
 }
 
+export interface PackStatsSection {
+  id: string;
+  label: string;
+  count: number;
+  group: string;
+}
+
+export interface PackStats {
+  id: string;
+  meta: PackMeta;
+  summary: {
+    total_entries: number;
+    config_files: number;
+    section_groups: number;
+  };
+  sections: PackStatsSection[];
+}
+
 export interface RoomState {
   room_code: string;
   admin_id: string;

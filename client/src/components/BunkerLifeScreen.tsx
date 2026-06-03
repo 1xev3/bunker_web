@@ -165,7 +165,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <><Utensils size={14} /> Запасы еды не изменились</>
         )
       ) : eventOutcome.survival_change > 0 ? (
-        <><TrendingUp size={14} /> Вам повезло! Шанс выживания: +{eventOutcome.survival_change}%</>
+        <><TrendingUp size={14} /> Шанс выживания: +{eventOutcome.survival_change}%</>
       ) : (
         <><TrendingDown size={14} /> {eventOutcome.outcome === 'failure' ? 'Не повезло. ' : ''}Шанс выживания: {eventOutcome.survival_change}%</>
       ),

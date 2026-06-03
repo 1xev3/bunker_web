@@ -33,7 +33,6 @@ AGES:
   - [[50, 70], 0.2]
   - [[70, 95], 0.1]
 
-# Простые списки ниже содержат только строки.
 BODY_TYPES:
   - [Худощавое, 0.3]
   - [Обычное, 0.3]
@@ -86,30 +85,32 @@ TRAITS:
   - Эгоистичный
   - Озабоченный
 
+# Объектный синтаксис: { label, weight, groups? }
+# Старый формат [значение, вес] тоже работает (без групп).
 HEALTH_STATES:
-  - [Здоров, 0.35]
-  - [Диабет, 0.05]
-  - [Астма, 0.05]
-  - [Аллергия, 0.05]
-  - [Болезнь сердца, 0.05]
-  - [Проблемы со зрением, 0.05]
-  - [Неизвестная болезнь, 0.05]
-  - [Анемия, 0.05]
-  - [Артрит, 0.05]
-  - [Мигрень, 0.05]
-  - [Депрессия, 0.05]
-  - [Гипертония, 0.05]
-  - [Язва желудка, 0.05]
-  - [Бессонница, 0.05]
-  - [Эпилепсия, 0.05]
-  - [ВИЧ, 0.05]
-  - [СПИД, 0.05]
-  - [Аутизм, 0.05]
-  - [Серая хворь, 0.05]
-  - [Гандонство, 0.05]
-  - [Хворь, 0.05]
-  - [Магич. отравление, 0.05]
-  - [Отравление, 0.05]
+  - { label: Здоров,               weight: 0.35, groups: [healthy] }
+  - { label: Диабет,               weight: 0.05, groups: [disease, chronic] }
+  - { label: Астма,                weight: 0.05, groups: [disease, chronic, respiratory] }
+  - { label: Аллергия,             weight: 0.05, groups: [disease, chronic] }
+  - { label: Болезнь сердца,       weight: 0.05, groups: [disease, chronic, serious] }
+  - { label: Проблемы со зрением,  weight: 0.05, groups: [disability, chronic] }
+  - { label: Неизвестная болезнь,  weight: 0.05, groups: [disease] }
+  - { label: Анемия,               weight: 0.05, groups: [disease, chronic] }
+  - { label: Артрит,               weight: 0.05, groups: [disease, chronic, disability] }
+  - { label: Мигрень,              weight: 0.05, groups: [disease, chronic] }
+  - { label: Депрессия,            weight: 0.05, groups: [mental, chronic] }
+  - { label: Гипертония,           weight: 0.05, groups: [disease, chronic, serious] }
+  - { label: Язва желудка,         weight: 0.05, groups: [disease, chronic] }
+  - { label: Бессонница,           weight: 0.05, groups: [mental, chronic] }
+  - { label: Эпилепсия,            weight: 0.05, groups: [disease, chronic, serious] }
+  - { label: ВИЧ,                  weight: 0.05, groups: [disease, chronic, serious, infectious] }
+  - { label: СПИД,                 weight: 0.05, groups: [disease, chronic, serious, infectious] }
+  - { label: Аутизм,               weight: 0.05, groups: [mental, disability, chronic] }
+  - { label: Серая хворь,          weight: 0.05, groups: [disease, magical] }
+  - { label: Гандонство,           weight: 0.05, groups: [mental] }
+  - { label: Хворь,                weight: 0.05, groups: [disease] }
+  - { label: Магич. отравление,    weight: 0.05, groups: [disease, magical, serious] }
+  - { label: Отравление,           weight: 0.05, groups: [disease, serious, injured] }
 
 HEALTH_STAGES:
   - [Лёгкое, 0.5]
@@ -117,36 +118,38 @@ HEALTH_STAGES:
   - [Тяжёлое, 0.2]
   - [При смерти, 0.05]
 
+# Объектный синтаксис: { label, groups? }
+# Старая строка тоже работает (без групп).
 HOBBIES:
-  - Рыбалка в подземных озёрах
-  - Выращивание алхимических трав
-  - Выживание в зачарованном лесу
-  - Ремонт артефактов
-  - Переписывание древних манускриптов
-  - Целительство
-  - Фехтование
-  - Стрельба из лука
-  - Алхимия
-  - Рунное дело
-  - Сварка мифриловых пластин
-  - Столярное дело
-  - Кузнечное дело
-  - Травничество
-  - Изготовление эликсиров
-  - Создание амулетов
-  - Строительство укреплений
-  - Разведение почтовых воронов
-  - Чтение летописей
-  - Рисование карт
-  - Приготовление походной похлёбки
-  - Паломничество
-  - Охота на чудовищ
-  - Соколиная охота
-  - Игра на лютне
-  - Сочинение баллад
-  - Гадание на рунах
-  - Наблюдение за звёздами
-  - Уход за грифонами
+  - { label: Рыбалка в подземных озёрах,         groups: [outdoor, survival, food] }
+  - { label: Выращивание алхимических трав,       groups: [intellectual, nature, survival] }
+  - { label: Выживание в зачарованном лесу,       groups: [outdoor, survival, nature] }
+  - { label: Ремонт артефактов,                   groups: [craftsman, magic, intellectual] }
+  - { label: Переписывание древних манускриптов,  groups: [intellectual] }
+  - { label: Целительство,                        groups: [medic, intellectual] }
+  - { label: Фехтование,                          groups: [combat, physical] }
+  - { label: Стрельба из лука,                    groups: [combat, outdoor, physical] }
+  - { label: Алхимия,                             groups: [intellectual, magic, medic] }
+  - { label: Рунное дело,                         groups: [intellectual, magic, craftsman] }
+  - { label: Сварка мифриловых пластин,           groups: [craftsman, physical] }
+  - { label: Столярное дело,                      groups: [craftsman, physical] }
+  - { label: Кузнечное дело,                      groups: [craftsman, physical] }
+  - { label: Травничество,                        groups: [nature, survival, medic] }
+  - { label: Изготовление эликсиров,              groups: [craftsman, magic, medic] }
+  - { label: Создание амулетов,                   groups: [craftsman, magic] }
+  - { label: Строительство укреплений,            groups: [craftsman, builder, survival] }
+  - { label: Разведение почтовых воронов,         groups: [nature, intellectual] }
+  - { label: Чтение летописей,                    groups: [intellectual] }
+  - { label: Рисование карт,                      groups: [intellectual, scout] }
+  - { label: Приготовление походной похлёбки,     groups: [food, survival, outdoor] }
+  - { label: Паломничество,                       groups: [spiritual, outdoor] }
+  - { label: Охота на чудовищ,                    groups: [combat, outdoor, survival] }
+  - { label: Соколиная охота,                     groups: [combat, outdoor, nature] }
+  - { label: Игра на лютне,                       groups: [art, social] }
+  - { label: Сочинение баллад,                    groups: [art, intellectual, social] }
+  - { label: Гадание на рунах,                    groups: [magic, intellectual] }
+  - { label: Наблюдение за звёздами,              groups: [intellectual, scout] }
+  - { label: Уход за грифонами,                   groups: [nature, outdoor] }
 
 PHOBIAS:
   - Замкнутых пространств

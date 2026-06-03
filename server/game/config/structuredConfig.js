@@ -32,12 +32,25 @@ function weightedEntity(entry, prefix, index, extraFactory = () => ({})) {
   if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'value' in entry && 'weight' in entry) {
     return entry;
   }
+  // Object syntax: { label, weight, groups? }
+  if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'label' in entry) {
+    const groups = Array.isArray(entry.groups) ? entry.groups : [];
+    const weight = typeof entry.weight === 'number' ? entry.weight : 1;
+    return { value: entity(entry.label, prefix, index, { ...extraFactory(entry.label, index), groups }), weight };
+  }
   const [value, weight] = entry;
   return { value: entity(value, prefix, index, extraFactory(value, index)), weight };
 }
 
 function plainEntities(values, prefix) {
-  return values.map((value, index) => entity(value, prefix, index));
+  return values.map((value, index) => {
+    // Object syntax: { label, groups? }
+    if (value && typeof value === 'object' && !Array.isArray(value) && 'label' in value) {
+      const groups = Array.isArray(value.groups) ? value.groups : [];
+      return entity(value.label, prefix, index, { groups });
+    }
+    return entity(value, prefix, index);
+  });
 }
 
 function weightedEntities(values, prefix, extraFactory) {
@@ -133,6 +146,7 @@ function normalizeConfig(config) {
     .map((value, index) => normalizeFoodSupply(value, index))
     .map((item, order) => ({ ...item, order }));
   next.BUNKER_ITEMS = plainEntities(config.BUNKER_ITEMS ?? [], 'bunker_item');
+  next.SCRIPTED_FILTERS = config.SCRIPTED_FILTERS ?? {};
 
   const inventoryByLabel = new Map(next.INVENTORY.map(item => [item.label, item]));
   const backpackByLabel = new Map(next.BACKPACK_ITEMS.map(item => [item.label, item]));

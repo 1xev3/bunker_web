@@ -1,0 +1,36 @@
+SCRIPTED_FILTERS:
+  medic:
+    any:
+      - profession_group: medic
+      - profession: целитель
+      - profession: алхимик
+
+  fighter:
+    profession_group: fighter
+
+  intellectual:
+    profession_group: intellectual
+
+  provider:
+    profession_group: provider
+
+  healthy:
+    health: Здоров
+
+  injured:
+    health_group: injured
+
+  sick:
+    health_group: disease
+
+  combat_ready:
+    all:
+      - not:
+          health_group: [injured, disease]
+      - profession_group: [fighter, military]
+
+  can_craft:
+    profession_group: craftsman
+
+  scout:
+    profession_group: scout

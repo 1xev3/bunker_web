@@ -6,10 +6,10 @@
     - Срочная травма
   description:
     - >-
-      Пострадавший в этом происшествии — {participant1}: {alt.injury}.
+      Пострадавший в этом происшествии — {patient}: {alt.injury}.
       Чем мы можем помочь ему прямо сейчас, чтобы он не погиб?
     - >-
-      Произошёл несчастный случай, и {participant1} уже теряет силы
+      Произошёл несчастный случай, и {patient} уже теряет силы
       из-за {alt.injury_cause}. Что мы сделаем в первую очередь,
       чтобы его стабилизировать?
   alt:
@@ -22,7 +22,8 @@
         - глубокого пореза и повреждённой ноги
         - тяжёлого ушиба груди и потери крови
   base_chance: 0.10
-  participants_template: random_one
+  participants:
+    - role: patient
   success_effects:
     - type: survival_change
       value: 15
@@ -30,7 +31,7 @@
     - type: survival_change
       value: -10
     - type: kill_participant
-      target: participant1
+      target: patient
   chain_success: patient_stabilized
   chain_failure: patient_died
 

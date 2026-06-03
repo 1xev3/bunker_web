@@ -41,6 +41,7 @@ function readEventsDirectory(packDir) {
   if (!fs.existsSync(eventsDir) || !fs.statSync(eventsDir).isDirectory()) return null;
 
   let eventSettings = {};
+  let scriptedFilters = {};
   const events = [];
 
   for (const filePath of walkDir(eventsDir)) {
@@ -54,8 +55,16 @@ function readEventsDirectory(packDir) {
     }
     if (!content) continue;
 
-    if (path.basename(filePath, path.extname(filePath)) === '_settings') {
+    const baseName = path.basename(filePath, path.extname(filePath));
+
+    if (baseName === '_settings') {
       if (content.EVENT_SETTINGS) eventSettings = content.EVENT_SETTINGS;
+      continue;
+    }
+    if (baseName === '_scripted_filters') {
+      if (content.SCRIPTED_FILTERS && typeof content.SCRIPTED_FILTERS === 'object') {
+        Object.assign(scriptedFilters, content.SCRIPTED_FILTERS);
+      }
       continue;
     }
 
@@ -66,7 +75,31 @@ function readEventsDirectory(packDir) {
     }
   }
 
-  return { EVENT_SETTINGS: eventSettings, EVENTS: events };
+  return { EVENT_SETTINGS: eventSettings, SCRIPTED_FILTERS: scriptedFilters, EVENTS: events };
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function countSectionEntries(value) {
+  if (Array.isArray(value)) return value.length;
+  if (isPlainObject(value)) return Object.keys(value).length;
+  if (value === undefined || value === null) return 0;
+  return 1;
+}
+
+function buildPackSections(files) {
+  return Object.entries(files)
+    .filter(([fileName, content]) => fileName !== 'Pack' && isPlainObject(content))
+    .flatMap(([fileName, content]) => Object.entries(content)
+      .map(([key, value]) => ({
+        id: `${fileName}.${key}`,
+        label: key,
+        count: countSectionEntries(value),
+        group: fileName,
+      }))
+      .filter((section) => section.count > 0));
 }
 
 function readPackFiles(packName) {
@@ -188,4 +221,33 @@ function loadPack(packName = getDefaultPackName()) {
   return config;
 }
 
-module.exports = { loadPack, listPacks, getDefaultPackName, validatePack, readPackMeta };
+function getPackStats(packName) {
+  const parsed = readPackFiles(packName);
+  if (!parsed.valid) {
+    reportPackIssues(packName, parsed.errors);
+    throw new Error(formatPackError(packName, parsed.errors));
+  }
+
+  const validation = validatePackContent(packName, parsed.files);
+  if (!validation.valid) {
+    reportPackIssues(packName, validation.errors);
+    throw new Error(formatPackError(packName, validation.errors));
+  }
+
+  const files = parsed.files;
+  const sections = buildPackSections(files);
+  const sectionGroups = new Set(sections.map((section) => section.group));
+
+  return {
+    id: packName,
+    meta: readPackMeta(packName),
+    summary: {
+      total_entries: sections.reduce((sum, section) => sum + section.count, 0),
+      config_files: Object.keys(files).length,
+      section_groups: sectionGroups.size,
+    },
+    sections,
+  };
+}
+
+module.exports = { loadPack, listPacks, getDefaultPackName, validatePack, readPackMeta, getPackStats };

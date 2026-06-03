@@ -25,4 +25,4 @@ alt:
       - пыльной нише за стеллажом
 success_effects:
   - type: food_change
-    value: 30
+    value: 300

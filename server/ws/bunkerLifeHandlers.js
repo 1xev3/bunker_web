@@ -8,6 +8,7 @@ const {
   materializeScheduledEvent,
   resolveEventParticipants,
 } = require('./eventHelpers');
+const { evaluateFilter } = require('./eventFilterEngine');
 
 function updateFood(room, delta) {
   const before = room.food;
@@ -15,49 +16,6 @@ function updateFood(room, delta) {
   if (room.food > room.foodMax) room.foodMax = room.food;
   if (room.food > 0) room.starvationPending = false;
   return room.food - before;
-}
-
-function getGenderLabel(player) {
-  return player?.config?.GENDERS.find(entry => entry.value.id === player.gender?.genderId)?.value?.label ?? null;
-}
-
-function normalizeBirthContext(room, context = {}) {
-  const next = { ...context };
-  const motherPlayer = next.mother_id ? room.getPlayer(next.mother_id) : null;
-  const fatherPlayer = next.father_id ? room.getPlayer(next.father_id) : null;
-
-  let resolvedMother = motherPlayer;
-  let resolvedFather = fatherPlayer;
-
-  if (motherPlayer && fatherPlayer) {
-    const motherGender = getGenderLabel(motherPlayer);
-    const fatherGender = getGenderLabel(fatherPlayer);
-    if (motherGender === 'Мужчина' && fatherGender === 'Женщина') {
-      resolvedMother = fatherPlayer;
-      resolvedFather = motherPlayer;
-    } else if (motherGender !== 'Женщина' && fatherGender === 'Женщина') {
-      resolvedMother = fatherPlayer;
-      resolvedFather = motherPlayer;
-    }
-  }
-
-  if (resolvedMother) {
-    next.mother_id = resolvedMother.id;
-    next.mother_name = resolvedMother.name;
-    next.mother_race_id = resolvedMother.race?.id ?? next.mother_race_id;
-  }
-  if (resolvedFather) {
-    next.father_id = resolvedFather.id;
-    next.father_name = resolvedFather.name;
-    next.father_race_id = resolvedFather.race?.id ?? next.father_race_id;
-  }
-
-  return next;
-}
-
-function normalizeScheduledEventContext(room, eventId, context = {}) {
-  if (eventId === 'birth') return normalizeBirthContext(room, context);
-  return context;
 }
 
 function hasScheduledEvent(room, scheduledEvent) {
@@ -69,17 +27,33 @@ function hasScheduledEvent(room, scheduledEvent) {
   );
 }
 
-function resolveScheduledParticipant(participants, participantRef, contextKey, effect) {
-  if (effect?.event_id === 'birth' && (contextKey === 'mother' || contextKey === 'father')) {
-    const female = participants.find(player => getGenderLabel(player) === 'Женщина') ?? null;
-    const male = participants.find(player => getGenderLabel(player) === 'Мужчина') ?? null;
-    if (contextKey === 'mother' && female) return female;
-    if (contextKey === 'father' && male) return male;
-  }
+// Resolves a participant reference (role name or legacy "participantN") to a player.
+function resolveScheduledParticipant(participants, participantRef, participantRoles) {
+  // Role name lookup (new system)
+  const playerId = participantRoles?.[participantRef];
+  if (playerId) return participants.find(p => p.id === playerId) ?? null;
 
+  // Legacy: participant1, participant2, etc.
   const match = String(participantRef).match(/^participant(\d+)$/);
   if (!match) return null;
   return participants[Number(match[1]) - 1] ?? null;
+}
+
+function evaluateEffectCondition(condition, room, context) {
+  if (!condition || typeof condition !== 'object') return false;
+  if ('participant' in condition && 'filter' in condition) {
+    const roles = context?.participantRoles ?? {};
+    const playerId = roles[condition.participant];
+    if (!playerId) return false;
+    const player = room.getPlayer(playerId);
+    if (!player) return false;
+    return evaluateFilter(condition.filter, player, room.config.SCRIPTED_FILTERS ?? {});
+  }
+  if (condition.game === 'survival_below') return room.survivalChance < (condition.value ?? 0);
+  if (condition.game === 'survival_above') return room.survivalChance > (condition.value ?? 0);
+  if (condition.game === 'food_below') return room.food < (condition.value ?? 0);
+  if (condition.game === 'player_count_below') return room.getActivePlayers().length < (condition.value ?? 0);
+  return false;
 }
 
 function normalizeEffectsArray(event, succeeded) {
@@ -117,8 +91,15 @@ function applyBunkerEventEffect(room, effect, context) {
     return result;
   }
 
+  if (effect.type === 'if') {
+    const conditionMet = evaluateEffectCondition(effect.condition, room, context);
+    const branch = conditionMet ? (effect.then ?? []) : (effect.else ?? []);
+    return applyEffectsArray(room, branch, context);
+  }
+
   if (effect.type === 'kill_participant') {
     const participantIds = context?.participantIds ?? [];
+    const participantRoles = context?.participantRoles ?? {};
     if (effect.target === 'each_participant') {
       const candidates = participantIds.map(id => room.getPlayer(id)).filter(p => p?.is_active);
       for (const target of candidates) {
@@ -129,10 +110,9 @@ function applyBunkerEventEffect(room, effect, context) {
       return result;
     }
     let target = null;
-    if (effect.target === 'participant1' && participantIds[0]) {
-      target = room.getPlayer(participantIds[0]);
-    } else if (effect.target === 'participant2' && participantIds[1]) {
-      target = room.getPlayer(participantIds[1]);
+    const roleId = participantRoles[effect.target];
+    if (roleId) {
+      target = room.getPlayer(roleId);
     } else {
       const candidates = participantIds.map(id => room.getPlayer(id)).filter(p => p?.is_active);
       if (candidates.length > 0) target = candidates[Math.floor(Math.random() * candidates.length)];
@@ -191,9 +171,10 @@ function applyBunkerEventEffect(room, effect, context) {
     const scheduledContext = {};
     if (effect.context_from_participants) {
       const participantIds = context?.participantIds ?? [];
+      const participantRoles = context?.participantRoles ?? {};
       const participants = participantIds.map(id => room.getPlayer(id)).filter(Boolean);
       for (const [contextKey, participantRef] of Object.entries(effect.context_from_participants)) {
-        const p = resolveScheduledParticipant(participants, participantRef, contextKey, effect);
+        const p = resolveScheduledParticipant(participants, participantRef, participantRoles);
         if (!p) continue;
         scheduledContext[`${contextKey}_name`] = p.name;
         scheduledContext[`${contextKey}_id`] = p.id;
@@ -203,7 +184,7 @@ function applyBunkerEventEffect(room, effect, context) {
     result.scheduledEvent = {
       event_id: effect.event_id,
       trigger_month: room.currentMonth + (effect.delay_months ?? 1),
-      context: normalizeScheduledEventContext(room, effect.event_id, scheduledContext),
+      context: scheduledContext,
     };
     return result;
   }
@@ -228,6 +209,7 @@ function applyEffectsArray(room, effects, context) {
     if (Array.isArray(r.playersKilled) && r.playersKilled.length > 0) accumulated.playersKilled.push(...r.playersKilled);
     if (r.roomChanged) accumulated.roomChanged = true;
     if (r.playerAdded) accumulated.playersAdded.push(r.playerAdded);
+    if (Array.isArray(r.playersAdded) && r.playersAdded.length > 0) accumulated.playersAdded.push(...r.playersAdded);
     if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
   }
 
@@ -332,7 +314,7 @@ function maybeChainOrNextMonth(roomCode, chainEventId) {
   }
 
   const materialized = materializeEvent(chainDef);
-  const participants = resolveEventParticipants(materialized, room.getActivePlayers());
+  const participants = resolveEventParticipants(materialized, room.getActivePlayers(), room.config.SCRIPTED_FILTERS);
   room.activeEvent = participants.length > 0
     ? materializeEventParticipants(materialized, participants)
     : materialized;
@@ -347,7 +329,7 @@ function resolveNarrativeEvent(roomCode) {
   const event = room.activeEvent;
   if (event.event_type !== 'narrative') return;
 
-  const context = { participantIds: event.participant_ids ?? [], scheduledContext: event.scheduled_context };
+  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
   const effects = normalizeEffectsArray(event, true);
   const effectResult = applyEffectsArray(room, effects, context);
 
@@ -387,10 +369,7 @@ function startNextMonth(roomCode) {
     const scheduled = due[0];
     const eventDef = room.config.EVENTS.find(e => e.id === scheduled.event_id);
     if (eventDef) {
-      const materialized = materializeScheduledEvent(
-        eventDef,
-        normalizeScheduledEventContext(room, scheduled.event_id, scheduled.context),
-      );
+      const materialized = materializeScheduledEvent(eventDef, scheduled.context);
       room.activeEvent = materialized;
       wsManager.broadcastState(roomCode, room);
       // Remaining due events are dropped this month (next month check will handle if still pending)
@@ -438,15 +417,14 @@ function startNextMonth(roomCode) {
   room.starvationPending = false;
 
   if (Math.random() < room.config.packSettings.events.bunker_event_chance) {
-    const event = pickRandomEvent(room.config);
-    const participants = resolveEventParticipants(event, room.getActivePlayers());
-    if (event.participants_template && participants.length === 0) {
+    const picked = pickRandomEvent(room.config, room.getActivePlayers(), room.config.SCRIPTED_FILTERS);
+    if (!picked) {
       room.activeEvent = null;
       wsManager.broadcastState(roomCode, room);
       setTimeout(() => startNextMonth(roomCode), room.monthDuration);
       return;
     }
-    room.activeEvent = materializeEventParticipants(event, participants);
+    room.activeEvent = materializeEventParticipants(picked.event, picked.participants);
     wsManager.broadcastState(roomCode, room);
   } else {
     room.activeEvent = null;
@@ -461,7 +439,7 @@ function resolvePassiveEvent(roomCode) {
   const event = room.activeEvent;
   if (event.event_type !== 'passive') return;
 
-  const context = { participantIds: event.participant_ids ?? [], scheduledContext: event.scheduled_context };
+  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
   const effects = normalizeEffectsArray(event, true);
   const effectResult = applyEffectsArray(room, effects, context);
 
@@ -601,7 +579,7 @@ function resolveChoiceEvent(roomCode, outcome) {
   const event = room.activeEvent;
 
   const succeeded = outcome === 'success';
-  const context = { participantIds: event.participant_ids ?? [], scheduledContext: event.scheduled_context };
+  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
   const effects = normalizeEffectsArray(event, succeeded);
   const effectResult = applyEffectsArray(room, effects, context);
 
@@ -693,7 +671,7 @@ function handleResolveEvent(roomCode, playerId, msg) {
     succeeded = Math.random() < successChance;
   }
   const effects = normalizeEffectsArray(event, succeeded);
-  const context = { participantIds: event.participant_ids ?? [], scheduledContext: event.scheduled_context };
+  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
 
   for (const entry of selectedItems) consumeSelectedItem(room, entry);
 

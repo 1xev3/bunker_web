@@ -8,6 +8,7 @@
 # variants используется вместо effect, если у способности есть выбор режима.
 PROFESSION_ABILITIES:
   Целитель:
+    groups: [medic, intellectual]
     title: Исцеляющий свет
     description: Устанавливает здоровье выбранного игрока в «Здоров».
     targetType: other
@@ -18,6 +19,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} исцелил игрока {target}."
 
   Рунный кузнец:
+    groups: [craftsman, magic]
     title: Порча руны
     description: Заменяет инвентарь выбранного игрока на «Проклят».
     targetType: other
@@ -28,6 +30,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} испортил снаряжение игрока {target}."
 
   Наставник:
+    groups: [intellectual, social]
     title: Наставление
     description: Случайно заменяет хобби выбранного игрока на другое.
     targetType: other
@@ -37,6 +40,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} наставил игрока {target}."
 
   Рыцарь:
+    groups: [fighter, military]
     title: Оружейная заначка
     description: Добавляет «Дальнобойный арбалет» в свой рюкзак.
     targetType: self
@@ -46,6 +50,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} использовал личную способность."
 
   Земледелец:
+    groups: [farmer, provider, nature]
     title: Щедрый урожай
     description: Повышает запас еды в бункере на одну ступень.
     targetType: none
@@ -55,6 +60,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} увеличил запас еды в бункере."
 
   Провидец:
+    groups: [magic, scout, intellectual]
     title: Видение
     description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
     targetType: other
@@ -63,6 +69,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} использовал способность на игроке {target}."
 
   Трактирщик:
+    groups: [provider, social]
     title: Сытная похлёбка
     description: Повышает запас еды в бункере на одну ступень.
     targetType: none
@@ -72,6 +79,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} увеличил запас еды в бункере."
 
   Каменщик:
+    groups: [craftsman, builder]
     title: Припас мастера
     description: Добавляет «Набор инструментов» в свой рюкзак.
     targetType: self
@@ -81,6 +89,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} использовал личную способность."
 
   Арканист:
+    groups: [magic, intellectual]
     title: Чародейский опыт
     description: Случайно меняет здоровье или фобию выбранного игрока на другое значение.
     targetType: other
@@ -98,6 +107,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} поставил магический опыт над игроком {target}."
 
   Наездник грифона:
+    groups: [military, scout, nature]
     title: Воздушная разведка
     description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
     targetType: other
@@ -106,6 +116,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} раскрыл у игрока {target} атрибут \"{revealed_label}\": {revealed_value}."
 
   Грозовой маг:
+    groups: [magic, fighter]
     title: Удар молнией
     description: Ухудшает здоровье выбранного игрока.
     targetType: other
@@ -116,6 +127,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} поразил молнией игрока {target}."
 
   Мастер водоводов:
+    groups: [craftsman, builder]
     title: Порча водовода
     description: Ухудшает здоровье выбранного игрока.
     targetType: other
@@ -126,6 +138,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} испортил водовод игроку {target}."
 
   Исповедник:
+    groups: [social, spiritual, intellectual]
     title: Исповедь
     description: Случайно заменяет фобию выбранного игрока на другую.
     targetType: other
@@ -135,6 +148,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} изменил фобию игрока {target}."
 
   Друид:
+    groups: [magic, nature, spiritual]
     title: Зов природы
     description: Случайно меняет пол, телосложение или здоровье выбранного игрока.
     targetType: other
@@ -157,6 +171,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} вызвал изменение природы у игрока {target}."
 
   Алхимик:
+    groups: [medic, magic, intellectual]
     title: Эликсир или яд
     description: Устанавливает здоровье выбранного игрока в «Здоров» или ухудшает его.
     targetType: other
@@ -176,6 +191,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} применил алхимический состав на игроке {target}."
 
   Артефактор:
+    groups: [craftsman, magic]
     title: Разбор артефакта
     description: "Забирает инвентарь выбранного игрока себе, тому ставит «Разряжен»."
     targetType: other
@@ -186,6 +202,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} разобрал снаряжение игрока {target}."
 
   Бронник:
+    groups: [craftsman, military]
     title: Перековка
     description: Случайно меняет инвентарь выбранного игрока на другой предмет.
     targetType: other
@@ -195,6 +212,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} перековал снаряжение игрока {target}."
 
   Следопыт:
+    groups: [scout, provider, nature]
     title: Добыча
     description: Повышает запас еды в бункере на одну ступень.
     targetType: none
@@ -204,6 +222,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} увеличил запас еды в бункере."
 
   Ассасин:
+    groups: [fighter, military]
     title: Стирание следов
     description: Заменяет инвентарь выбранного игрока на «Обобран».
     targetType: other
@@ -214,6 +233,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} лишил игрока {target} его инвентаря."
 
   Теневой лазутчик:
+    groups: [scout, fighter]
     title: Тайная слежка
     description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
     targetType: other
@@ -222,6 +242,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} использовал способность на игроке {target}."
 
   Купец:
+    groups: [social, provider]
     title: Бартер
     description: Меняет местами инвентарь двух выбранных игроков.
     targetType: pair
@@ -231,6 +252,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} обменял инвентарь игроков {target1} и {target2}."
 
   Казначей:
+    groups: [social, provider]
     title: Звон монет
     description: Случайно заменяет доп. факт выбранного игрока на другой.
     targetType: other
@@ -240,6 +262,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} подкупил игрока {target}."
 
   Хранитель хартий:
+    groups: [intellectual, social]
     title: Перепись хроник
     description: Случайно заменяет доп. факт выбранного игрока на другой.
     targetType: other
@@ -249,6 +272,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} переписал биографию игрока {target}."
 
   Зодчий:
+    groups: [intellectual, builder]
     title: Чтение планов
     description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
     targetType: other
@@ -257,6 +281,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} использовал способность на игроке {target}."
 
   Инквизитор:
+    groups: [military, social, intellectual]
     title: Дознание
     description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
     targetType: other
@@ -265,6 +290,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} раскрыл у игрока {target} атрибут \"{revealed_label}\": {revealed_value}."
 
   Арбитр:
+    groups: [social, intellectual]
     title: Приговор
     description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
     targetType: other
@@ -273,6 +299,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} вынес приговор по игроку {target}: атрибут \"{revealed_label}\" — {revealed_value}."
 
   Разбойник:
+    groups: [fighter]
     title: Налёт
     description: "Забирает инвентарь выбранного игрока себе, тому ставит Табличка 'лох'."
     targetType: other
@@ -283,6 +310,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} ограбил игрока {target}."
 
   Медовар:
+    groups: [provider, social]
     title: Хмельной настой
     description: Случайно заменяет доп. факт или инвентарь выбранного игрока на другой.
     targetType: other
@@ -300,6 +328,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} опоил игрока {target}."
 
   Соблазнитель:
+    groups: [social]
     title: Чары
     description: Случайно заменяет пол или доп. факт выбранного игрока на другой.
     targetType: other
@@ -317,6 +346,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} повлиял на игрока {target}."
 
   Шут:
+    groups: [social]
     title: Едкая насмешка
     description: Случайно заменяет фобию или доп. факт выбранного игрока на другой.
     targetType: other
@@ -334,6 +364,7 @@ PROFESSION_ABILITIES:
     publicMessage: "{actor} вывел из себя игрока {target}."
 
   Иллюзионист:
+    groups: [magic, social]
     title: Морок
     description: Случайно заменяет один скрытый атрибут выбранного игрока на другой.
     targetType: pair

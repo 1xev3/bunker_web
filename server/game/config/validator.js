@@ -18,6 +18,13 @@ function validateStringArray(value, scope, errors) {
     return;
   }
   value.forEach((item, index) => {
+    // Object syntax: { label, groups? }
+    if (item && typeof item === 'object' && !Array.isArray(item) && 'label' in item) {
+      if (typeof item.label !== 'string' || item.label.trim() === '') {
+        addError(errors, `${scope}[${index}].label`, 'ожидается непустая строка');
+      }
+      return;
+    }
     if (typeof item !== 'string' || item.trim() === '') {
       addError(errors, `${scope}[${index}]`, 'ожидается непустая строка');
       return;
@@ -103,8 +110,21 @@ function extractTemplateKeys(value) {
   return [...value.matchAll(EVENT_TEMPLATE_RE)].map(match => match[1]);
 }
 
-function isParticipantTemplateKey(key) {
-  return key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key) || key.startsWith('context.');
+function isParticipantTemplateKey(key, eventRoles) {
+  if (key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key) || key.startsWith('context.')) return true;
+  // Role name or role.attribute from participants slots
+  const base = key.includes('.') ? key.slice(0, key.indexOf('.')) : key;
+  return eventRoles?.has(base) ?? false;
+}
+
+function getEventRoles(event) {
+  const roles = new Set();
+  if (Array.isArray(event.participants)) {
+    event.participants.forEach((slot, i) => {
+      roles.add(typeof slot.role === 'string' && slot.role.trim() !== '' ? slot.role : `participant${i + 1}`);
+    });
+  }
+  return roles;
 }
 
 function validateEventText(value, scope, errors) {
@@ -135,8 +155,8 @@ function resolveTemplateSource(event, altText, key) {
   return { exists: key in event, value: event[key], rawKey: key };
 }
 
-function validateEventTemplateSource(event, altText, scope, key, errors) {
-  if (isParticipantTemplateKey(key)) return;
+function validateEventTemplateSource(event, altText, scope, key, errors, eventRoles) {
+  if (isParticipantTemplateKey(key, eventRoles)) return;
   const source = resolveTemplateSource(event, altText, key);
   if (!source.exists) {
     addError(errors, scope, `плейсхолдер "{${key}}" ссылается на отсутствующий ключ "${source.rawKey}"`);
@@ -163,10 +183,11 @@ function validateEventTemplateSource(event, altText, scope, key, errors) {
 }
 
 function validateEventTemplateReferences(event, altText, scope, fieldName, value, errors) {
+  const eventRoles = getEventRoles(event);
   const entries = Array.isArray(value) ? value : [value];
   for (const entry of entries) {
     for (const key of extractTemplateKeys(entry)) {
-      validateEventTemplateSource(event, altText, `${scope}.${fieldName}`, key, errors);
+      validateEventTemplateSource(event, altText, `${scope}.${fieldName}`, key, errors, eventRoles);
     }
   }
 }
@@ -189,6 +210,16 @@ function validateWeightedTable(value, scope, errors, valueValidator = () => {}) 
     return;
   }
   value.forEach((entry, index) => {
+    // Object syntax: { label, weight, groups? }
+    if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'label' in entry) {
+      if (typeof entry.label !== 'string' || entry.label.trim() === '') {
+        addError(errors, `${scope}[${index}].label`, 'ожидается непустая строка');
+      }
+      if (typeof entry.weight !== 'number' || !Number.isFinite(entry.weight) || entry.weight <= 0) {
+        addError(errors, `${scope}[${index}].weight`, 'вес должен быть положительным числом');
+      }
+      return;
+    }
     if (!Array.isArray(entry) || entry.length !== 2) {
       addError(errors, `${scope}[${index}]`, 'ожидается массив из 2 элементов: [значение, вес]');
       return;
@@ -519,10 +550,24 @@ function validatePackContent(packName, files) {
         if (Number.isInteger(event.participants_min) && Number.isInteger(event.participants_max) && event.participants_max < event.participants_min) {
           addError(errors, `${scope}.participants_max`, 'must be greater than or equal to participants_min');
         }
+        if (event.participants != null) {
+          if (!Array.isArray(event.participants) || event.participants.length === 0) {
+            addError(errors, `${scope}.participants`, 'ожидается непустой массив слотов');
+          } else {
+            event.participants.forEach((slot, i) => {
+              const slotScope = `${scope}.participants[${i}]`;
+              if (!isPlainObject(slot)) { addError(errors, slotScope, 'ожидается объект'); return; }
+              if (slot.role != null && typeof slot.role !== 'string') addError(errors, `${slotScope}.role`, 'ожидается строка');
+              if (slot.optional != null && typeof slot.optional !== 'boolean') addError(errors, `${slotScope}.optional`, 'ожидается boolean');
+              if (slot.filter != null && !isPlainObject(slot.filter)) addError(errors, `${slotScope}.filter`, 'ожидается объект');
+            });
+          }
+        }
         const KNOWN_EFFECT_TYPES = new Set([
           'survival_change', 'food_change',
           'kill_participant', 'kill_random_active',
           'remove_room', 'add_room', 'add_player', 'schedule_event',
+          'if',
         ]);
 
         const validateEffect = (eff, effScope) => {
@@ -533,15 +578,23 @@ function validatePackContent(packName, files) {
           if (eff.type === 'food_change' && typeof eff.value !== 'number') addError(errors, `${effScope}.value`, 'ожидается число');
           if (eff.chance != null && (typeof eff.chance !== 'number' || eff.chance <= 0 || eff.chance > 1)) addError(errors, `${effScope}.chance`, 'ожидается число от 0 (исключительно) до 1');
           if (eff.per_target_chance != null && (typeof eff.per_target_chance !== 'number' || eff.per_target_chance <= 0 || eff.per_target_chance > 1)) addError(errors, `${effScope}.per_target_chance`, 'ожидается число от 0 (исключительно) до 1');
-          if (eff.type === 'kill_participant' && eff.target != null && !['participant1', 'participant2', 'random_participant', 'each_participant'].includes(eff.target)) {
-            addError(errors, `${effScope}.target`, 'ожидается participant1 | participant2 | random_participant | each_participant');
-          }
           if (eff.per_target_chance != null && !(eff.type === 'kill_participant' && eff.target === 'each_participant')) {
             addError(errors, `${effScope}.per_target_chance`, 'допустим только для kill_participant с target: each_participant');
           }
           if (eff.type === 'schedule_event') {
             if (typeof eff.event_id !== 'string' || eff.event_id.trim() === '') addError(errors, `${effScope}.event_id`, 'ожидается непустая строка');
             if (!Number.isInteger(eff.delay_months) || eff.delay_months < 1) addError(errors, `${effScope}.delay_months`, 'ожидается целое число >= 1');
+          }
+          if (eff.type === 'if') {
+            if (!isPlainObject(eff.condition)) addError(errors, `${effScope}.condition`, 'ожидается объект условия');
+            if (eff.then != null) {
+              if (!Array.isArray(eff.then)) addError(errors, `${effScope}.then`, 'ожидается массив эффектов');
+              else eff.then.forEach((e, i) => validateEffect(e, `${effScope}.then[${i}]`));
+            }
+            if (eff.else != null) {
+              if (!Array.isArray(eff.else)) addError(errors, `${effScope}.else`, 'ожидается массив эффектов');
+              else eff.else.forEach((e, i) => validateEffect(e, `${effScope}.else[${i}]`));
+            }
           }
         };
 

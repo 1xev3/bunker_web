@@ -5,17 +5,18 @@ title:
   - Потёртый снимок из прошлого
 description:
   - >-
-    {participant1} показывает остальным {alt.memento}, и все вдруг чувствуют,
+    {storyteller} показывает остальным {alt.memento}, и все вдруг чувствуют,
     за что именно они борются. Воля к выживанию окрепла.
   - >-
-    {participant1} достаёт {alt.memento}, и разговоры вдруг становятся очень личными.
+    {storyteller} достаёт {alt.memento}, и разговоры вдруг становятся очень личными.
     Память о прежней жизни заметно укрепила дух группы.
 alt:
   - memento:
       - фотографию своей семьи
       - старый снимок дома
       - выцветший портрет близких
-participants_template: random_one
+participants:
+  - role: storyteller
 success_effects:
   - type: survival_change
     value: 3

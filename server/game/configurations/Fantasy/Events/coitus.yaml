@@ -6,12 +6,18 @@
     - Переспали
   description:
     - >-
-      {participant1} вставил {participant2} как следует.
+      {father} вставил {mother} как следует.
       Тепло человеческой близости немного подняло общий дух.
     - >-
-      {participant1} случайно застрял, а {participant2} время не терял(а).
+      {father} случайно застрял, а {mother} время не теряла.
       Вот такие дела.
-  participants_template: couple
+  participants:
+    - role: father
+      filter:
+        gender: male
+    - role: mother
+      filter:
+        gender: female
   success_effects:
     - type: survival_change
       value: 5
@@ -19,8 +25,8 @@
       event_id: birth
       delay_months: 9
       context_from_participants:
-        mother: participant2
-        father: participant1
+        mother: mother
+        father: father
 
 - id: birth
   event_type: passive

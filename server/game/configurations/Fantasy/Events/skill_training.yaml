@@ -5,17 +5,18 @@ title:
   - Небольшая тренировка
 description:
   - >-
-    Сегодня {participant1} учит остальных {alt.topic}.
+    Сегодня {teacher} учит остальных {alt.topic}.
     Группа стала немного более подготовленной.
   - >-
-    По инициативе {participant1} устроили короткую тренировку по {alt.topic}.
+    По инициативе {teacher} устроили короткую тренировку по {alt.topic}.
     Такие мелочи заметно добавляют уверенности в завтрашнем дне.
 alt:
   - topic:
       - первой помощи и ориентированию
       - уходу за ранеными
       - обращению с инструментами в аварии
-participants_template: random_one
+participants:
+  - role: teacher
 success_effects:
   - type: survival_change
     value: 3
