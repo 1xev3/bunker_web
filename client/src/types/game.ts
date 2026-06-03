@@ -58,6 +58,22 @@ export interface Player {
   attributes: PlayerAttributes;
   description: string;
   profession_ability: ProfessionAbilityInfo | null;
+  vital_status: VitalStatus;
+}
+
+export interface VitalStatus {
+  health: number;
+  sanity: number;
+  statuses: VitalStatusEffect[];
+}
+
+export interface VitalStatusEffect {
+  id: string;
+  label: string;
+  type: 'buff' | 'debuff';
+  stat: 'health' | 'sanity';
+  delta: number;
+  months: number;
 }
 
 export type ProfessionAbilityTargetType = 'none' | 'self' | 'other' | 'pair';
@@ -100,19 +116,6 @@ export interface BunkerInfo {
   grid: BunkerCell[][];
 }
 
-export interface EventEffect {
-  type: string;
-  value?: number;
-  target?: string;
-  chance?: number;
-  per_target_chance?: number;
-  event_id?: string;
-  delay_months?: number;
-  character_type?: 'full' | 'child';
-  name_template?: string;
-  race_from_context?: string;
-}
-
 export interface ScheduledEvent {
   event_id: string;
   trigger_month: number;
@@ -125,18 +128,9 @@ export interface GameEvent {
   description: string;
   base_chance?: number;
   event_type?: 'passive' | 'interactive' | 'food_replenish' | 'narrative';
-  narrative_duration_ms?: number;
-  participants_template?: 'couple' | 'random_one' | 'random_group' | null;
-  participants_min?: number;
-  participants_max?: number;
   participants?: string[];
   participant_ids?: string[];
-  success_effect?: EventEffect;
-  failure_effect?: EventEffect;
-  success_effects?: EventEffect[];
-  failure_effects?: EventEffect[];
-  chain_success?: string;
-  chain_failure?: string;
+  requires_player_selection?: boolean;
   choice_labels?: { success: string; failure: string };
 }
 
@@ -148,8 +142,6 @@ export interface PackMeta {
 
 export interface PackSettings {
   bunker_life: {
-    initial_survival_chance: number;
-    max_survival_chance: number;
     month_duration_ms: number;
     food_consumption_per_player: number;
   };
@@ -216,7 +208,6 @@ export interface RoomState {
   is_voting: boolean;
   round: number;
   bunker_capacity: number | null;
-  survival_chance: number;
   current_month: number;
   total_months: number;
   food: number;
@@ -252,6 +243,7 @@ export type SelectedItem =
     };
 
 export interface EventSelection {
+  selected_player_id: string | null;
   selected_professions: string[];
   selected_items: SelectedItem[];
 }
@@ -270,7 +262,21 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; survival_change: number; survival_chance: number; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] };
+  | { type: 'event_resolved'; event_id: string; outcome: 'success' | 'failure'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] };
+
+export interface VitalChange {
+  id: string;
+  name: string;
+  delta: number;
+}
+
+export interface StatusChange {
+  id: string;
+  name: string;
+  status?: VitalStatusEffect;
+  status_id?: string;
+  action: 'added' | 'cleared';
+}
 
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }
@@ -291,6 +297,6 @@ export type ClientMessage =
   | { type: 'force_start_bunker_life' }
   | { type: 'use_profession_ability'; target_id?: string; second_target_id?: string }
   | { type: 'confirm_bunker_life' }
-  | { type: 'update_event_selection'; selected_professions: string[]; selected_items: SelectedItem[] }
+  | { type: 'update_event_selection'; selected_player_id?: string | null; selected_professions: string[]; selected_items: SelectedItem[] }
   | { type: 'cast_choice_vote'; vote: 'success' | 'failure' }
-  | { type: 'resolve_event'; selected_professions: string[]; selected_items: SelectedItem[]; forced_outcome?: 'success' | 'failure' };
+  | { type: 'resolve_event'; selected_player_id?: string | null; selected_professions: string[]; selected_items: SelectedItem[]; forced_outcome?: 'success' | 'failure' };

@@ -5,8 +5,6 @@ const { normalizeConfig, validateStructuredConfig } = require('./structuredConfi
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
-const EVENT_TEMPLATE_RE = /\{([a-zA-Z_][a-zA-Z0-9_.]*)\}/g;
-const EVENT_PARTICIPANT_TEMPLATE_RE = /^participant\d+$/;
 
 function addError(errors, scope, message) {
   errors.push(`${scope}: ${message}`);
@@ -51,19 +49,6 @@ function validatePositiveInteger(value, scope, errors) {
 
 function validateBunkerLifeSettings(settings, scope, errors) {
   if (!isPlainObject(settings)) { addError(errors, scope, 'ожидается объект'); return; }
-  if (settings.initial_survival_chance !== undefined) {
-    validatePositiveInteger(settings.initial_survival_chance, `${scope}.initial_survival_chance`, errors);
-  }
-  if (settings.max_survival_chance !== undefined) {
-    validatePositiveInteger(settings.max_survival_chance, `${scope}.max_survival_chance`, errors);
-  }
-  if (
-    settings.initial_survival_chance !== undefined
-    && settings.max_survival_chance !== undefined
-    && settings.initial_survival_chance > settings.max_survival_chance
-  ) {
-    addError(errors, `${scope}.initial_survival_chance`, 'не может быть больше max_survival_chance');
-  }
   if (settings.month_duration_ms !== undefined) {
     validatePositiveInteger(settings.month_duration_ms, `${scope}.month_duration_ms`, errors);
   }
@@ -103,105 +88,6 @@ function validateEventSettings(settings, scope, errors) {
       validatePositiveInteger(settings.food_replenish.food_per_resource, `${scope}.food_replenish.food_per_resource`, errors);
     }
   }
-}
-
-function extractTemplateKeys(value) {
-  if (typeof value !== 'string') return [];
-  return [...value.matchAll(EVENT_TEMPLATE_RE)].map(match => match[1]);
-}
-
-function isParticipantTemplateKey(key, eventRoles) {
-  if (key === 'participants' || EVENT_PARTICIPANT_TEMPLATE_RE.test(key) || key.startsWith('context.')) return true;
-  // Role name or role.attribute from participants slots
-  const base = key.includes('.') ? key.slice(0, key.indexOf('.')) : key;
-  return eventRoles?.has(base) ?? false;
-}
-
-function getEventRoles(event) {
-  const roles = new Set();
-  if (Array.isArray(event.participants)) {
-    event.participants.forEach((slot, i) => {
-      roles.add(typeof slot.role === 'string' && slot.role.trim() !== '' ? slot.role : `participant${i + 1}`);
-    });
-  }
-  return roles;
-}
-
-function validateEventText(value, scope, errors) {
-  if (typeof value !== 'string' || value.trim() === '') {
-    addError(errors, scope, 'ожидается непустая строка');
-  }
-}
-
-function validateEventTextValue(value, scope, errors) {
-  if (typeof value === 'string') { validateEventText(value, scope, errors); return; }
-  if (!Array.isArray(value) || value.length === 0) {
-    addError(errors, scope, 'ожидается непустая строка или непустой массив строк');
-    return;
-  }
-  value.forEach((item, index) => {
-    if (typeof item !== 'string' || item.trim() === '') {
-      addError(errors, `${scope}[${index}]`, 'ожидается непустая строка');
-    }
-  });
-}
-
-function resolveTemplateSource(event, altText, key) {
-  if (key.startsWith('alt.')) {
-    const rawKey = key.slice(4);
-    if (!altText) return { exists: false, value: undefined, rawKey };
-    return { exists: rawKey in altText, value: altText[rawKey], rawKey };
-  }
-  return { exists: key in event, value: event[key], rawKey: key };
-}
-
-function validateEventTemplateSource(event, altText, scope, key, errors, eventRoles) {
-  if (isParticipantTemplateKey(key, eventRoles)) return;
-  const source = resolveTemplateSource(event, altText, key);
-  if (!source.exists) {
-    addError(errors, scope, `плейсхолдер "{${key}}" ссылается на отсутствующий ключ "${source.rawKey}"`);
-    return;
-  }
-  const value = source.value;
-  if (typeof value === 'string') {
-    if (value.trim() === '') addError(errors, `${scope} -> ${key}`, 'ключ подстановки не должен быть пустой строкой');
-    return;
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      addError(errors, `${scope} -> ${key}`, 'ключ подстановки должен содержать непустой массив строк');
-      return;
-    }
-    value.forEach((item, index) => {
-      if (typeof item !== 'string' || item.trim() === '') {
-        addError(errors, `${scope} -> ${key}[${index}]`, 'ожидается непустая строка');
-      }
-    });
-    return;
-  }
-  addError(errors, `${scope} -> ${key}`, 'ключ подстановки должен быть строкой или массивом строк');
-}
-
-function validateEventTemplateReferences(event, altText, scope, fieldName, value, errors) {
-  const eventRoles = getEventRoles(event);
-  const entries = Array.isArray(value) ? value : [value];
-  for (const entry of entries) {
-    for (const key of extractTemplateKeys(entry)) {
-      validateEventTemplateSource(event, altText, `${scope}.${fieldName}`, key, errors, eventRoles);
-    }
-  }
-}
-
-function mergeAltTextSources(altTexts) {
-  if (!Array.isArray(altTexts) || altTexts.length === 0) return null;
-  const merged = {};
-  for (const altText of altTexts) {
-    if (!isPlainObject(altText)) continue;
-    for (const [key, value] of Object.entries(altText)) {
-      if (!(key in merged)) merged[key] = value;
-    }
-  }
-  return merged;
 }
 
 function validateWeightedTable(value, scope, errors, valueValidator = () => {}) {
@@ -499,151 +385,29 @@ function validatePackContent(packName, files) {
     if (!Array.isArray(files.Event.EVENTS) || files.Event.EVENTS.length === 0) {
       addError(errors, 'Event -> EVENTS', 'ожидается непустой массив событий');
     } else {
+      const seenIds = new Set();
       files.Event.EVENTS.forEach((event, index) => {
         const scope = `Event -> EVENTS[${index}]`;
         if (!isPlainObject(event)) { addError(errors, scope, 'ожидается объект'); return; }
-        if (typeof event.id !== 'string' || event.id.trim() === '') addError(errors, `${scope}.id`, 'ожидается непустая строка');
-        if (event.title == null) addError(errors, `${scope}.title`, 'ожидается поле title');
-        else validateEventTextValue(event.title, `${scope}.title`, errors);
-        if (event.description == null) addError(errors, `${scope}.description`, 'ожидается поле description');
-        else validateEventTextValue(event.description, `${scope}.description`, errors);
-        const mergedAltText = mergeAltTextSources(event.alt);
-        if (event.title != null) validateEventTemplateReferences(event, mergedAltText, scope, 'title', event.title, errors);
-        if (event.description != null) validateEventTemplateReferences(event, mergedAltText, scope, 'description', event.description, errors);
-        if (event.alt != null) {
-          if (!Array.isArray(event.alt) || event.alt.length === 0) {
-            addError(errors, `${scope}.alt`, 'ожидается непустой массив объектов');
-          } else {
-            event.alt.forEach((altText, altIndex) => {
-              const altScope = `${scope}.alt[${altIndex}]`;
-              if (!isPlainObject(altText)) { addError(errors, altScope, 'ожидается объект'); return; }
-              if ('title' in altText || 'description' in altText) {
-                addError(errors, altScope, 'alt должен содержать только данные для подстановок, без title/description');
-              }
-              for (const [key, value] of Object.entries(altText)) {
-                if (typeof value === 'string') {
-                  if (value.trim() === '') addError(errors, `${altScope}.${key}`, 'ожидается непустая строка');
-                  continue;
-                }
-                if (Array.isArray(value)) {
-                  if (value.length === 0) { addError(errors, `${altScope}.${key}`, 'ожидается непустой массив строк'); continue; }
-                  value.forEach((item, itemIndex) => {
-                    if (typeof item !== 'string' || item.trim() === '') {
-                      addError(errors, `${altScope}.${key}[${itemIndex}]`, 'ожидается непустая строка');
-                    }
-                  });
-                  continue;
-                }
-                addError(errors, `${altScope}.${key}`, 'ожидается строка или массив строк');
-              }
-            });
-          }
-        }
-        if (event.participants_template != null && !['couple', 'random_one', 'random_group'].includes(event.participants_template)) {
-          addError(errors, `${scope}.participants_template`, 'expected one of: couple, random_one, random_group');
-        }
-        for (const key of ['participants_min', 'participants_max']) {
-          if (event[key] != null && (!Number.isInteger(event[key]) || event[key] < 1)) {
-            addError(errors, `${scope}.${key}`, 'expected a positive integer');
-          }
-        }
-        if (Number.isInteger(event.participants_min) && Number.isInteger(event.participants_max) && event.participants_max < event.participants_min) {
-          addError(errors, `${scope}.participants_max`, 'must be greater than or equal to participants_min');
-        }
-        if (event.participants != null) {
-          if (!Array.isArray(event.participants) || event.participants.length === 0) {
-            addError(errors, `${scope}.participants`, 'ожидается непустой массив слотов');
-          } else {
-            event.participants.forEach((slot, i) => {
-              const slotScope = `${scope}.participants[${i}]`;
-              if (!isPlainObject(slot)) { addError(errors, slotScope, 'ожидается объект'); return; }
-              if (slot.role != null && typeof slot.role !== 'string') addError(errors, `${slotScope}.role`, 'ожидается строка');
-              if (slot.optional != null && typeof slot.optional !== 'boolean') addError(errors, `${slotScope}.optional`, 'ожидается boolean');
-              if (slot.filter != null && !isPlainObject(slot.filter)) addError(errors, `${slotScope}.filter`, 'ожидается объект');
-            });
-          }
-        }
-        const KNOWN_EFFECT_TYPES = new Set([
-          'survival_change', 'food_change',
-          'kill_participant', 'kill_random_active',
-          'remove_room', 'add_room', 'add_player', 'schedule_event',
-          'if',
-        ]);
 
-        const validateEffect = (eff, effScope) => {
-          if (!isPlainObject(eff)) { addError(errors, effScope, 'ожидается объект эффекта'); return; }
-          if (typeof eff.type !== 'string' || eff.type.trim() === '') { addError(errors, `${effScope}.type`, 'ожидается непустая строка'); return; }
-          if (!KNOWN_EFFECT_TYPES.has(eff.type)) addError(errors, `${effScope}.type`, `неизвестный тип: "${eff.type}"`);
-          if (eff.type === 'survival_change' && typeof eff.value !== 'number') addError(errors, `${effScope}.value`, 'ожидается число');
-          if (eff.type === 'food_change' && typeof eff.value !== 'number') addError(errors, `${effScope}.value`, 'ожидается число');
-          if (eff.chance != null && (typeof eff.chance !== 'number' || eff.chance <= 0 || eff.chance > 1)) addError(errors, `${effScope}.chance`, 'ожидается число от 0 (исключительно) до 1');
-          if (eff.per_target_chance != null && (typeof eff.per_target_chance !== 'number' || eff.per_target_chance <= 0 || eff.per_target_chance > 1)) addError(errors, `${effScope}.per_target_chance`, 'ожидается число от 0 (исключительно) до 1');
-          if (eff.per_target_chance != null && !(eff.type === 'kill_participant' && eff.target === 'each_participant')) {
-            addError(errors, `${effScope}.per_target_chance`, 'допустим только для kill_participant с target: each_participant');
-          }
-          if (eff.type === 'schedule_event') {
-            if (typeof eff.event_id !== 'string' || eff.event_id.trim() === '') addError(errors, `${effScope}.event_id`, 'ожидается непустая строка');
-            if (!Number.isInteger(eff.delay_months) || eff.delay_months < 1) addError(errors, `${effScope}.delay_months`, 'ожидается целое число >= 1');
-          }
-          if (eff.type === 'if') {
-            if (!isPlainObject(eff.condition)) addError(errors, `${effScope}.condition`, 'ожидается объект условия');
-            if (eff.then != null) {
-              if (!Array.isArray(eff.then)) addError(errors, `${effScope}.then`, 'ожидается массив эффектов');
-              else eff.then.forEach((e, i) => validateEffect(e, `${effScope}.then[${i}]`));
-            }
-            if (eff.else != null) {
-              if (!Array.isArray(eff.else)) addError(errors, `${effScope}.else`, 'ожидается массив эффектов');
-              else eff.else.forEach((e, i) => validateEffect(e, `${effScope}.else[${i}]`));
-            }
-          }
-        };
-
-        const validateEffectsField = (singKey, arrKey, required) => {
-          if (Array.isArray(event[arrKey])) {
-            event[arrKey].forEach((eff, i) => validateEffect(eff, `${scope}.${arrKey}[${i}]`));
-          } else if (isPlainObject(event[singKey])) {
-            validateEffect(event[singKey], `${scope}.${singKey}`);
-          } else if (required) {
-            addError(errors, `${scope}.${singKey}`, 'ожидается объект или массив эффектов');
-          }
-        };
-
-        const isNarrative = event.event_type === 'narrative';
-        const isChoice = event.choice_labels != null;
-        const isPassive = !isChoice && event.base_chance == null;
-
-        if (isChoice) {
-          if (typeof event.choice_labels?.success !== 'string' || event.choice_labels.success.trim() === '') addError(errors, `${scope}.choice_labels.success`, 'ожидается непустая строка');
-          if (typeof event.choice_labels?.failure !== 'string' || event.choice_labels.failure.trim() === '') addError(errors, `${scope}.choice_labels.failure`, 'ожидается непустая строка');
-          validateEffectsField('success_effect', 'success_effects', true);
-          validateEffectsField('failure_effect', 'failure_effects', true);
-        } else if (!isPassive && !isNarrative) {
-          if (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1) addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
-          validateEffectsField('success_effect', 'success_effects', true);
-          validateEffectsField('failure_effect', 'failure_effects', true);
+        if (typeof event.id !== 'string' || event.id.trim() === '') {
+          addError(errors, `${scope}.id`, 'ожидается непустая строка');
+        } else if (seenIds.has(event.id)) {
+          addError(errors, `${scope}.id`, `дублирующийся id события: "${event.id}"`);
         } else {
-          validateEffectsField('success_effect', 'success_effects', !isNarrative);
+          seenIds.add(event.id);
         }
 
-        if (isNarrative && event.narrative_duration_ms != null) {
-          if (!Number.isInteger(event.narrative_duration_ms) || event.narrative_duration_ms < 100) {
-            addError(errors, `${scope}.narrative_duration_ms`, 'ожидается целое число >= 100');
-          }
+        if (typeof event.title !== 'string' || event.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
+        if (typeof event.description !== 'string' || event.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
+
+        if (event.base_chance != null && (typeof event.base_chance !== 'number' || event.base_chance < 0 || event.base_chance > 1)) {
+          addError(errors, `${scope}.base_chance`, 'ожидается число от 0 до 1');
         }
 
-        if (event.weight != null && (typeof event.weight !== 'number' || !Number.isFinite(event.weight) || event.weight <= 0)) {
-          addError(errors, `${scope}.weight`, 'ожидается положительное число');
-        }
-
-        const allEventIds = files.Event?.EVENTS?.map(e => e.id).filter(Boolean) ?? [];
-        for (const chainKey of ['chain_success', 'chain_failure']) {
-          if (event[chainKey] != null) {
-            if (typeof event[chainKey] !== 'string' || event[chainKey].trim() === '') {
-              addError(errors, `${scope}.${chainKey}`, 'ожидается непустая строка (ID события)');
-            } else if (!allEventIds.includes(event[chainKey])) {
-              addError(errors, `${scope}.${chainKey}`, `событие с ID "${event[chainKey]}" не найдено`);
-            }
-          }
+        if (event.choice_labels != null) {
+          if (typeof event.choice_labels.success !== 'string' || event.choice_labels.success.trim() === '') addError(errors, `${scope}.choice_labels.success`, 'ожидается непустая строка');
+          if (typeof event.choice_labels.failure !== 'string' || event.choice_labels.failure.trim() === '') addError(errors, `${scope}.choice_labels.failure`, 'ожидается непустая строка');
         }
       });
     }

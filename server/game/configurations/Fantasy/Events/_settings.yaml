@@ -1,5 +1,5 @@
 EVENT_SETTINGS:
-  bunker_event_chance: 0.10
+  bunker_event_chance: 0.45
   success_chances_by_resources:
     - 0.75
     - 0.90

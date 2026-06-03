@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ServerMessage, ClientMessage, Player } from './types/game';
+import type { ServerMessage, ClientMessage, Player, VitalChange, StatusChange } from './types/game';
 import { useGameState } from './hooks/useGameState';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameLobby from './components/GameLobby';
@@ -39,7 +39,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; survival_change: number; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: 'success' | 'failure'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
 
   const showFlashMessage = useCallback((kind: 'info' | 'error', text: string) => {
@@ -146,8 +146,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, survival_change: msg.survival_change, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
-        setTimeout(() => setEventOutcome(null), 6000);
+        setEventOutcome({ outcome: msg.outcome, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
       }
 
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
@@ -277,6 +276,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           send={send}
           onLeave={handleLeave}
           eventOutcome={eventOutcome}
+          onDismissEventOutcome={() => setEventOutcome(null)}
           isConnectionLost={isConnectionLost}
         />
         {connectionOverlay}

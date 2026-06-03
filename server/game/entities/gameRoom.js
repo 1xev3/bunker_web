@@ -24,20 +24,19 @@ class GameRoom {
     this.isVoting = false;
     this.round = 0;
     this.bunkerCapacity = null;
-    this.survivalChance = this.config.packSettings.bunker_life.initial_survival_chance;
     this.currentMonth = 0;
     this.totalMonths = 0;
     this.food = 0;
     this.foodMax = 0;
     this.starvationPending = false;
     this.activeEvent = null;
-    this.activeEventSelection = { selected_professions: [], selected_items: [] };
+    this.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
     this.choiceVotes = {};
-    this.pendingChainKills = [];
     this.monthStartTime = null;
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.scheduledEvents = []; // [{ event_id, trigger_month, context }]
+    this.flags = {};
     this.createdAt = Date.now();
     this.lastActivity = Date.now();
   }
@@ -92,6 +91,9 @@ class GameRoom {
   }
 
   toDict(viewerId = null) {
+    const publicEvent = this.activeEvent
+      ? Object.fromEntries(Object.entries(this.activeEvent).filter(([key]) => !key.startsWith('__')))
+      : null;
     return {
       room_code: this.roomCode,
       admin_id: this.adminId,
@@ -102,14 +104,14 @@ class GameRoom {
       is_voting: this.isVoting,
       round: this.round,
       bunker_capacity: this.bunkerCapacity,
-      survival_chance: this.survivalChance,
       current_month: this.currentMonth,
       total_months: this.totalMonths,
       food: this.food,
       food_max: this.foodMax,
-      active_event: this.activeEvent,
+      active_event: publicEvent,
       choice_votes: { ...this.choiceVotes },
       active_event_selection: {
+        selected_player_id: this.activeEventSelection.selected_player_id ?? null,
         selected_professions: [...this.activeEventSelection.selected_professions],
         selected_items: this.activeEventSelection.selected_items.map(item => ({ ...item })),
       },

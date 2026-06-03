@@ -1,4 +1,4 @@
-import { AlertTriangle, Send, Users, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Send, Users, CheckCircle, XCircle, UserRound } from 'lucide-react';
 import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, PackSettings, EventSelection } from '../../types/game';
 import {
   renderEventText,
@@ -7,7 +7,6 @@ import {
   getBunkerItemOptions,
   getSuccessChance,
   ChanceBar,
-  OutcomePreview,
   SelectableItemList,
 } from './eventUtils';
 import EventSelectableRow from './EventSelectableRow';
@@ -59,8 +58,6 @@ function ChoiceEventCard({
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
 }) {
-  const successEffects = event.success_effects ?? (event.success_effect ? [event.success_effect] : []);
-  const failureEffects = event.failure_effects ?? (event.failure_effect ? [event.failure_effect] : []);
   const labels = event.choice_labels!;
 
   const myVote = choiceVotes[myPlayerId] ?? null;
@@ -99,12 +96,7 @@ function ChoiceEventCard({
           )}
         </div>
 
-        <div className="p-5 grid gap-3 sm:grid-cols-2">
-          <OutcomePreview label={labels.success} effects={successEffects} tone="good" />
-          <OutcomePreview label={labels.failure} effects={failureEffects} tone="bad" />
-        </div>
-
-        <div className="p-5 pt-0 flex flex-col gap-2">
+        <div className="p-5 flex flex-col gap-2">
           <div className="flex gap-3">
             <button
               className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold border transition-colors flex flex-col items-center justify-center gap-1 ${
@@ -155,25 +147,34 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
 
   const selectedProfessions = eventSelection.selected_professions;
   const selectedItems = eventSelection.selected_items;
+  const selectedPlayerId = eventSelection.selected_player_id;
   const playerItems = getPlayerItemOptions(activePlayers);
   const bunkerItems = getBunkerItemOptions(bunker);
+  const targetCandidates = event.participant_ids && event.participant_ids.length > 0
+    ? event.participant_ids.map(id => activePlayers.find(p => p.id === id)).filter((p): p is Player => Boolean(p))
+    : activePlayers;
+  const requiresPlayerSelection = event.requires_player_selection === true;
 
-  const pushSelection = (nextProfessions: string[], nextItems: SelectedItem[]) => {
-    send({ type: 'update_event_selection', selected_professions: nextProfessions, selected_items: nextItems });
+  const pushSelection = (nextPlayerId: string | null, nextProfessions: string[], nextItems: SelectedItem[]) => {
+    send({ type: 'update_event_selection', selected_player_id: nextPlayerId, selected_professions: nextProfessions, selected_items: nextItems });
+  };
+
+  const selectPlayer = (playerId: string) => {
+    pushSelection(selectedPlayerId === playerId ? null : playerId, selectedProfessions, selectedItems);
   };
 
   const toggleProfession = (playerId: string) => {
     const nextProfessions = selectedProfessions.includes(playerId)
       ? selectedProfessions.filter(p => p !== playerId)
       : [...selectedProfessions, playerId];
-    pushSelection(nextProfessions, selectedItems);
+    pushSelection(selectedPlayerId, nextProfessions, selectedItems);
   };
 
   const toggleItem = (entry: SelectedItem) => {
     const key = getItemKey(entry);
     const exists = selectedItems.some(i => getItemKey(i) === key);
     const nextItems = exists ? selectedItems.filter(i => getItemKey(i) !== key) : [...selectedItems, entry];
-    pushSelection(selectedProfessions, nextItems);
+    pushSelection(selectedPlayerId, selectedProfessions, nextItems);
   };
 
   const isItemSelected = (entry: SelectedItem) =>
@@ -183,7 +184,7 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
   const successChance = getSuccessChance(resourceCount, event.base_chance ?? 0.1, packSettings);
 
   const handleSend = () => {
-    send({ type: 'resolve_event', selected_professions: selectedProfessions, selected_items: selectedItems });
+    send({ type: 'resolve_event', selected_player_id: selectedPlayerId, selected_professions: selectedProfessions, selected_items: selectedItems });
   };
 
   return (
@@ -206,13 +207,43 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
         </div>
 
         <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[55vh]">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <OutcomePreview label="При успехе" effects={event.success_effects ?? (event.success_effect ? [event.success_effect] : [])} tone="good" />
-            <OutcomePreview label="При провале" effects={event.failure_effects ?? (event.failure_effect ? [event.failure_effect] : [])} tone="bad" />
+          <div>
+            <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Кому помочь / кого отправить</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {targetCandidates.map(p => {
+                const selected = selectedPlayerId === p.id;
+                const health = p.vital_status?.health ?? 100;
+                const sanity = p.vital_status?.sanity ?? 100;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectPlayer(p.id)}
+                    disabled={disabled}
+                    className={`text-left rounded-xl border px-3 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                      selected
+                        ? 'border-amber-500/70 bg-amber-950/30 text-amber-100'
+                        : 'border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <UserRound size={14} className={selected ? 'text-amber-300' : 'text-zinc-500'} />
+                      {p.name}
+                    </span>
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      здоровье {health} · рассудок {sanity}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {requiresPlayerSelection && !selectedPlayerId && (
+              <p className="mt-2 text-xs text-orange-400">Для этого события нужно выбрать конкретного человека.</p>
+            )}
           </div>
 
           <div>
-            <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Профессии выживших</p>
+            <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Кто помогает профессией</p>
             <div className="flex flex-col gap-1">
               {activePlayers.map(p => {
                 if (!p.attributes.profession) return null;
@@ -260,7 +291,7 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
           <button
             className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleSend}
-            disabled={disabled}
+            disabled={disabled || (requiresPlayerSelection && !selectedPlayerId)}
           >
             <Send size={14} /> {disabled ? 'Переподключение...' : 'Принять решение'}
           </button>

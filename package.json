@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
+    "fengari": "^0.1.5",
     "js-yaml": "^4.2.0",
     "ws": "^8.18.0"
   },

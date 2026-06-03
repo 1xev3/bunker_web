@@ -103,6 +103,11 @@ class Player {
     this.config = null;
     this.profession_ability_used = false;
     this.profession_ability_variant = null;
+    this.vital_status = {
+      health: 100,
+      sanity: 100,
+      statuses: [],
+    };
 
     this.revealed_attributes = Object.fromEntries(ATTRIBUTE_KEYS.map(k => [k, false]));
   }
@@ -216,6 +221,11 @@ class Player {
       attributes: attrs,
       description: viewerId === this.id ? this.description : '',
       profession_ability: getProfessionAbilityInfo(this, viewerId),
+      vital_status: {
+        health: this.vital_status?.health ?? 100,
+        sanity: this.vital_status?.sanity ?? 100,
+        statuses: Array.isArray(this.vital_status?.statuses) ? this.vital_status.statuses.map(s => ({ ...s })) : [],
+      },
     };
   }
 }

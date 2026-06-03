@@ -1,9 +1,0 @@
-id: argument_forgotten
-title: Примирение
-description: >-
-  После долгой ссоры {participant1} и {participant2} наконец-то мирятся.
-  Атмосфера в бункере заметно потеплела.
-participants_template: couple
-success_effects:
-  - type: survival_change
-    value: 4

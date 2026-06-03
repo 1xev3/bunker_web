@@ -10,7 +10,12 @@ interface Props {
 export default function BunkerEndScreen({ survived, roomState, onLeave }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const bunker = roomState.bunker;
-  const displaySurvivalChance = Math.min(100, roomState.survival_chance);
+  const avgHealth = activePlayers.length > 0
+    ? Math.round(activePlayers.reduce((sum, p) => sum + (p.vital_status?.health ?? 0), 0) / activePlayers.length)
+    : 0;
+  const avgSanity = activePlayers.length > 0
+    ? Math.round(activePlayers.reduce((sum, p) => sum + (p.vital_status?.sanity ?? 0), 0) / activePlayers.length)
+    : 0;
 
   return (
     <div
@@ -87,9 +92,15 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
             </span>
           </div>
           <div className="px-4 py-3 flex items-center justify-between">
-            <span className="text-zinc-500 text-sm">Шанс выживания</span>
-            <span className={`text-sm font-mono font-bold ${roomState.survival_chance > 30 ? 'text-green-400' : 'text-red-400'}`}>
-              {displaySurvivalChance}%
+            <span className="text-zinc-500 text-sm">Среднее здоровье</span>
+            <span className={`text-sm font-mono font-bold ${avgHealth > 30 ? 'text-green-400' : 'text-red-400'}`}>
+              {avgHealth}
+            </span>
+          </div>
+          <div className="px-4 py-3 flex items-center justify-between">
+            <span className="text-zinc-500 text-sm">Средний рассудок</span>
+            <span className={`text-sm font-mono font-bold ${avgSanity > 30 ? 'text-sky-400' : 'text-red-400'}`}>
+              {avgSanity}
             </span>
           </div>
           {bunker?.food && (

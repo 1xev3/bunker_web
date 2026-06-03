@@ -1,7 +1,5 @@
 const DEFAULT_PACK_SETTINGS = {
   bunker_life: {
-    initial_survival_chance: 100,
-    max_survival_chance: 150,
     month_duration_ms: 750,
     food_consumption_per_player: 90,
   },

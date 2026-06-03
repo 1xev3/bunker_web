@@ -146,7 +146,6 @@ function normalizeConfig(config) {
     .map((value, index) => normalizeFoodSupply(value, index))
     .map((item, order) => ({ ...item, order }));
   next.BUNKER_ITEMS = plainEntities(config.BUNKER_ITEMS ?? [], 'bunker_item');
-  next.SCRIPTED_FILTERS = config.SCRIPTED_FILTERS ?? {};
 
   const inventoryByLabel = new Map(next.INVENTORY.map(item => [item.label, item]));
   const backpackByLabel = new Map(next.BACKPACK_ITEMS.map(item => [item.label, item]));

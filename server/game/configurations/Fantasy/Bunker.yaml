@@ -1,7 +1,5 @@
 # BUNKER_THEMES и BUNKER_SIZES: массив объектов с полями name и description.
 BUNKER_LIFE_SETTINGS:
-  initial_survival_chance: 100
-  max_survival_chance: 150
   month_duration_ms: 750
   food_consumption_per_player: 90
 

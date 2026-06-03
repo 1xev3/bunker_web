@@ -1,14 +1,11 @@
 const { rooms, wsManager } = require('../state');
-const { Player } = require('../game/entities/player');
+const { runLuaEventHandler } = require('../game/config/luaEvents');
 const {
   parseDurationMonths,
   pickRandomEvent,
-  materializeEvent,
   materializeEventParticipants,
   materializeScheduledEvent,
-  resolveEventParticipants,
 } = require('./eventHelpers');
-const { evaluateFilter } = require('./eventFilterEngine');
 
 function updateFood(room, delta) {
   const before = room.food;
@@ -22,60 +19,152 @@ function hasScheduledEvent(room, scheduledEvent) {
   return room.scheduledEvents.some(existing =>
     existing.event_id === scheduledEvent.event_id
     && existing.trigger_month === scheduledEvent.trigger_month
-    && existing.context?.mother_id === scheduledEvent.context?.mother_id
-    && existing.context?.father_id === scheduledEvent.context?.father_id
+    && JSON.stringify(existing.context ?? {}) === JSON.stringify(scheduledEvent.context ?? {})
   );
 }
 
-// Resolves a participant reference (role name or legacy "participantN") to a player.
-function resolveScheduledParticipant(participants, participantRef, participantRoles) {
-  // Role name lookup (new system)
-  const playerId = participantRoles?.[participantRef];
-  if (playerId) return participants.find(p => p.id === playerId) ?? null;
-
-  // Legacy: participant1, participant2, etc.
-  const match = String(participantRef).match(/^participant(\d+)$/);
-  if (!match) return null;
-  return participants[Number(match[1]) - 1] ?? null;
+function clampStat(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function evaluateEffectCondition(condition, room, context) {
-  if (!condition || typeof condition !== 'object') return false;
-  if ('participant' in condition && 'filter' in condition) {
-    const roles = context?.participantRoles ?? {};
-    const playerId = roles[condition.participant];
-    if (!playerId) return false;
-    const player = room.getPlayer(playerId);
-    if (!player) return false;
-    return evaluateFilter(condition.filter, player, room.config.SCRIPTED_FILTERS ?? {});
+function ensureVitalStatus(player) {
+  if (!player.vital_status) {
+    player.vital_status = { health: 100, sanity: 100, statuses: [] };
   }
-  if (condition.game === 'survival_below') return room.survivalChance < (condition.value ?? 0);
-  if (condition.game === 'survival_above') return room.survivalChance > (condition.value ?? 0);
-  if (condition.game === 'food_below') return room.food < (condition.value ?? 0);
-  if (condition.game === 'player_count_below') return room.getActivePlayers().length < (condition.value ?? 0);
-  return false;
+  if (!Array.isArray(player.vital_status.statuses)) player.vital_status.statuses = [];
+  player.vital_status.health = clampStat(player.vital_status.health ?? 100);
+  player.vital_status.sanity = clampStat(player.vital_status.sanity ?? 100);
+  return player.vital_status;
 }
 
-function normalizeEffectsArray(event, succeeded) {
-  const arrKey = succeeded ? 'success_effects' : 'failure_effects';
-  const singKey = succeeded ? 'success_effect' : 'failure_effect';
-  if (Array.isArray(event[arrKey])) return event[arrKey];
-  if (event[singKey]) return [event[singKey]];
-  return [];
+// Lua player actions (SetHealth/SetSanity/SetStatus/...) always emit a concrete
+// player id as the effect target.
+function getEffectTargets(room, effect) {
+  const target = room.getPlayer(effect.target);
+  return target?.is_active ? [target] : [];
+}
+
+function changePlayerStat(player, stat, value) {
+  const vital = ensureVitalStatus(player);
+  const before = vital[stat];
+  vital[stat] = clampStat(before + value);
+  if (vital.health <= 0 || vital.sanity <= 0) {
+    player.is_active = false;
+  }
+  return vital[stat] - before;
+}
+
+function normalizeStatus(effect) {
+  const stat = effect.stat === 'sanity' ? 'sanity' : 'health';
+  return {
+    id: effect.status_id || `${stat}_${effect.value < 0 ? 'debuff' : 'buff'}`,
+    label: effect.label || (effect.value < 0 ? 'Неблагоприятное состояние' : 'Поддержка'),
+    type: effect.value < 0 ? 'debuff' : 'buff',
+    stat,
+    delta: Number(effect.value ?? 0),
+    months: Math.max(1, Number(effect.months ?? 1)),
+  };
+}
+
+function applyMonthlyVitals(room) {
+  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], playersKilled: [] };
+  const active = room.getActivePlayers();
+  const noFood = room.food <= 0;
+
+  for (const player of active) {
+    const vital = ensureVitalStatus(player);
+    const statuses = [...vital.statuses];
+
+    for (const status of statuses) {
+      const stat = status.stat === 'sanity' ? 'sanity' : 'health';
+      const delta = changePlayerStat(player, stat, Number(status.delta ?? 0));
+      if (delta !== 0) {
+        result[stat === 'health' ? 'healthChanges' : 'sanityChanges'].push({ id: player.id, name: player.name, delta });
+      }
+      status.months = Math.max(0, Number(status.months ?? 1) - 1);
+    }
+
+    vital.statuses = statuses.filter(status => status.months > 0);
+
+    if (noFood && player.is_active) {
+      const healthDelta = changePlayerStat(player, 'health', -18);
+      const sanityDelta = changePlayerStat(player, 'sanity', -8);
+      result.healthChanges.push({ id: player.id, name: player.name, delta: healthDelta });
+      result.sanityChanges.push({ id: player.id, name: player.name, delta: sanityDelta });
+      result.statusChanges.push({ id: player.id, name: player.name, status: { id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -6, months: 2 }, action: 'added' });
+      vital.statuses = vital.statuses.filter(status => status.id !== 'hunger');
+      vital.statuses.push({ id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -6, months: 2 });
+    }
+
+    if (!player.is_active) result.playersKilled.push({ id: player.id, name: player.name });
+  }
+
+  return result;
+}
+
+// Resolves a participant role name (e.g. "male") to a player for scheduled context.
+function resolveScheduledParticipant(participants, participantRef, participantRoles) {
+  const playerId = participantRoles?.[participantRef];
+  return playerId ? participants.find(p => p.id === playerId) ?? null : null;
+}
+
+function getEventEffects(event, succeeded, room, context) {
+  const handlerKey = event.event_type === 'passive' || event.event_type === 'narrative'
+    ? 'run'
+    : succeeded ? 'success' : 'failure';
+  return runLuaEventHandler(event.__lua_file, event.id, handlerKey, { room, eventContext: event.__lua_context ?? {}, context });
+}
+
+function uniquePlayerRefs(players) {
+  const seen = new Set();
+  const result = [];
+  for (const player of players ?? []) {
+    if (!player?.id || seen.has(player.id)) continue;
+    seen.add(player.id);
+    result.push(player);
+  }
+  return result;
 }
 
 function applyBunkerEventEffect(room, effect, context) {
-  const result = { survivalChange: 0, foodChange: undefined, playerKilled: null, playersKilled: [], roomChanged: false, playerAdded: null, scheduledEvent: null };
+  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], foodChange: undefined, playerKilled: null, playersKilled: [], roomChanged: false, scheduledEvent: null };
   if (!effect) return result;
 
-  if (typeof effect.chance === 'number' && Math.random() >= effect.chance) return result;
+  if (effect.type === 'health_change' || effect.type === 'sanity_change') {
+    const stat = effect.type === 'health_change' ? 'health' : 'sanity';
+    const targets = getEffectTargets(room, effect);
+    for (const target of targets) {
+      const delta = changePlayerStat(target, stat, Number(effect.value ?? 0));
+      result[stat === 'health' ? 'healthChanges' : 'sanityChanges'].push({ id: target.id, name: target.name, delta });
+      if (!target.is_active) result.playersKilled.push({ id: target.id, name: target.name });
+    }
+    return result;
+  }
 
-  if (effect.type === 'survival_change') {
-    result.survivalChange = effect.value;
-    room.survivalChance = Math.max(
-      0,
-      Math.min(room.config.packSettings.bunker_life.max_survival_chance, room.survivalChance + effect.value),
-    );
+  if (effect.type === 'add_status') {
+    const targets = getEffectTargets(room, effect);
+    const status = normalizeStatus(effect);
+    for (const target of targets) {
+      const vital = ensureVitalStatus(target);
+      vital.statuses = vital.statuses.filter(existing => existing.id !== status.id);
+      vital.statuses.push({ ...status });
+      result.statusChanges.push({ id: target.id, name: target.name, status: { ...status }, action: 'added' });
+    }
+    return result;
+  }
+
+  if (effect.type === 'clear_status') {
+    const targets = getEffectTargets(room, effect);
+    for (const target of targets) {
+      const vital = ensureVitalStatus(target);
+      const before = vital.statuses.length;
+      vital.statuses = effect.status_id
+        ? vital.statuses.filter(status => status.id !== effect.status_id)
+        : vital.statuses.filter(status => status.type !== (effect.status_type ?? 'debuff'));
+      if (vital.statuses.length !== before) {
+        result.statusChanges.push({ id: target.id, name: target.name, status_id: effect.status_id, action: 'cleared' });
+      }
+    }
     return result;
   }
 
@@ -91,35 +180,10 @@ function applyBunkerEventEffect(room, effect, context) {
     return result;
   }
 
-  if (effect.type === 'if') {
-    const conditionMet = evaluateEffectCondition(effect.condition, room, context);
-    const branch = conditionMet ? (effect.then ?? []) : (effect.else ?? []);
-    return applyEffectsArray(room, branch, context);
-  }
-
-  if (effect.type === 'kill_participant') {
-    const participantIds = context?.participantIds ?? [];
-    const participantRoles = context?.participantRoles ?? {};
-    if (effect.target === 'each_participant') {
-      const candidates = participantIds.map(id => room.getPlayer(id)).filter(p => p?.is_active);
-      for (const target of candidates) {
-        if (typeof effect.per_target_chance === 'number' && Math.random() >= effect.per_target_chance) continue;
-        target.is_active = false;
-        result.playersKilled.push({ id: target.id, name: target.name });
-      }
-      return result;
-    }
-    let target = null;
-    const roleId = participantRoles[effect.target];
-    if (roleId) {
-      target = room.getPlayer(roleId);
-    } else {
-      const candidates = participantIds.map(id => room.getPlayer(id)).filter(p => p?.is_active);
-      if (candidates.length > 0) target = candidates[Math.floor(Math.random() * candidates.length)];
-    }
-    if (target && target.is_active) {
-      target.is_active = false;
-      result.playerKilled = { id: target.id, name: target.name };
+  if (effect.type === 'set_flag') {
+    if (!room.flags || typeof room.flags !== 'object') room.flags = {};
+    if (typeof effect.key === 'string' && effect.key.trim() !== '') {
+      room.flags[effect.key] = effect.value;
     }
     return result;
   }
@@ -135,35 +199,8 @@ function applyBunkerEventEffect(room, effect, context) {
     return result;
   }
 
-  if (effect.type === 'remove_room') {
-    const removed = room.bunker.removeRandomRoom();
-    result.roomChanged = removed !== null;
-    return result;
-  }
-
   if (effect.type === 'add_room') {
-    const added = room.bunker.addRoom([]);
-    result.roomChanged = added;
-    return result;
-  }
-
-  if (effect.type === 'add_player') {
-    const context_ = context?.scheduledContext ?? {};
-    const isChild = effect.character_type === 'child';
-    let name = 'Незнакомец';
-    if (effect.name_template) {
-      name = effect.name_template.replace(/\{context\.(\w+)\}/g, (_, k) => String(context_[k] ?? '')).replace(/\s+/g, ' ').trim();
-    }
-    if (!name || name === 'Ребёнок') name = isChild ? 'Ребёнок' : 'Незнакомец';
-    const newPlayer = new Player(name);
-    if (isChild) {
-      newPlayer.generateMinimalCharacter(room.config, { raceId: context_[effect.race_from_context] });
-    } else {
-      newPlayer.generateCharacter(room.config);
-      newPlayer.revealAll();
-    }
-    room.addPlayer(newPlayer);
-    result.playerAdded = { id: newPlayer.id, name: newPlayer.name };
+    result.roomChanged = room.bunker.addRoom([]);
     return result;
   }
 
@@ -178,7 +215,6 @@ function applyBunkerEventEffect(room, effect, context) {
         if (!p) continue;
         scheduledContext[`${contextKey}_name`] = p.name;
         scheduledContext[`${contextKey}_id`] = p.id;
-        scheduledContext[`${contextKey}_race_id`] = p.race?.id;
       }
     }
     result.scheduledEvent = {
@@ -194,22 +230,23 @@ function applyBunkerEventEffect(room, effect, context) {
 
 function applyEffectsArray(room, effects, context) {
   const accumulated = {
-    survivalChange: 0,
+    healthChanges: [],
+    sanityChanges: [],
+    statusChanges: [],
     foodChange: undefined,
     playersKilled: [],
     roomChanged: false,
-    playersAdded: [],
   };
 
   for (const effect of effects) {
     const r = applyBunkerEventEffect(room, effect, context);
-    accumulated.survivalChange += r.survivalChange;
+    accumulated.healthChanges.push(...r.healthChanges);
+    accumulated.sanityChanges.push(...r.sanityChanges);
+    accumulated.statusChanges.push(...r.statusChanges);
     if (r.foodChange !== undefined) accumulated.foodChange = (accumulated.foodChange ?? 0) + r.foodChange;
     if (r.playerKilled) accumulated.playersKilled.push(r.playerKilled);
-    if (Array.isArray(r.playersKilled) && r.playersKilled.length > 0) accumulated.playersKilled.push(...r.playersKilled);
+    accumulated.playersKilled.push(...r.playersKilled);
     if (r.roomChanged) accumulated.roomChanged = true;
-    if (r.playerAdded) accumulated.playersAdded.push(r.playerAdded);
-    if (Array.isArray(r.playersAdded) && r.playersAdded.length > 0) accumulated.playersAdded.push(...r.playersAdded);
     if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
   }
 
@@ -246,6 +283,9 @@ function consumeSelectedItem(room, entry) {
 }
 
 function normalizeEventSelection(msg) {
+  const selectedPlayerId = typeof msg?.selected_player_id === 'string' && msg.selected_player_id.trim() !== ''
+    ? msg.selected_player_id
+    : null;
   const selectedProfessions = Array.isArray(msg?.selected_professions)
     ? [...new Set(msg.selected_professions.filter(id => typeof id === 'string'))]
     : [];
@@ -265,11 +305,11 @@ function normalizeEventSelection(msg) {
       )
     : [];
 
-  return { selectedProfessions, selectedItems };
+  return { selectedPlayerId, selectedProfessions, selectedItems };
 }
 
 function resetEventSelection(room) {
-  room.activeEventSelection = { selected_professions: [], selected_items: [] };
+  room.activeEventSelection = { selected_player_id: null, selected_professions: [], selected_items: [] };
   room.choiceVotes = {};
 }
 
@@ -278,17 +318,18 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult) 
     type: 'event_resolved',
     event_id: eventId,
     outcome,
-    survival_change: effectResult.survivalChange,
-    survival_chance: room.survivalChance,
+    health_changes: effectResult.healthChanges ?? [],
+    sanity_changes: effectResult.sanityChanges ?? [],
+    status_changes: effectResult.statusChanges ?? [],
     food_change: effectResult.foodChange,
-    players_killed: effectResult.playersKilled ?? [],
+    players_killed: uniquePlayerRefs(effectResult.playersKilled),
     room_changed: effectResult.roomChanged ?? false,
-    players_added: effectResult.playersAdded ?? [],
+    players_added: [],
   });
 }
 
 function checkGameOver(roomCode, room) {
-  if (room.getActivePlayers().length === 0 || room.survivalChance <= 0) {
+  if (room.getActivePlayers().length === 0) {
     room.status = 'finished';
     room.revealAllPlayers();
     wsManager.broadcast(roomCode, { type: 'game_ended', winner: null, from_bunker_life: true });
@@ -298,29 +339,17 @@ function checkGameOver(roomCode, room) {
   return false;
 }
 
-function maybeChainOrNextMonth(roomCode, chainEventId) {
-  const room = rooms.get(roomCode);
-  if (!room || room.status !== 'bunker_life') return;
+function scheduleNextMonth(roomCode, room) {
+  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+}
 
-  if (!chainEventId) {
-    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
-    return;
-  }
-
-  const chainDef = room.config.EVENTS.find(e => e.id === chainEventId);
-  if (!chainDef) {
-    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
-    return;
-  }
-
-  const materialized = materializeEvent(chainDef);
-  const participants = resolveEventParticipants(materialized, room.getActivePlayers(), room.config.SCRIPTED_FILTERS);
-  room.activeEvent = participants !== null && participants.length > 0
-    ? materializeEventParticipants(materialized, participants)
-    : materialized;
-  resetEventSelection(room);
-  wsManager.broadcastState(roomCode, room);
-
+function eventContextOf(event, extra = {}) {
+  return {
+    participantIds: event.participant_ids ?? [],
+    participantRoles: event.participant_roles ?? {},
+    scheduledContext: event.scheduled_context,
+    ...extra,
+  };
 }
 
 function resolveNarrativeEvent(roomCode) {
@@ -329,15 +358,8 @@ function resolveNarrativeEvent(roomCode) {
   const event = room.activeEvent;
   if (event.event_type !== 'narrative') return;
 
-  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
-  const effects = normalizeEffectsArray(event, true);
-  const effectResult = applyEffectsArray(room, effects, context);
-
-  const pendingKills = room.pendingChainKills ?? [];
-  room.pendingChainKills = [];
-  if (pendingKills.length > 0) {
-    effectResult.playersKilled = [...pendingKills, ...effectResult.playersKilled];
-  }
+  const context = eventContextOf(event);
+  const effectResult = applyEffectsArray(room, getEventEffects(event, true, room, context), context);
 
   room.activeEvent = null;
   resetEventSelection(room);
@@ -347,7 +369,7 @@ function resolveNarrativeEvent(roomCode) {
   if (checkGameOver(roomCode, room)) return;
 
   wsManager.broadcastState(roomCode, room);
-  maybeChainOrNextMonth(roomCode, event.chain_success);
+  scheduleNextMonth(roomCode, room);
 }
 
 function startNextMonth(roomCode) {
@@ -357,7 +379,6 @@ function startNextMonth(roomCode) {
   room.currentMonth++;
   room.monthStartTime = Date.now();
   resetEventSelection(room);
-  room.pendingChainKills = [];
 
   if (checkGameOver(roomCode, room)) return;
 
@@ -380,16 +401,38 @@ function startNextMonth(roomCode) {
   const activePlayers = room.getActivePlayers();
   const consumptionPerPlayer = room.config.packSettings.bunker_life.food_consumption_per_player;
   updateFood(room, -(activePlayers.length * consumptionPerPlayer));
+  const monthlyVitals = applyMonthlyVitals(room);
+
+  if (
+    monthlyVitals.healthChanges.length > 0 ||
+    monthlyVitals.sanityChanges.length > 0 ||
+    monthlyVitals.statusChanges.length > 0 ||
+    monthlyVitals.playersKilled.length > 0
+  ) {
+    wsManager.broadcast(roomCode, {
+      type: 'event_resolved',
+      event_id: 'month_tick',
+      outcome: 'success',
+      health_changes: monthlyVitals.healthChanges,
+      sanity_changes: monthlyVitals.sanityChanges,
+      status_changes: monthlyVitals.statusChanges,
+      food_change: undefined,
+      players_killed: uniquePlayerRefs(monthlyVitals.playersKilled),
+      room_changed: false,
+      players_added: [],
+    });
+  }
+
+  if (checkGameOver(roomCode, room)) return;
 
   if (room.totalMonths > 0 && room.currentMonth >= room.totalMonths) {
     room.status = 'finished';
     room.revealAllPlayers();
-    const survived = Math.random() * 100 < room.survivalChance;
     wsManager.broadcast(roomCode, {
       type: 'game_ended',
       winner: null,
       from_bunker_life: true,
-      survived,
+      survived: room.getActivePlayers().length > 0,
     });
     wsManager.broadcastState(roomCode, room);
     return;
@@ -416,20 +459,17 @@ function startNextMonth(roomCode) {
 
   room.starvationPending = false;
 
-  if (Math.random() < room.config.packSettings.events.bunker_event_chance) {
-    const picked = pickRandomEvent(room.config, room.getActivePlayers(), room.config.SCRIPTED_FILTERS);
-    if (!picked) {
-      room.activeEvent = null;
-      wsManager.broadcastState(roomCode, room);
-      setTimeout(() => startNextMonth(roomCode), room.monthDuration);
-      return;
-    }
+  const picked = Math.random() < room.config.packSettings.events.bunker_event_chance
+    ? pickRandomEvent(room.config, room)
+    : null;
+
+  if (picked) {
     room.activeEvent = materializeEventParticipants(picked.event, picked.participants);
     wsManager.broadcastState(roomCode, room);
   } else {
     room.activeEvent = null;
     wsManager.broadcastState(roomCode, room);
-    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+    scheduleNextMonth(roomCode, room);
   }
 }
 
@@ -439,25 +479,18 @@ function resolvePassiveEvent(roomCode) {
   const event = room.activeEvent;
   if (event.event_type !== 'passive') return;
 
-  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
-  const effects = normalizeEffectsArray(event, true);
-  const effectResult = applyEffectsArray(room, effects, context);
+  const context = eventContextOf(event);
+  const effectResult = applyEffectsArray(room, getEventEffects(event, true, room, context), context);
 
   room.activeEvent = null;
   resetEventSelection(room);
-
-  const chainDef = event.chain_success ? room.config.EVENTS.find(e => e.id === event.chain_success) : null;
-  if (chainDef?.event_type === 'narrative' && effectResult.playersKilled.length > 0) {
-    room.pendingChainKills = effectResult.playersKilled;
-    effectResult.playersKilled = [];
-  }
 
   broadcastEventResolved(roomCode, room, event.id, 'success', effectResult);
 
   if (checkGameOver(roomCode, room)) return;
 
   wsManager.broadcastState(roomCode, room);
-  maybeChainOrNextMonth(roomCode, event.chain_success);
+  scheduleNextMonth(roomCode, room);
 }
 
 function resolveFoodReplenishEvent(roomCode, msg) {
@@ -475,15 +508,16 @@ function resolveFoodReplenishEvent(roomCode, msg) {
       type: 'event_resolved',
       event_id: 'food_replenish',
       outcome: 'failure',
-      survival_change: 0,
-      survival_chance: room.survivalChance,
+      health_changes: [],
+      sanity_changes: [],
+      status_changes: [],
       food_change: 0,
       players_killed: [],
       room_changed: false,
       players_added: [],
     });
     wsManager.broadcastState(roomCode, room);
-    setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+    scheduleNextMonth(roomCode, room);
     return;
   }
 
@@ -497,8 +531,9 @@ function resolveFoodReplenishEvent(roomCode, msg) {
     type: 'event_resolved',
     event_id: 'food_replenish',
     outcome: 'success',
-    survival_change: 0,
-    survival_chance: room.survivalChance,
+    health_changes: [],
+    sanity_changes: [],
+    status_changes: [],
     food_change: foodDisplay,
     players_killed: [],
     room_changed: false,
@@ -506,7 +541,7 @@ function resolveFoodReplenishEvent(roomCode, msg) {
   });
 
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+  scheduleNextMonth(roomCode, room);
 }
 
 function confirmBotsForBunkerLife(room) {
@@ -520,7 +555,6 @@ function tryStartBunkerLife(roomCode, room) {
   if (room.confirmedBunkerLife.size < active.length) return false;
 
   room.status = 'bunker_life';
-  room.survivalChance = room.config.packSettings.bunker_life.initial_survival_chance;
   room.currentMonth = 0;
   room.totalMonths = room.bunker.duration?.months ?? parseDurationMonths(room.bunker.duration?.label);
   room.food = (room.bunker.food?.amount ?? 0) * active.length;
@@ -528,11 +562,13 @@ function tryStartBunkerLife(roomCode, room) {
   room.starvationPending = false;
   room.scheduledEvents = [];
   room.activeEvent = null;
+  for (const player of active) {
+    player.vital_status = { health: 100, sanity: 100, statuses: [] };
+  }
   resetEventSelection(room);
-  room.pendingChainKills = [];
   room.monthStartTime = Date.now();
   wsManager.broadcastState(roomCode, room);
-  setTimeout(() => startNextMonth(roomCode), room.monthDuration);
+  scheduleNextMonth(roomCode, room);
   return true;
 }
 
@@ -543,8 +579,10 @@ function handleUpdateEventSelection(roomCode, playerId, msg) {
   if (!player || !player.is_active) return;
   if (room.activeEvent.event_type === 'passive') return;
 
-  const { selectedProfessions, selectedItems } = normalizeEventSelection(msg);
+  const { selectedPlayerId, selectedProfessions, selectedItems } = normalizeEventSelection(msg);
+  const selectedPlayer = selectedPlayerId ? room.getPlayer(selectedPlayerId) : null;
   room.activeEventSelection = {
+    selected_player_id: selectedPlayer?.is_active ? selectedPlayer.id : null,
     selected_professions: selectedProfessions,
     selected_items: selectedItems,
   };
@@ -579,24 +617,16 @@ function resolveChoiceEvent(roomCode, outcome) {
   const event = room.activeEvent;
 
   const succeeded = outcome === 'success';
-  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
-  const effects = normalizeEffectsArray(event, succeeded);
-  const effectResult = applyEffectsArray(room, effects, context);
+  const context = eventContextOf(event);
+  const effectResult = applyEffectsArray(room, getEventEffects(event, succeeded, room, context), context);
 
   room.activeEvent = null;
   resetEventSelection(room);
 
-  const chainId = succeeded ? event.chain_success : event.chain_failure;
-  const chainDef = chainId ? room.config.EVENTS.find(e => e.id === chainId) : null;
-  if (chainDef?.event_type === 'narrative' && effectResult.playersKilled.length > 0) {
-    room.pendingChainKills = effectResult.playersKilled;
-    effectResult.playersKilled = [];
-  }
-
   broadcastEventResolved(roomCode, room, event.id, outcome, effectResult);
   if (checkGameOver(roomCode, room)) return;
   wsManager.broadcastState(roomCode, room);
-  maybeChainOrNextMonth(roomCode, chainId);
+  scheduleNextMonth(roomCode, room);
 }
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
@@ -651,8 +681,16 @@ function handleResolveEvent(roomCode, playerId, msg) {
     return;
   }
 
-  const selectedProfessions = room.activeEventSelection.selected_professions;
-  const selectedItems = room.activeEventSelection.selected_items;
+  const submittedSelection = normalizeEventSelection(msg);
+  const selectedProfessions = submittedSelection.selectedProfessions.length > 0
+    ? submittedSelection.selectedProfessions
+    : room.activeEventSelection.selected_professions;
+  const selectedItems = submittedSelection.selectedItems.length > 0
+    ? submittedSelection.selectedItems
+    : room.activeEventSelection.selected_items;
+  const selectedPlayerId = submittedSelection.selectedPlayerId ?? room.activeEventSelection.selected_player_id;
+  const selectedPlayer = selectedPlayerId ? room.getPlayer(selectedPlayerId) : null;
+  if (event.requires_player_selection === true && !selectedPlayer?.is_active) return;
 
   const forcedOutcome = typeof msg?.forced_outcome === 'string' ? msg.forced_outcome : null;
   let succeeded;
@@ -670,8 +708,8 @@ function handleResolveEvent(roomCode, playerId, msg) {
     else successChance = successChances.three_plus_resources;
     succeeded = Math.random() < successChance;
   }
-  const effects = normalizeEffectsArray(event, succeeded);
-  const context = { participantIds: event.participant_ids ?? [], participantRoles: event.participant_roles ?? {}, scheduledContext: event.scheduled_context };
+  const context = eventContextOf(event, { selectedPlayerId: selectedPlayer?.id ?? null });
+  const effects = getEventEffects(event, succeeded, room, context);
 
   for (const entry of selectedItems) consumeSelectedItem(room, entry);
 
@@ -679,19 +717,12 @@ function handleResolveEvent(roomCode, playerId, msg) {
   room.activeEvent = null;
   resetEventSelection(room);
 
-  const chainId = succeeded ? event.chain_success : event.chain_failure;
-  const chainDef = chainId ? room.config.EVENTS.find(e => e.id === chainId) : null;
-  if (chainDef?.event_type === 'narrative' && effectResult.playersKilled.length > 0) {
-    room.pendingChainKills = effectResult.playersKilled;
-    effectResult.playersKilled = [];
-  }
-
   broadcastEventResolved(roomCode, room, event.id, succeeded ? 'success' : 'failure', effectResult);
 
   if (checkGameOver(roomCode, room)) return;
 
   wsManager.broadcastState(roomCode, room);
-  maybeChainOrNextMonth(roomCode, chainId);
+  scheduleNextMonth(roomCode, room);
 }
 
 module.exports = {
