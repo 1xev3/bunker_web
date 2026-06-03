@@ -19,6 +19,7 @@
     - type: survival_change
       value: -15
     - type: kill_random_active
+      chance: 0.4
   chain_success: survivor_calmed
   chain_failure: tragedy_from_madness
 
