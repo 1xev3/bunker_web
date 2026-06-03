@@ -38,17 +38,19 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 let eaddrinuseRetries = 0;
 function handleStartupError(error) {
   if (error?.code === 'EADDRINUSE') {
-    // In dev, `node --watch` restarts the process whenever a watched file
-    // changes — and it watches every file the server reads, including the
-    // config YAMLs. The replacement process can boot before the old one has
-    // released the socket, so don't die on the first clash: retry a few times.
-    if (IS_DEV && eaddrinuseRetries < 10) {
+    // On a `--watch` restart the replacement process can boot a few hundred ms
+    // before the old one (which shuts down gracefully below) releases the
+    // socket. A couple of short retries cover that race. If the port is still
+    // held after that it's a foreign/zombie process — bail with a clear message
+    // rather than spinning.
+    if (IS_DEV && eaddrinuseRetries < 3) {
       eaddrinuseRetries += 1;
-      console.error(`Port ${PORT} busy (likely the previous --watch process exiting), retry ${eaddrinuseRetries}/10 in 500ms...`);
-      setTimeout(() => { try { server.close(); } catch {} server.listen(PORT); }, 500);
+      setTimeout(() => { try { server.close(); } catch {} server.listen(PORT); }, 300);
       return;
     }
-    console.error(`Port ${PORT} is already in use. Stop the existing server or start with a different PORT.`);
+    console.error(`Port ${PORT} is already in use by another process. Free it and restart, or start with a different PORT.`);
+    console.error(`  Windows (PowerShell): Get-NetTCPConnection -LocalPort ${PORT} -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`);
+    console.error(`  Linux/macOS:          lsof -ti tcp:${PORT} | xargs kill -9`);
     process.exit(1);
   }
 
