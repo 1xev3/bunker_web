@@ -2,7 +2,7 @@
 events:
   - id: poison_fog
     type: choice
-    weight: 2
+    weight: 1
     when:
       min_month: 2
       flag_unset: [poison_fog_cleared]

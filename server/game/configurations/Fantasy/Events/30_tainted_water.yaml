@@ -2,7 +2,7 @@
 events:
   - id: tainted_water
     type: choice
-    weight: 2
+    weight: 1
     when:
       flag_unset: [water_tainted_resolved]
     participants:

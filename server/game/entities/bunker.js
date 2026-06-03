@@ -115,6 +115,45 @@ class Bunker {
     return removedItems;
   }
 
+  // Drops an item into a random existing (non-entrance) room and the flat
+  // `items` list. Returns true if placed.
+  addItem(item) {
+    const cells = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const cell = this.grid[r][c];
+        if (cell && !cell.isEntrance) cells.push(cell);
+      }
+    }
+    if (cells.length === 0) return false;
+    const cell = cells[Math.floor(Math.random() * cells.length)];
+    if (!Array.isArray(cell.items)) cell.items = [];
+    cell.items.push(item);
+    this.items.push(item);
+    return true;
+  }
+
+  // Removes one item from the bunker — a specific id, or (itemId == null) a
+  // random one. Returns the removed item or null.
+  removeItem(itemId = null) {
+    const matches = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const cell = this.grid[r][c];
+        if (!cell || !Array.isArray(cell.items)) continue;
+        cell.items.forEach((item, idx) => {
+          if (itemId == null || item.id === itemId) matches.push({ cell, idx, item });
+        });
+      }
+    }
+    if (matches.length === 0) return null;
+    const pick = itemId == null ? matches[Math.floor(Math.random() * matches.length)] : matches[0];
+    pick.cell.items.splice(pick.idx, 1);
+    const gi = this.items.findIndex(i => i.id === pick.item.id);
+    if (gi !== -1) this.items.splice(gi, 1);
+    return pick.item;
+  }
+
   addRoom(newItems = []) {
     const frontier = [];
     for (let r = 0; r < 5; r++) {

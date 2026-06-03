@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ServerMessage, ClientMessage, Player, VitalChange, StatusChange } from './types/game';
+import type { ServerMessage, ClientMessage, Player, VitalChange, StatusChange, ItemChange } from './types/game';
 import { useGameState } from './hooks/useGameState';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameLobby from './components/GameLobby';
@@ -44,7 +44,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<{ outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }>; item_changes?: ItemChange[] } | null>(null);
   const [monthlyNotice, setMonthlyNotice] = useState<{ health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> } | null>(null);
   const monthlyNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
@@ -173,7 +173,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, message: msg.message, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added });
+        setEventOutcome({ outcome: msg.outcome, message: msg.message, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
       }
 
       if (msg.type === 'monthly_report') {

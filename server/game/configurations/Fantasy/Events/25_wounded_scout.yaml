@@ -2,7 +2,7 @@
 events:
   - id: wounded_scout
     type: choice
-    weight: 2
+    weight: 1
     when:
       min_players: 2
     participants:

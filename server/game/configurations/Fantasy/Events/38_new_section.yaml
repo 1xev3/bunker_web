@@ -1,0 +1,68 @@
+# Выживший предлагает пробить новый отсек. С инструментами и умелым мастером
+# выйдет надёжная комната (add_room + находка), без них свод может рухнуть
+# (remove_room и потеря припасов).
+events:
+  - id: dig_new_section
+    type: choice
+    weight: 1
+    when:
+      min_month: 2
+      min_players: 3
+    participants:
+      digger: {}
+    title: Новый отсек
+    text: >-
+      {digger} простучал дальнюю стену — за ней пустота. Если пробиться, в
+      убежище станет на комнату больше. Но порода ненадёжна: без инструментов и
+      умелых рук свод может обрушиться прямо на соседнюю кладовую.
+    select:
+      kinds: [item, profession]
+      prompt_item: Поднять инструменты для проходки
+      prompt_profession: Кто возглавит работы
+    options:
+      - id: dig_through
+        label: Пробивать стену
+        description: >-
+          Кирки, лопаты, рунные пластины крепи, опытный мастер — чем больше
+          всего собрано, тем надёжнее новый свод.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: "Пробились ровно и сразу укрепили свод — у убежища новая комната, а в нише за стеной нашлась {item}."
+              effects:
+                - { on: digger, sanity: 8 }
+                - { add_room: true }
+                - { add_bunker_item: random }
+          some:
+            - chance: 55
+              text: Отсек пробили, но второпях — вышла пыльная, зато рабочая каморка.
+              effects:
+                - { on: digger, health: -8 }
+                - { add_room: true }
+            - text: >-
+                Свод не выдержал и осыпался — проход завалило вместе с соседней
+                кладовой.
+              effects:
+                - { on: digger, health: -18, sanity: -10 }
+                - { on: others, sanity: -6 }
+                - { remove_room: true }
+          none:
+            - chance: 25
+              text: Голыми руками и упрямством всё же прокопали тесный лаз.
+              effects:
+                - { on: digger, health: -15 }
+                - { add_room: true }
+            - text: >-
+                Без инструментов стену лишь расшатали — обвал погрёб часть
+                запасов вместе с отсеком.
+              effects:
+                - { on: digger, health: -22, sanity: -12 }
+                - { on: others, health: -5, sanity: -8 }
+                - { remove_room: true }
+                - { remove_bunker_item: random }
+      - id: leave_wall
+        label: Не трогать стену
+        description: Не рисковать — целее будем.
+        effects:
+          - { on: digger, sanity: -2 }

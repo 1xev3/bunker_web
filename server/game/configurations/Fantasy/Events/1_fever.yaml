@@ -3,7 +3,7 @@
 events:
   - id: fever
     type: choice
-    weight: 2
+    weight: 1
     when:
       min_players: 1
     participants:

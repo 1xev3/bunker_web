@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, Brain, Calendar, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Briefcase, User, Sparkles, Send, Package, Backpack } from 'lucide-react';
-import type { ClientMessage, Player, RoomState, StatusChange, VitalChange } from '../types/game';
+import type { ClientMessage, ItemChange, Player, RoomState, StatusChange, VitalChange } from '../types/game';
 import EventModal from './EventModal';
 import BunkerMap from './BunkerMap';
 
@@ -15,6 +15,7 @@ interface EventOutcome {
   players_killed?: Array<{ id: string; name: string }>;
   room_changed?: boolean;
   players_added?: Array<{ id: string; name: string }>;
+  item_changes?: ItemChange[];
 }
 
 interface Props {
@@ -223,6 +224,17 @@ function EventOutcomeModal({ outcome, activePlayers, myPlayerId, outcomeConfirma
     rows.push(<OutcomeRow key={`killed-${i}-${p.id}`} icon={<Skull size={14} className="text-red-400" />} label={p.name} valueColor="text-red-400" />));
   (outcome.players_added ?? []).forEach((p, i) =>
     rows.push(<OutcomeRow key={`added-${i}-${p.id}`} icon={<Baby size={14} className="text-blue-400" />} label={p.name} />));
+  (outcome.item_changes ?? []).forEach((c, i) => {
+    const gained = c.action === 'given' || c.action === 'bunker_added';
+    const owner = c.name ? `${c.name}: ` : c.action.startsWith('bunker') ? 'Бункер: ' : '';
+    const qty = c.quantity && c.quantity > 1 ? ` ×${c.quantity}` : '';
+    rows.push(<OutcomeRow
+      key={`item-${i}-${c.item}`}
+      icon={<Package size={14} className={gained ? 'text-emerald-400' : 'text-red-400'} />}
+      label={`${owner}${c.item}${qty}`}
+      value={gained ? '+' : '−'}
+      valueColor={gained ? 'text-emerald-400' : 'text-red-400'} />);
+  });
   if (outcome.room_changed)
     rows.push(<OutcomeRow key="room" icon={<DoorOpen size={14} className="text-zinc-400" />} label="Бункер изменился" />);
 

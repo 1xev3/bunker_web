@@ -73,6 +73,7 @@ function setupWebSocket(wss) {
       if (!room) { wsLog(`no room ${roomCode} for ${msg.type}`); return; }
       room.touch();
 
+      try {
       switch (msg.type) {
         case 'ping':
           ws.send(JSON.stringify({ type: 'pong' }));
@@ -98,6 +99,13 @@ function setupWebSocket(wss) {
         case 'cancel_choice_selection': handleCancelChoiceSelection(roomCode, playerId); break;
         case 'resolve_event':         handleResolveEvent(roomCode, playerId, msg); break;
         case 'confirm_outcome':       handleConfirmOutcome(roomCode, playerId); break;
+      }
+      } catch (error) {
+        // A bug while handling one message must never tear down the whole
+        // server (and with it every other player's connection). Log it with
+        // context and keep the socket alive so play can continue.
+        console.error(`[ws] handler error for type=${msg.type} room=${roomCode} player=${playerId}:`, error);
+        try { ws.send(JSON.stringify({ type: 'error', message: 'Внутренняя ошибка сервера при обработке действия' })); } catch { /* ignore */ }
       }
     });
 

@@ -244,8 +244,61 @@ function uniquePlayerRefs(players) {
   return result;
 }
 
+// Resolves an item reference to a concrete { id, label }. With `random` (or no
+// id) it picks any item from the given pack pools; otherwise it looks the id up
+// to recover its label, falling back to the id itself.
+function resolveItemRef(config, itemId, random, pools) {
+  const all = pools.flat().filter(Boolean);
+  if (random || !itemId) {
+    if (all.length === 0) return null;
+    const pick = all[Math.floor(Math.random() * all.length)];
+    return { id: pick.id, label: pick.label ?? pick.id };
+  }
+  const found = all.find(i => i.id === itemId);
+  return { id: itemId, label: found?.label ?? itemId };
+}
+
+// Whether a player carries anything that can be taken (inventory or backpack).
+function hasItems(player) {
+  return Boolean(player?.inventory?.id) || (Array.isArray(player?.backpack) && player.backpack.length > 0);
+}
+
+// Adds an item to a player's backpack, stacking with an existing entry.
+function giveItemToPlayer(player, item, quantity = 1) {
+  if (!Array.isArray(player.backpack)) player.backpack = [];
+  const existing = player.backpack.find(i => i.id === item.id);
+  if (existing) existing.quantity += quantity;
+  else player.backpack.push({ id: item.id, label: item.label, quantity });
+}
+
+// Removes one item from a player — a specific id, or (random) any item they
+// carry across inventory + backpack. Returns the removed { id, label } or null.
+function removeItemFromPlayer(player, itemId, random) {
+  const pool = [];
+  if (player.inventory?.id) pool.push({ source: 'inventory', item: player.inventory });
+  if (Array.isArray(player.backpack)) player.backpack.forEach(item => pool.push({ source: 'backpack', item }));
+  if (pool.length === 0) return null;
+
+  const entry = (random || !itemId)
+    ? pool[Math.floor(Math.random() * pool.length)]
+    : pool.find(e => e.item.id === itemId);
+  if (!entry) return null;
+
+  const removed = { id: entry.item.id, label: entry.item.label ?? entry.item.id };
+  if (entry.source === 'inventory') {
+    player.inventory = null;
+  } else {
+    entry.item.quantity = (entry.item.quantity ?? 1) - 1;
+    if (entry.item.quantity <= 0) {
+      const idx = player.backpack.indexOf(entry.item);
+      if (idx !== -1) player.backpack.splice(idx, 1);
+    }
+  }
+  return removed;
+}
+
 function applyBunkerEventEffect(room, effect, context) {
-  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], foodChange: undefined, playerKilled: null, playersKilled: [], playersAdded: [], roomChanged: false, scheduledEvent: null };
+  const result = { healthChanges: [], sanityChanges: [], statusChanges: [], foodChange: undefined, playerKilled: null, playersKilled: [], playersAdded: [], itemChanges: [], roomChanged: false, scheduledEvent: null };
   if (!effect) return result;
 
   if (effect.type === 'health_change' || effect.type === 'sanity_change') {
@@ -321,6 +374,69 @@ function applyBunkerEventEffect(room, effect, context) {
     return result;
   }
 
+  if (effect.type === 'remove_room') {
+    result.roomChanged = room.bunker.removeRandomRoom() !== null;
+    return result;
+  }
+
+  if (effect.type === 'give_item') {
+    const targets = getEffectTargets(room, effect);
+    const item = resolveItemRef(room.config, effect.item_id, effect.random,
+      [room.config?.BACKPACK_ITEMS ?? [], room.config?.BUNKER_ITEMS ?? []]);
+    const qty = effect.quantity > 0 ? effect.quantity : 1;
+    if (item) {
+      for (const target of targets) {
+        giveItemToPlayer(target, item, qty);
+        result.itemChanges.push({ id: target.id, name: target.name, item: item.label, quantity: qty, action: 'given' });
+      }
+    }
+    return result;
+  }
+
+  if (effect.type === 'steal_item') {
+    const thief = effect.to ? room.getPlayer(effect.to) : null;
+    if (!thief) return result;
+    const donors = (effect.from_ids ?? [])
+      .map(id => room.getPlayer(id))
+      .filter(p => p && p.id !== thief.id && hasItems(p));
+    if (donors.length === 0) return result;
+    const donor = donors[Math.floor(Math.random() * donors.length)];
+    const stolen = removeItemFromPlayer(donor, effect.item_id, effect.random);
+    if (stolen) {
+      giveItemToPlayer(thief, stolen, 1);
+      result.itemChanges.push({ id: donor.id, name: donor.name, item: stolen.label, action: 'removed' });
+      result.itemChanges.push({ id: thief.id, name: thief.name, item: stolen.label, quantity: 1, action: 'given' });
+    }
+    return result;
+  }
+
+  if (effect.type === 'remove_item') {
+    const targets = getEffectTargets(room, effect);
+    for (const target of targets) {
+      const removed = removeItemFromPlayer(target, effect.item_id, effect.random);
+      if (removed) result.itemChanges.push({ id: target.id, name: target.name, item: removed.label, action: 'removed' });
+    }
+    return result;
+  }
+
+  if (effect.type === 'add_bunker_item') {
+    const item = resolveItemRef(room.config, effect.item_id, effect.random, [room.config?.BUNKER_ITEMS ?? []]);
+    if (item && room.bunker.addItem({ id: item.id, label: item.label })) {
+      result.roomChanged = true;
+      result.itemChanges.push({ item: item.label, action: 'bunker_added' });
+    }
+    return result;
+  }
+
+  if (effect.type === 'remove_bunker_item') {
+    const removed = room.bunker.removeItem(effect.random ? null : effect.item_id);
+    if (removed) {
+      result.roomChanged = true;
+      result.itemChanges.push({ item: removed.label ?? removed.id, action: 'bunker_removed' });
+    }
+    return result;
+  }
+
   if (effect.type === 'spawn_survivor') {
     const parent = effect.parent_id ? room.getPlayer(effect.parent_id) : null;
     const child = spawnNewborn(room, parent, effect.name);
@@ -348,6 +464,7 @@ function applyEffectsArray(room, effects, context) {
     foodChange: undefined,
     playersKilled: [],
     playersAdded: [],
+    itemChanges: [],
     roomChanged: false,
   };
 
@@ -360,6 +477,7 @@ function applyEffectsArray(room, effects, context) {
     if (r.playerKilled) accumulated.playersKilled.push(r.playerKilled);
     accumulated.playersKilled.push(...r.playersKilled);
     accumulated.playersAdded.push(...(r.playersAdded ?? []));
+    accumulated.itemChanges.push(...(r.itemChanges ?? []));
     if (r.roomChanged) accumulated.roomChanged = true;
     if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
   }
@@ -444,6 +562,18 @@ function selectionHasKind(room, kind) {
   return true;
 }
 
+// Substitutes {item}/{items} in an outcome message with the names of the items
+// the effects actually produced (resolved after `random` picks). {item} is the
+// first produced item; {items} is the full list ("a, b и c").
+function injectItemPlaceholders(text, itemChanges) {
+  if (typeof text !== 'string' || !text.includes('{item')) return text;
+  const labels = [...new Set((itemChanges ?? []).map(c => c.item).filter(Boolean))];
+  const joined = labels.length <= 1
+    ? (labels[0] ?? '')
+    : `${labels.slice(0, -1).join(', ')} и ${labels[labels.length - 1]}`;
+  return text.replace(/\{items\}/g, joined).replace(/\{item\}/g, labels[0] ?? '');
+}
+
 function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null) {
   wsManager.broadcast(roomCode, {
     type: 'event_resolved',
@@ -457,6 +587,7 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, 
     players_killed: uniquePlayerRefs(effectResult.playersKilled),
     room_changed: effectResult.roomChanged ?? false,
     players_added: uniquePlayerRefs(effectResult.playersAdded),
+    item_changes: effectResult.itemChanges ?? [],
   });
 }
 
@@ -834,11 +965,12 @@ function resolveChoiceEvent(roomCode, optionId) {
   const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId, selection);
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
+  const finalMessage = injectItemPlaceholders(message, effectResult.itemChanges);
 
   room.activeEvent = null;
   resetEventSelection(room);
 
-  broadcastEventResolved(roomCode, room, event.id, option.id, effectResult, message);
+  broadcastEventResolved(roomCode, room, event.id, option.id, effectResult, finalMessage);
   if (checkGameOver(roomCode, room)) return;
   waitForOutcomeConfirmations(roomCode, 'next_month');
 }

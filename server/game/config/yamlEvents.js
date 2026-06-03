@@ -83,7 +83,7 @@ function isPlainObject(value) {
 
 function validateEffect(effect, scope, errors) {
   if (!isPlainObject(effect)) { errors.push(`${scope}: ожидается объект эффекта`); return; }
-  const hasTargetedOp = ['health', 'sanity', 'status', 'clear_status', 'kill'].some(k => effect[k] !== undefined);
+  const hasTargetedOp = ['health', 'sanity', 'status', 'clear_status', 'kill', 'give_item', 'remove_item'].some(k => effect[k] !== undefined);
   if (hasTargetedOp && effect.on === undefined) {
     errors.push(`${scope}.on: эффект действует на цель, укажите on (роль, all, others или random)`);
   }
@@ -122,6 +122,33 @@ function validateEffect(effect, scope, errors) {
       errors.push(`${scope}.spawn_survivor.name: ожидается строка`);
     }
   }
+  if (effect.remove_room !== undefined && typeof effect.remove_room !== 'boolean') {
+    errors.push(`${scope}.remove_room: ожидается true`);
+  }
+  for (const key of ['give_item', 'remove_item', 'add_bunker_item', 'remove_bunker_item']) {
+    if (effect[key] === undefined) continue;
+    const v = effect[key];
+    if (typeof v !== 'string' && !isPlainObject(v)) {
+      errors.push(`${scope}.${key}: ожидается id предмета, "random" или объект { item, quantity? }`);
+    } else if (isPlainObject(v)) {
+      if (v.item !== undefined && typeof v.item !== 'string') {
+        errors.push(`${scope}.${key}.item: ожидается строка (id предмета или "random")`);
+      }
+      if (v.quantity !== undefined && (typeof v.quantity !== 'number' || v.quantity < 1)) {
+        errors.push(`${scope}.${key}.quantity: ожидается число >= 1`);
+      }
+    }
+  }
+  if (effect.steal_item !== undefined) {
+    const v = effect.steal_item;
+    if (!isPlainObject(v)) {
+      errors.push(`${scope}.steal_item: ожидается объект { from, to, item? }`);
+    } else {
+      if (typeof v.from !== 'string' || v.from.trim() === '') errors.push(`${scope}.steal_item.from: ожидается роль или all/others/random`);
+      if (typeof v.to !== 'string' || v.to.trim() === '') errors.push(`${scope}.steal_item.to: ожидается роль вора`);
+      if (v.item !== undefined && typeof v.item !== 'string') errors.push(`${scope}.steal_item.item: ожидается строка (id предмета или "random")`);
+    }
+  }
 }
 
 function validateEffectsArray(effects, scope, errors) {
@@ -149,6 +176,7 @@ function validateParticipants(participants, scope, errors) {
     if (crit.max_age !== undefined && typeof crit.max_age !== 'number') errors.push(`${scope}.${role}.max_age: ожидается число`);
     if (crit.gender !== undefined && typeof crit.gender !== 'string') errors.push(`${scope}.${role}.gender: ожидается строка-метка пола`);
     if (crit.profession !== undefined && typeof crit.profession !== 'string') errors.push(`${scope}.${role}.profession: ожидается строка-метка профессии`);
+    if (crit.no_status !== undefined && typeof crit.no_status !== 'string') errors.push(`${scope}.${role}.no_status: ожидается id статуса`);
   }
 }
 
@@ -297,6 +325,7 @@ function matchesCriteria(player, crit) {
   if (crit.max_age != null && age > crit.max_age) return false;
   if (crit.gender && getPlayerAttributeLabel(player, 'gender') !== crit.gender) return false;
   if (crit.profession && getPlayerAttributeLabel(player, 'profession') !== crit.profession) return false;
+  if (crit.no_status && player.vital_status?.statuses?.some(s => s.id === crit.no_status)) return false;
   return true;
 }
 
@@ -311,14 +340,52 @@ function randomOf(list) {
 // Reserved event fields exposed to {event.<field>} references.
 const EVENT_REF_FIELDS = new Set(['id', 'type', 'title', 'weight']);
 
-// Inline alternatives: "{крыс|мышей|тараканов}" -> one random choice. Matches a
-// brace group that contains a pipe and no nested braces.
-const INLINE_ALTERNATIVE_RE = /\{([^{}]*\|[^{}]*)\}/g;
 // Self-references: "{event.animals}", "{event.id}", etc.
 const EVENT_REF_RE = /\{event\.([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
 
+// Splits a brace-group body on top-level pipes only, so pipes inside nested
+// "{...}" placeholders don't split the alternative.
+function splitTopLevelPipes(body) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of body) {
+    if (ch === '{') depth++;
+    else if (ch === '}') depth--;
+    if (ch === '|' && depth === 0) { parts.push(current); current = ''; }
+    else current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+// Inline alternatives: "{крыс|мышей|тараканов}" -> one random choice. A balanced
+// brace scan (rather than a regex) so an alternative may itself contain nested
+// placeholders, e.g. "{...|горечь, а потом {patient} упал}". Groups without a
+// top-level pipe (plain "{patient}", "{event.x}") are left intact for later
+// passes.
 function resolveAlternatives(str) {
-  return str.replace(INLINE_ALTERNATIVE_RE, (_match, body) => randomOf(body.split('|')));
+  if (typeof str !== 'string' || str.indexOf('{') === -1) return str;
+  let result = '';
+  let i = 0;
+  while (i < str.length) {
+    if (str[i] !== '{') { result += str[i]; i++; continue; }
+    let depth = 1;
+    let j = i + 1;
+    for (; j < str.length && depth > 0; j++) {
+      if (str[j] === '{') depth++;
+      else if (str[j] === '}') depth--;
+      if (depth === 0) break;
+    }
+    if (depth !== 0) { result += str.slice(i); break; } // unbalanced — leave as-is
+    const body = str.slice(i + 1, j);
+    const parts = splitTopLevelPipes(body);
+    result += parts.length > 1
+      ? resolveAlternatives(randomOf(parts))      // an alternative: pick + recurse
+      : `{${resolveAlternatives(body)}}`;         // a placeholder: keep, recurse inside
+    i = j + 1;
+  }
+  return result;
 }
 
 // Picks concrete values for an event's declared `vars` once. Array values are
@@ -421,6 +488,37 @@ function buildEffectPrimitives(effects, roleMap, room, participantIds) {
     }
     if (eff.kill_random) out.push({ type: 'kill_random_active' });
     if (eff.add_room) out.push({ type: 'add_room' });
+    if (eff.remove_room) out.push({ type: 'remove_room' });
+    if (eff.give_item !== undefined) {
+      const spec = isPlainObject(eff.give_item) ? eff.give_item : { item: eff.give_item };
+      const random = spec.item === 'random' || spec.item == null;
+      const quantity = Number(spec.quantity) > 0 ? Math.floor(Number(spec.quantity)) : 1;
+      for (const id of ids) out.push({ type: 'give_item', target: id, item_id: random ? null : spec.item, random, quantity });
+    }
+    if (eff.remove_item !== undefined) {
+      const spec = isPlainObject(eff.remove_item) ? eff.remove_item : { item: eff.remove_item };
+      const random = spec.item === 'random' || spec.item == null;
+      for (const id of ids) out.push({ type: 'remove_item', target: id, item_id: random ? null : spec.item, random });
+    }
+    if (eff.add_bunker_item !== undefined) {
+      const spec = isPlainObject(eff.add_bunker_item) ? eff.add_bunker_item : { item: eff.add_bunker_item };
+      const random = spec.item === 'random' || spec.item == null;
+      out.push({ type: 'add_bunker_item', item_id: random ? null : spec.item, random });
+    }
+    if (eff.remove_bunker_item !== undefined) {
+      const spec = isPlainObject(eff.remove_bunker_item) ? eff.remove_bunker_item : { item: eff.remove_bunker_item };
+      const random = spec.item === 'random' || spec.item == null;
+      out.push({ type: 'remove_bunker_item', item_id: random ? null : spec.item, random });
+    }
+    if (isPlainObject(eff.steal_item)) {
+      const spec = eff.steal_item;
+      const fromIds = targetIdsFor(spec.from, roleMap, room, participantIds);
+      const toIds = targetIdsFor(spec.to, roleMap, room, participantIds);
+      const random = spec.item === 'random' || spec.item == null;
+      if (toIds.length > 0) {
+        out.push({ type: 'steal_item', from_ids: fromIds, to: toIds[0], item_id: random ? null : spec.item, random });
+      }
+    }
     if (eff.spawn_survivor) {
       // `on` (if given) names the parent — the newborn inherits their race.
       const opts = isPlainObject(eff.spawn_survivor) ? eff.spawn_survivor : {};
@@ -469,6 +567,8 @@ function outcomeTone(outcome) {
     if (typeof eff.food === 'number') score += eff.food > 0 ? 1 : -1;
     else if (typeof eff.food === 'string') score -= 1; // "N%" is always a loss
     if (eff.kill || eff.kill_random) score -= 100;
+    if (eff.add_room || eff.give_item || eff.add_bunker_item) score += 1;
+    if (eff.remove_room || eff.remove_item || eff.remove_bunker_item) score -= 1;
   }
   return score > 0 ? 'good' : score < 0 ? 'bad' : 'neutral';
 }

@@ -164,10 +164,40 @@ options:
 - { on: chosen, kill: true }
 - { kill_random: true }                     # случайный, кроме участников
 - { add_room: true }
+- { remove_room: true }                     # обрушить случайную комнату (с её вещами)
 - { on: mother, spawn_survivor: true }      # новый житель без «взрослых» атрибутов
+- { on: chosen, give_item: rope }           # выдать предмет в рюкзак
+- { on: chosen, give_item: { item: rope, quantity: 2 } }
+- { on: chosen, give_item: random }         # случайный предмет из пула пака
+- { on: thief, remove_item: random }        # отнять случайный предмет (рюкзак/инвентарь)
+- { on: thief, remove_item: lantern }       # отнять конкретный предмет
+- { add_bunker_item: medkit }               # добавить предмет в случайную комнату
+- { add_bunker_item: random }
+- { remove_bunker_item: random }            # пропажа предмета из бункера
+- { steal_item: { from: others, to: thief } }  # отнять предмет у одного и отдать другому (тот же предмет)
+- { steal_item: { from: thief, to: random, item: random } }
 ```
 
 В одном объекте можно совмещать операции: `{ on: victim, health: -5, sanity: -5 }`.
+
+### Воздействие на бункер и вещи
+
+`add_room`/`remove_room` добавляют или обрушивают случайную комнату (вместе с
+её предметами). `give_item`/`remove_item` действуют на цель из `on` (предмет
+кладётся в рюкзак; при отъёме сначала ищется рюкзак, затем инвентарь).
+`add_bunker_item`/`remove_bunker_item` кладут предмет в случайную комнату или
+убирают его из бункера. `steal_item: { from, to, item? }` переносит **тот же**
+предмет от одной цели (`from` — роль/`others`/`random`; берётся случайный её
+владелец, у кого есть вещи) к другой (`to`). Предмет задаётся id из пулов пака
+(`BACKPACK_ITEMS`, `BUNKER_ITEMS`), значением `random` или объектом
+`{ item, quantity? }`. Изменения показываются в итогах события (`item_changes`).
+
+В тексте исхода `choice`-события можно подставить название появившегося/
+отнятого предмета: `{item}` — первый затронутый предмет, `{items}` — все
+через запятую. Плейсхолдер заполняется уже **после** применения эффектов
+(когда `random` выбрал конкретный предмет), поэтому работает только в `text`
+исходов, а не в основном `text` flavor-карты. Пример:
+`text: "{thief} прибрал к рукам чужое — {item}."`
 
 ### Новый выживший (`spawn_survivor`)
 

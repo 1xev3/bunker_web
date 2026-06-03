@@ -39,12 +39,12 @@ events:
         description: Положить что-то своё и посмотреть, что будет.
         outcomes:
           - chance: 35
-            text: >-
-              Через день в сундуке лежал запас еды и короткая записка:
-              «Ещё придём».
+            text: "Через день в сундуке лежал запас еды, {item} и короткая записка: «Ещё придём»."
             effects:
               - { food: 120 }
               - { on: all, health: 5, sanity: 8 }
+              - { on: finder, give_item: random }
+              - { add_bunker_item: random }
               - { flag: { chest_mystery_resolved: true } }
           - text: >-
               Ответный знак исчез. Следующей ночью у {finder} остановилось сердце —

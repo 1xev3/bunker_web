@@ -298,7 +298,7 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[] }
+  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
   | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> };
 
 export interface VitalChange {
@@ -313,6 +313,14 @@ export interface StatusChange {
   status?: VitalStatusEffect;
   status_id?: string;
   action: 'added' | 'cleared';
+}
+
+export interface ItemChange {
+  id?: string;
+  name?: string;
+  item: string;
+  quantity?: number;
+  action: 'given' | 'removed' | 'bunker_added' | 'bunker_removed';
 }
 
 export type ClientMessage =

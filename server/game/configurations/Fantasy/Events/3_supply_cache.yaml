@@ -3,7 +3,7 @@
 events:
   - id: supply_cache
     type: choice
-    weight: 2
+    weight: 1
     when:
       flag_unset: [supply_cache_found]
       min_players: 2
@@ -21,9 +21,11 @@ events:
         description: Всё в общий котёл — пока не начались споры.
         outcomes:
           - chance: 65
+            text: "В сундуке не только снедь — на дне нашлась {item}, она пополнила бункер."
             effects:
               - { food: 180 }
               - { on: all, sanity: 8 }
+              - { add_bunker_item: random }
               - { flag: { supply_cache_found: true } }
           - effects:
               - { food: 140 }

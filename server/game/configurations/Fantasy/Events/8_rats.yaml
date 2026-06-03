@@ -3,7 +3,7 @@
 events:
   - id: rats_invasion
     type: choice
-    weight: 2
+    weight: 1
     when:
       min_month: 1
     vars:

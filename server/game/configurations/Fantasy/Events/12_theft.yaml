@@ -43,10 +43,11 @@ events:
             text: Кражи прекратились сами собой — видно, вору стало стыдно.
             effects:
               - { on: all, sanity: 1 }
-          - text: Безнаказанность развязала руки — запасы продолжили таять.
+          - text: "Безнаказанность развязала руки: запасы продолжили таять, а {thief} прибрал к рукам чужое — {item}."
             effects:
               - { food: "20%" }
               - { on: all, sanity: -5 }
+              - { steal_item: { from: others, to: thief } }
 
   - id: thief_caught
     type: choice
@@ -74,9 +75,11 @@ events:
         description: Пусть все знают — тайное всегда выходит наружу.
         outcomes:
           - chance: 55
+            text: "Под общим напором {thief} вернул припрятанное — {item} вернулось хозяевам."
             effects:
               - { on: thief, health: -8, sanity: -8 }
               - { on: others, sanity: 5 }
+              - { steal_item: { from: thief, to: others } }
           - effects:
               - { on: thief, health: -14, sanity: -14 }
               - { on: others, sanity: -4 }

@@ -3,7 +3,7 @@
 events:
   - id: water_contamination
     type: choice
-    weight: 2
+    weight: 1
     when:
       min_month: 1
       min_players: 2

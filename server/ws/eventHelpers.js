@@ -89,6 +89,12 @@ function effectChips(eff, resolveName) {
   }
   if (eff.spawn_survivor) chips.push({ text: 'новый выживший', tone: 'good' });
   if (eff.add_room) chips.push({ text: 'новая комната', tone: 'good' });
+  if (eff.remove_room) chips.push({ text: 'потеря комнаты', tone: 'bad' });
+  if (eff.give_item) chips.push({ text: `${prefix}предмет получен`, tone: 'good' });
+  if (eff.remove_item) chips.push({ text: `${prefix}предмет потерян`, tone: 'bad' });
+  if (eff.add_bunker_item) chips.push({ text: 'предмет в бункере', tone: 'good' });
+  if (eff.remove_bunker_item) chips.push({ text: 'пропажа предмета', tone: 'bad' });
+  if (eff.steal_item) chips.push({ text: 'кража предмета', tone: 'bad' });
   return chips;
 }
 
@@ -218,21 +224,29 @@ function materializeEvent(def, roleMap) {
   };
 }
 
-// Picks a random eligible event whose `when` passes and whose participants fill.
-// Returns a materialized activeEvent or null.
+// Picks a random eligible event whose `when` passes and whose participants fill,
+// using each event's `weight` for weighted random selection.
 function pickRandomEvent(config, room) {
   const pool = (Array.isArray(config.EVENTS) ? config.EVENTS : []).filter(e => !e.scheduled_only);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+
+  const eligible = [];
   for (const def of pool) {
     if (!matchesWhen(def.when, room)) continue;
     const roleMap = selectParticipants(def.participants, room);
     if (roleMap === null) continue;
-    return materializeEvent(def, roleMap);
+    eligible.push({ def, roleMap });
   }
-  return null;
+
+  if (eligible.length === 0) return null;
+
+  const total = eligible.reduce((sum, e) => sum + (e.def.weight ?? 1), 0);
+  let rand = Math.random() * total;
+  for (const entry of eligible) {
+    rand -= entry.def.weight ?? 1;
+    if (rand <= 0) return materializeEvent(entry.def, entry.roleMap);
+  }
+  const last = eligible[eligible.length - 1];
+  return materializeEvent(last.def, last.roleMap);
 }
 
 // Renders text for a scheduled event using carried role names (a player may be

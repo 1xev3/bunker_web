@@ -56,6 +56,7 @@ events:
         effects:
           - { on: trapped, kill: true }
           - { on: others, health: -8, sanity: -30 }
+          - { remove_room: true }
       - id: cave_bare_hands
         label: Копать без инструментов
         description: Руками, зубами — только бы добраться.

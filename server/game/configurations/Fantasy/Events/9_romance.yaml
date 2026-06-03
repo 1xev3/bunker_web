@@ -2,12 +2,12 @@
 events:
   - id: night_together
     type: flavor
-    weight: 2
+    weight: 1
     when:
       min_players: 2
     participants:
       man: { gender: Мужчина, min_age: 18 }
-      woman: { gender: Женщина, min_age: 18 }
+      woman: { gender: Женщина, min_age: 18, no_status: pregnancy }
     vars:
       place: "{в кладовой|в дальнем отсеке|за стеллажами|в тёмном углу}"
     title: Близость {event.place}

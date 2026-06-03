@@ -85,4 +85,17 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
+// The WebSocket message listener is async, so a throw inside a handler surfaces
+// as an unhandled rejection — which by default would terminate the process and
+// drop every connected player (they'd all see "Переподключение"). Per-message
+// handling is already wrapped in try/catch in ws/connection.js; these are the
+// last-resort nets so an unforeseen async error logs instead of crashing the
+// server. (Startup errors still exit via handleStartupError above.)
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (kept alive):', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception (kept alive):', error);
+});
+
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
