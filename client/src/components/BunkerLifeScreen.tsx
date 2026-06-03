@@ -80,12 +80,13 @@ function SurvivorCard({ player, isMe }: { player: Player; isMe: boolean }) {
         </h3>
         <p className="flex items-center gap-1.5 truncate text-[11px] text-zinc-500">
           <Briefcase size={10} className="shrink-0" /> {attrDisplay(player, 'profession')}
-          <span className="text-zinc-700">·</span>
+        </p>
+        <p className="flex items-center gap-1.5 truncate text-[11px] text-zinc-500">
           <User size={10} className="shrink-0" /> {attrDisplay(player, 'gender')}
         </p>
       </div>
 
-      <div className="mt-3 grid gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <StatMeter icon={<HeartPulse size={12} className="text-red-400" />} label="Здоровье" value={vital.health} />
         <StatMeter icon={<Brain size={12} className="text-sky-400" />} label="Рассудок" value={vital.sanity} />
       </div>
@@ -318,6 +319,8 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
   const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
   const monthlyConsumption = Math.max(1, activePlayers.length * foodConsumptionPerPlayer);
   const monthsLeft = Math.floor(roomState.food / monthlyConsumption);
+  const avgHealth = activePlayers.length > 0 ? Math.round(activePlayers.reduce((sum, p) => sum + (p.vital_status?.health ?? 0), 0) / activePlayers.length) : 0;
+  const avgSanity = activePlayers.length > 0 ? Math.round(activePlayers.reduce((sum, p) => sum + (p.vital_status?.sanity ?? 0), 0) / activePlayers.length) : 0;
   const [monthProgress, setMonthProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
 
@@ -372,44 +375,41 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col gap-4 p-4">
-        <section className="card grid gap-4 px-4 py-4 lg:grid-cols-[260px_1fr]">
-          <div className="month-status-card relative overflow-hidden rounded-2xl border border-zinc-800/90 bg-zinc-950/80 px-4 py-4">
+        <section className="grid gap-3 lg:grid-cols-[minmax(260px,320px)_1fr]">
+          <div className="month-status-card card relative overflow-hidden px-3 py-2.5">
             <div className="month-status-glow pointer-events-none absolute inset-0" />
-            <div className="relative z-10 flex h-full flex-col justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">Хроника бункера</p>
-                <div className="mt-2 font-mono text-4xl font-bold tabular-nums text-zinc-200">
+            <div className="relative z-10 flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Хроника</p>
+                <div className="font-mono text-2xl font-bold tabular-nums text-zinc-200">
                   {String(roomState.current_month).padStart(2, '0')}
                   {roomState.total_months > 0 && <span className="text-zinc-600"> / {roomState.total_months}</span>}
                 </div>
-                <p className="text-sm text-zinc-600">{hasEvent ? 'месяц остановлен событием' : 'идёт месяц выживания'}</p>
               </div>
               <MonthProgressBar progress={monthProgress} />
+              <p className="text-xs text-zinc-600">{hasEvent ? 'месяц остановлен событием' : 'идёт месяц выживания'}</p>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500"><Utensils size={13} className="text-amber-400" /> Еда</p>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">{roomState.food}</p>
-              <p className="text-sm text-zinc-600">примерно {monthsLeft} мес.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="month-status-card card flex items-center gap-3 px-3 py-2.5">
+              <Utensils size={28} className="shrink-0 text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm uppercase tracking-widest text-zinc-400">Еда</p>
+                <p className="text-sm text-zinc-500">примерно {monthsLeft} мес.</p>
+              </div>
+              <p className="font-mono text-2xl font-bold text-zinc-100">{roomState.food}</p>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500"><User size={13} className="text-zinc-400" /> Живые</p>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">{activePlayers.length}</p>
-              <p className="text-sm text-zinc-600">из {roomState.players.length} в бункере</p>
-            </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500"><Brain size={13} className="text-sky-400" /> Режим</p>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">{hasEvent ? 'Событие' : 'Ожидание'}</p>
-              <p className="text-sm text-zinc-600">решения влияют на людей, не на абстрактный шанс</p>
+            <div className="month-status-card card flex flex-col justify-center gap-2 px-3 py-2.5">
+              <StatMeter icon={<HeartPulse size={12} className="text-red-400" />} label="Общее здоровье" value={avgHealth} />
+              <StatMeter icon={<Brain size={12} className="text-sky-400" />} label="Общий рассудок" value={avgSanity} />
             </div>
           </div>
         </section>
 
         <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(260px,320px)_1fr] xl:grid-cols-[minmax(260px,320px)_1fr_minmax(260px,340px)]">
-          <div className="flex flex-col gap-2.5">
-            <p className="flex items-center gap-2 px-1 text-xs uppercase tracking-widest text-zinc-500">
+          <div className="card flex flex-col gap-2.5 px-4 py-4">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
               <User size={13} /> Выжившие · {activePlayers.length}
             </p>
             {activePlayers.map(player => (
