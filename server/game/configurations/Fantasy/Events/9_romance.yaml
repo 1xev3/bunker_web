@@ -2,7 +2,7 @@
 events:
   - id: night_together
     type: flavor
-    weight: 1000
+    weight: 1
     when:
       min_players: 2
     participants:
