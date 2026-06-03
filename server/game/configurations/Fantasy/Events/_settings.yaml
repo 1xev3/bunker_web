@@ -5,4 +5,4 @@ EVENT_SETTINGS:
     - 0.90
     - 1.00
   food_replenish:
-    food_per_resource: 450
+    food_per_resource: 900

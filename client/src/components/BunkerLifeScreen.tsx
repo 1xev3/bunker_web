@@ -10,6 +10,7 @@ interface Props {
   send: (msg: ClientMessage) => void;
   onLeave: () => void;
   eventOutcome: { outcome: 'success' | 'failure' | 'nothing'; survival_change: number; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }> } | null;
+  isConnectionLost: boolean;
 }
 
 function SurvivalBar({ chance }: { chance: number }) {
@@ -101,7 +102,7 @@ function MonthProgressBar({ progress }: { progress: number }) {
   );
 }
 
-export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome }: Props) {
+export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave, eventOutcome, isConnectionLost }: Props) {
   const activePlayers = roomState.players.filter(p => p.is_active);
   const hasEvent = Boolean(roomState.active_event);
   const foodConsumptionPerPlayer = roomState.pack_settings.bunker_life.food_consumption_per_player;
@@ -341,6 +342,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           choiceVotes={roomState.choice_votes}
           myPlayerId={myPlayerId}
           send={send}
+          disabled={isConnectionLost}
         />
       )}
 

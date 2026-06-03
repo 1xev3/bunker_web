@@ -188,13 +188,13 @@ function resolveParticipantSlots(slots, activePlayers, scriptedFilters) {
   return result;
 }
 
-// Returns [{ role: string, player: Player }]
+// Returns [{ role: string, player: Player }] on success, null if a required slot failed.
 function resolveEventParticipants(event, activePlayers, scriptedFilters) {
   if (activePlayers.length === 0) return [];
 
   // New slot-based system
   if (Array.isArray(event.participants) && event.participants.length > 0) {
-    return resolveParticipantSlots(event.participants, activePlayers, scriptedFilters) ?? [];
+    return resolveParticipantSlots(event.participants, activePlayers, scriptedFilters);
   }
 
   // Legacy: participants_template
@@ -312,10 +312,11 @@ function pickRandomEvent(config, activePlayers, scriptedFilters) {
     if (!picked.participants && !picked.participants_template) {
       return { event: materialized, participants };
     }
-    if (participants.length > 0) {
+    // null = required slot had no candidates; [] = all-optional with no matches (still valid)
+    if (participants !== null) {
       return { event: materialized, participants };
     }
-    // participants failed — try next event
+    // required slot failed — try next event
   }
 
   return null;

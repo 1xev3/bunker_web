@@ -260,6 +260,7 @@ export type ServerMessage =
   | { type: 'room_state'; data: RoomState }
   | { type: 'joined'; token: string; player_id: string; room_code: string }
   | { type: 'error'; message: string }
+  | { type: 'pong' }
   | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue }
   | { type: 'vote_confirmed' }
   | { type: 'voting_result'; eliminated: Player | null; is_tie: boolean; votes: Record<string, number> }
@@ -274,6 +275,7 @@ export type ServerMessage =
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }
   | { type: 'rejoin'; token: string }
+  | { type: 'ping' }
   | { type: 'start_game' }
   | { type: 'reveal_attribute'; attribute: AttributeKey }
   | { type: 'reveal_all' }

@@ -5,9 +5,10 @@ import { renderEventText, EffectLine, formatEffectLabel } from './eventUtils';
 interface Props {
   event: GameEvent;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }
 
-export default function NarrativeEventCard({ event, send }: Props) {
+export default function NarrativeEventCard({ event, send, disabled = false }: Props) {
   const allEffects = event.success_effects ?? (event.success_effect ? [event.success_effect] : []);
   const visibleEffects = allEffects.filter(e => formatEffectLabel(e));
   const isPositiveEffect = allEffects.every(e => !e.value || e.value >= 0);
@@ -47,11 +48,13 @@ export default function NarrativeEventCard({ event, send }: Props) {
         )}
 
         <button
-          className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           onClick={handleNext}
+          disabled={disabled}
         >
-          <Send size={14} /> Дальше
+          <Send size={14} /> {disabled ? 'Переподключение...' : 'Дальше'}
         </button>
+        {disabled && <p className="text-center text-xs text-orange-400">Соединение восстанавливается. Продолжение станет доступно после переподключения.</p>}
       </div>
     </div>
   );

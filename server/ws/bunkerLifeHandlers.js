@@ -315,7 +315,7 @@ function maybeChainOrNextMonth(roomCode, chainEventId) {
 
   const materialized = materializeEvent(chainDef);
   const participants = resolveEventParticipants(materialized, room.getActivePlayers(), room.config.SCRIPTED_FILTERS);
-  room.activeEvent = participants.length > 0
+  room.activeEvent = participants !== null && participants.length > 0
     ? materializeEventParticipants(materialized, participants)
     : materialized;
   resetEventSelection(room);

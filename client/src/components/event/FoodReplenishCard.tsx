@@ -16,9 +16,10 @@ interface Props {
   packSettings: PackSettings;
   eventSelection: EventSelection;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }
 
-export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, send }: Props) {
+export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, send, disabled = false }: Props) {
   const selectedProfessions = eventSelection.selected_professions;
   const selectedItems = eventSelection.selected_items;
   const playerItems = getPlayerItemOptions(activePlayers);
@@ -83,6 +84,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
                     primary={p.attributes.profession.display}
                     secondary={p.name}
                     ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}
+                    disabled={disabled}
                   />
                 );
               })}
@@ -94,11 +96,11 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <p className="text-zinc-600 text-xs mb-2">Выжившие</p>
-                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
               </div>
               <div>
                 <p className="text-zinc-600 text-xs mb-2">Бункер</p>
-                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
               </div>
             </div>
           </div>
@@ -134,11 +136,13 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
             </p>
           )}
           <button
-            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleSend}
+            disabled={disabled}
           >
-            <Send size={14} /> {resourceCount === 0 ? 'Нечем помочь' : 'Пополнить запасы'}
+            <Send size={14} /> {disabled ? 'Переподключение...' : resourceCount === 0 ? 'Нечем помочь' : 'Пополнить запасы'}
           </button>
+          {disabled && <p className="text-center text-xs text-orange-400">Соединение восстанавливается. Выбор ресурсов временно заблокирован.</p>}
         </div>
       </div>
     </div>

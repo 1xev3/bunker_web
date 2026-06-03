@@ -190,10 +190,12 @@ export function SelectableItemList({
   items,
   isItemSelected,
   toggleItem,
+  disabled = false,
 }: {
   items: ItemOption[];
   isItemSelected: (entry: SelectedItem) => boolean;
   toggleItem: (entry: SelectedItem) => void;
+  disabled?: boolean;
 }) {
   if (items.length === 0) {
     return <p className="text-zinc-600 text-xs px-3 py-2 rounded-lg bg-zinc-900/50">Нет доступных предметов</p>;
@@ -213,6 +215,7 @@ export function SelectableItemList({
             primary={label}
             secondary={`${owner} · ${sourceLabel}`}
             ariaLabel={`Выбрать предмет ${label}`}
+            disabled={disabled}
           />
         );
       })}

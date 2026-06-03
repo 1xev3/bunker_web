@@ -631,6 +631,10 @@ function validatePackContent(packName, files) {
           }
         }
 
+        if (event.weight != null && (typeof event.weight !== 'number' || !Number.isFinite(event.weight) || event.weight <= 0)) {
+          addError(errors, `${scope}.weight`, 'ожидается положительное число');
+        }
+
         const allEventIds = files.Event?.EVENTS?.map(e => e.id).filter(Boolean) ?? [];
         for (const chainKey of ['chain_success', 'chain_failure']) {
           if (event[chainKey] != null) {

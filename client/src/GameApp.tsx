@@ -9,6 +9,9 @@ import BunkerLifeScreen from './components/BunkerLifeScreen';
 import ReadyModal from './components/ReadyModal';
 import BunkerEndScreen from './components/BunkerEndScreen';
 
+const HEARTBEAT_INTERVAL_MS = 10000;
+const HEARTBEAT_TIMEOUT_MS = 15000;
+
 function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -23,6 +26,8 @@ interface Props {
 export default function GameApp({ onOpenPackEditor }: Props) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const intentionalCloseRef = useRef(false);
 
   const { roomState, handleMessage, myPlayerIdRef } = useGameState();
@@ -41,6 +46,31 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     setFlashMessage({ kind, text });
     setTimeout(() => setFlashMessage(null), 5000);
   }, []);
+
+  const clearHeartbeat = useCallback(() => {
+    clearInterval(heartbeatIntervalRef.current);
+    clearTimeout(heartbeatTimeoutRef.current);
+  }, []);
+
+  const markHeartbeat = useCallback(() => {
+    clearTimeout(heartbeatTimeoutRef.current);
+    heartbeatTimeoutRef.current = setTimeout(() => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }, HEARTBEAT_TIMEOUT_MS);
+  }, []);
+
+  const startHeartbeat = useCallback(() => {
+    clearHeartbeat();
+    markHeartbeat();
+    heartbeatIntervalRef.current = setInterval(() => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'ping' }));
+    }, HEARTBEAT_INTERVAL_MS);
+  }, [clearHeartbeat, markHeartbeat]);
 
   const send = useCallback((msg: ClientMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -61,11 +91,17 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     ws.onopen = () => {
       intentionalCloseRef.current = false;
       setIsConnectionLost(false);
+      startHeartbeat();
       ws.send(JSON.stringify(authMsg));
     };
 
     ws.onmessage = (e) => {
       const msg: ServerMessage = JSON.parse(e.data);
+      markHeartbeat();
+
+      if (msg.type === 'pong') {
+        return;
+      }
 
       if (msg.type === 'error') {
         if (msg.message === 'Invalid or expired token') {
@@ -122,7 +158,12 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       handleMessage(msg);
     };
 
+    ws.onerror = () => {
+      setIsConnectionLost(true);
+    };
+
     ws.onclose = () => {
+      clearHeartbeat();
       if (intentionalCloseRef.current) return;
       const token = localStorage.getItem('bunker_token');
       if (token) {
@@ -130,7 +171,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         reconnectRef.current = setTimeout(() => connect({ type: 'rejoin', token }), 2000);
       }
     };
-  }, [handleMessage, myPlayerIdRef, showFlashMessage]);
+  }, [clearHeartbeat, handleMessage, markHeartbeat, myPlayerIdRef, showFlashMessage, startHeartbeat]);
 
   useEffect(() => {
     if (roomState?.status === 'running' && roomState.bunker) {
@@ -157,13 +198,15 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     return () => {
       intentionalCloseRef.current = true;
       clearTimeout(reconnectRef.current);
+      clearHeartbeat();
       wsRef.current?.close();
     };
-  }, [connect, myPlayerIdRef]);
+  }, [clearHeartbeat, connect, myPlayerIdRef]);
 
   const handleLeave = useCallback(() => {
     intentionalCloseRef.current = true;
     clearTimeout(reconnectRef.current);
+    clearHeartbeat();
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnectionLost(false);
@@ -175,7 +218,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     url.searchParams.delete('room');
     window.history.pushState({}, '', url);
     window.location.reload();
-  }, [myPlayerIdRef]);
+  }, [clearHeartbeat, myPlayerIdRef]);
 
   const handleIntroContinue = useCallback(() => {
     setShowBunkerIntro(false);
@@ -234,6 +277,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           send={send}
           onLeave={handleLeave}
           eventOutcome={eventOutcome}
+          isConnectionLost={isConnectionLost}
         />
         {connectionOverlay}
       </>

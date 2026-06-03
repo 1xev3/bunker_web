@@ -21,6 +21,7 @@ interface Props {
   choiceVotes: Record<string, 'success' | 'failure'>;
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }
 
 function VoterDotsInline({ voters, activePlayers, tone }: { voters: string[]; activePlayers: Player[]; tone: 'good' | 'bad' }) {
@@ -49,12 +50,14 @@ function ChoiceEventCard({
   choiceVotes,
   myPlayerId,
   send,
+  disabled = false,
 }: {
   event: GameEvent;
   activePlayers: Player[];
   choiceVotes: Record<string, 'success' | 'failure'>;
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }) {
   const successEffects = event.success_effects ?? (event.success_effect ? [event.success_effect] : []);
   const failureEffects = event.failure_effects ?? (event.failure_effect ? [event.failure_effect] : []);
@@ -108,8 +111,9 @@ function ChoiceEventCard({
                 myVote === 'success'
                   ? 'bg-green-800/60 border-green-600/60 text-green-200'
                   : 'bg-green-900/20 border-green-800/30 text-green-400 hover:bg-green-900/40'
-              }`}
+              } disabled:opacity-60 disabled:cursor-not-allowed`}
               onClick={() => castVote('success')}
+              disabled={disabled}
             >
               <span className="flex items-center gap-2"><CheckCircle size={15} /> {labels.success}</span>
               <VoterDotsInline voters={successVoters} activePlayers={activePlayers} tone="good" />
@@ -119,8 +123,9 @@ function ChoiceEventCard({
                 myVote === 'failure'
                   ? 'bg-red-800/50 border-red-600/50 text-red-200'
                   : 'bg-red-900/20 border-red-800/30 text-red-400 hover:bg-red-900/40'
-              }`}
+              } disabled:opacity-60 disabled:cursor-not-allowed`}
               onClick={() => castVote('failure')}
+              disabled={disabled}
             >
               <span className="flex items-center gap-2"><XCircle size={15} /> {labels.failure}</span>
               <VoterDotsInline voters={failureVoters} activePlayers={activePlayers} tone="bad" />
@@ -129,21 +134,23 @@ function ChoiceEventCard({
 
           {allVoted && (
             <button
-              className="w-full py-2 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
+              className="w-full py-2 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={() => confirm(confirmOutcome)}
+              disabled={disabled}
             >
-              <Send size={13} /> Подтвердить решение ({confirmOutcome === 'success' ? labels.success : labels.failure})
+              <Send size={13} /> {disabled ? 'Переподключение...' : `Подтвердить решение (${confirmOutcome === 'success' ? labels.success : labels.failure})`}
             </button>
           )}
+          {disabled && <p className="text-center text-xs text-orange-400">Соединение восстанавливается. Голосование временно заблокировано.</p>}
         </div>
       </div>
     </div>
   );
 }
 
-export default function InteractiveEventCard({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, myPlayerId, send }: Props) {
+export default function InteractiveEventCard({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, myPlayerId, send, disabled = false }: Props) {
   if (event.choice_labels) {
-    return <ChoiceEventCard event={event} activePlayers={activePlayers} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} />;
+    return <ChoiceEventCard event={event} activePlayers={activePlayers} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
   }
 
   const selectedProfessions = eventSelection.selected_professions;
@@ -218,6 +225,7 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
                     primary={p.attributes.profession.display}
                     secondary={p.name}
                     ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}
+                    disabled={disabled}
                   />
                 );
               })}
@@ -229,11 +237,11 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <p className="text-zinc-600 text-xs mb-2">Выжившие</p>
-                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+                <SelectableItemList items={playerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
               </div>
               <div>
                 <p className="text-zinc-600 text-xs mb-2">Бункер</p>
-                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} />
+                <SelectableItemList items={bunkerItems} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
               </div>
             </div>
           </div>
@@ -250,11 +258,13 @@ export default function InteractiveEventCard({ event, activePlayers, bunker, pac
             <ChanceBar chance={successChance} />
           </div>
           <button
-            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleSend}
+            disabled={disabled}
           >
-            <Send size={14} /> Принять решение
+            <Send size={14} /> {disabled ? 'Переподключение...' : 'Принять решение'}
           </button>
+          {disabled && <p className="text-center text-xs text-orange-400">Соединение восстанавливается. Выбор ресурсов временно заблокирован.</p>}
         </div>
       </div>
     </div>

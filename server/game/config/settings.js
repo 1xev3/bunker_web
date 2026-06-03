@@ -13,7 +13,7 @@ const DEFAULT_PACK_SETTINGS = {
       three_plus_resources: 1.0,
     },
     food_replenish: {
-      food_per_resource: 450,
+      food_per_resource: 900,
     },
   },
   characters: {

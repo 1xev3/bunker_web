@@ -58,6 +58,9 @@ function setupWebSocket(wss) {
       room.touch();
 
       switch (msg.type) {
+        case 'ping':
+          ws.send(JSON.stringify({ type: 'pong' }));
+          break;
         case 'start_game':            handleStartGame(roomCode, playerId); break;
         case 'reveal_attribute':      handleRevealAttr(roomCode, playerId, msg); break;
         case 'reveal_all':            handleRevealAll(roomCode, playerId); break;

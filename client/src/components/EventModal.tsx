@@ -13,17 +13,18 @@ interface Props {
   choiceVotes: Record<string, 'success' | 'failure'>;
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
+  disabled?: boolean;
 }
 
-export default function EventModal({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, myPlayerId, send }: Props) {
+export default function EventModal({ event, activePlayers, bunker, packSettings, eventSelection, choiceVotes, myPlayerId, send, disabled = false }: Props) {
   if (event.event_type === 'narrative') {
-    return <NarrativeEventCard event={event} send={send} />;
+    return <NarrativeEventCard event={event} send={send} disabled={disabled} />;
   }
   if (event.event_type === 'passive') {
-    return <PassiveEventCard event={event} send={send} />;
+    return <PassiveEventCard event={event} send={send} disabled={disabled} />;
   }
   if (event.event_type === 'food_replenish') {
-    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} send={send} />;
+    return <FoodReplenishCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} send={send} disabled={disabled} />;
   }
-  return <InteractiveEventCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} />;
+  return <InteractiveEventCard event={event} activePlayers={activePlayers} bunker={bunker} packSettings={packSettings} eventSelection={eventSelection} choiceVotes={choiceVotes} myPlayerId={myPlayerId} send={send} disabled={disabled} />;
 }
