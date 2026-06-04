@@ -32,36 +32,48 @@ export default function BunkerInfo({ bunker }: Props) {
       </button>
 
       {open && (
-        <div className="border-t border-zinc-800 px-4 py-4 space-y-4 animate-fade-in-up">
-          {bunker.disaster_info && (
-            <Section icon={<AlertTriangle size={11} />} title="Ситуация снаружи" text={bunker.disaster_info} />
-          )}
-          {bunker.bunker_info && (
-            <Section icon={<Building2 size={11} />} title="Бункер" text={bunker.bunker_info} />
-          )}
-          <div className="space-y-3 pt-3 border-t border-zinc-800/60">
-            <div className="grid grid-cols-3 gap-3">
-              <Stat icon={<Ruler size={11} />} label="Размер"           value={renderEventText(bunker.size.label)} />
-              <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration.label} />
-              <Stat icon={<Wheat size={11} />} label="Еда"              value={`${bunker.food.label} (${bunker.food.amount} на человека)`} />
-            </div>
-            <div>
-              <p className="text-zinc-600 text-xs mb-1 flex items-center gap-1">
-                <Package size={11} className="text-zinc-600" /> Инвентарь бункера
-              </p>
-              <p className="text-zinc-300 text-xs leading-relaxed">{bunker.items.map(item => item.label).join(', ')}</p>
-            </div>
-            {(bunker.layout?.rooms?.length ?? 0) > 0 && (
-              <div>
-                <p className="text-zinc-600 text-xs mb-2 flex items-center gap-1">
-                  <Map size={11} className="text-zinc-600" /> Карта бункера
-                </p>
-                <div className="max-w-105">
-                  <BunkerMap layout={bunker.layout} compact />
+        <div className="border-t border-zinc-800 px-4 py-4 animate-fade-in-up">
+          {(() => {
+            const hasMap = (bunker.layout?.rooms?.length ?? 0) > 0;
+            return (
+              <div className={`grid gap-4 items-stretch ${hasMap ? 'grid-cols-1 sm:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
+                {/* Left: text content */}
+                <div className="space-y-4">
+                  {bunker.disaster_info && (
+                    <Section icon={<AlertTriangle size={11} />} title="Ситуация снаружи" text={bunker.disaster_info} />
+                  )}
+                  {bunker.bunker_info && (
+                    <Section icon={<Building2 size={11} />} title="Бункер" text={bunker.bunker_info} />
+                  )}
+                  <div className="space-y-3 pt-3 border-t border-zinc-800/60">
+                    <div className="grid grid-cols-3 gap-3">
+                      <Stat icon={<Ruler size={11} />} label="Размер"           value={renderEventText(bunker.size.label)} />
+                      <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration.label} />
+                      <Stat icon={<Wheat size={11} />} label="Еда"              value={`${bunker.food.label} (${bunker.food.amount} на человека)`} />
+                    </div>
+                    <div>
+                      <p className="text-zinc-600 text-xs mb-1 flex items-center gap-1">
+                        <Package size={11} className="text-zinc-600" /> Инвентарь бункера
+                      </p>
+                      <p className="text-zinc-300 text-xs leading-relaxed">{bunker.items.map(item => item.label).join(', ')}</p>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Right: map — same height as left column */}
+                {hasMap && (
+                  <div className="flex flex-col">
+                    <p className="text-zinc-600 text-xs mb-2 flex items-center gap-1 shrink-0">
+                      <Map size={11} className="text-zinc-600" /> Карта бункера
+                    </p>
+                    <div className="flex-1 min-h-0 relative">
+                      <BunkerMap layout={bunker.layout} compact svgClassName="absolute inset-0 w-full h-full" />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
     </div>

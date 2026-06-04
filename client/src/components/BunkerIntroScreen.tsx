@@ -166,7 +166,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
             </div>
 
             {/* Two-column layout: info left, map right */}
-            <div className={`grid gap-5 items-start ${stage >= S.MAP && hasMap ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
+            <div className={`grid gap-5 items-stretch ${stage >= S.MAP && hasMap ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
               {/* Left: text info */}
               <div className="space-y-4">
                 {stage >= S.DISASTER && (
@@ -222,13 +222,15 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                 )}
               </div>
 
-              {/* Right: map — square (width-driven), sticky */}
+              {/* Right: map — fills full height of the left column */}
               {stage >= S.MAP && hasMap && (
-                <div className="card p-3 animate-fade-in-up sticky top-[60px]">
-                  <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
+                <div className="card p-3 animate-fade-in-up flex flex-col">
+                  <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3 shrink-0">
                     <Map size={13} /> Карта бункера
                   </p>
-                  <BunkerMap layout={bunker.layout} />
+                  <div className="flex-1 min-h-0 relative">
+                    <BunkerMap layout={bunker.layout} svgClassName="absolute inset-0 w-full h-full" />
+                  </div>
                 </div>
               )}
             </div>

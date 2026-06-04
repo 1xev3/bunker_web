@@ -4,6 +4,7 @@ import type { BunkerLayout } from '../types/game';
 interface Props {
   layout: BunkerLayout | undefined | null;
   compact?: boolean;
+  svgClassName?: string;
 }
 
 // User-space units (the SVG viewBox scales to fit the container).
@@ -16,7 +17,7 @@ const OVERLAP = 0;         // corridors meet rooms flush, never tucking under th
 const roomX = (gx: number) => gx * CELL + OFFSET;
 const roomY = (gy: number) => gy * CELL + OFFSET;
 
-export default function BunkerMap({ layout, compact = false }: Props) {
+export default function BunkerMap({ layout, compact = false, svgClassName }: Props) {
   if (!layout || layout.rooms.length === 0) {
     return <p className="text-sm text-zinc-600">Карта недоступна</p>;
   }
@@ -28,8 +29,8 @@ export default function BunkerMap({ layout, compact = false }: Props) {
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className="w-full h-auto"
-      style={{ aspectRatio: `${W} / ${H}` }}
+      className={svgClassName ?? "w-full h-auto"}
+      style={svgClassName ? undefined : { aspectRatio: `${W} / ${H}` }}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Карта бункера"
