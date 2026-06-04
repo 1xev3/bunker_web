@@ -23,7 +23,7 @@ export default function BuffDebuffSnackbar({ statusChanges = [], healthChanges =
   if (added.length === 0 && cleared.length === 0 && hp.length === 0 && san.length === 0 && playersKilled.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-[60] animate-fade-in-up pointer-events-none">
+    <div className="fixed bottom-0 inset-x-0 z-60 animate-fade-in-up pointer-events-none">
       <div className="mx-auto max-w-4xl px-3 pb-3">
         <div className="rounded-2xl border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 shadow-2xl backdrop-blur-sm">
           <div className="flex flex-wrap gap-1.5">
