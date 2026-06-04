@@ -13,14 +13,14 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+setupApiRoutes(app);
+setupWebSocket(wss);
+
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../client/dist');
   app.use(express.static(clientDist));
   app.get('*', (_, res) => res.sendFile(path.join(clientDist, 'index.html')));
 }
-
-setupApiRoutes(app);
-setupWebSocket(wss);
 
 setInterval(() => {
   sessions.cleanup();
