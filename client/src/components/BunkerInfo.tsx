@@ -51,13 +51,13 @@ export default function BunkerInfo({ bunker }: Props) {
               </p>
               <p className="text-zinc-300 text-xs leading-relaxed">{bunker.items.map(item => item.label).join(', ')}</p>
             </div>
-            {bunker.grid?.length > 0 && (
+            {(bunker.layout?.rooms?.length ?? 0) > 0 && (
               <div>
                 <p className="text-zinc-600 text-xs mb-2 flex items-center gap-1">
                   <Map size={11} className="text-zinc-600" /> Карта бункера
                 </p>
                 <div className="max-w-105">
-                  <BunkerMap grid={bunker.grid} compact />
+                  <BunkerMap layout={bunker.layout} compact />
                 </div>
               </div>
             )}

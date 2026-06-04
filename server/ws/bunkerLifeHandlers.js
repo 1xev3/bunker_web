@@ -491,12 +491,10 @@ function consumeSelectedItem(room, entry) {
   if (entry.source === 'bunker') {
     const itemIdx = room.bunker.items.findIndex(item => item.id === entry.item_id);
     if (itemIdx !== -1) room.bunker.items.splice(itemIdx, 1);
-    for (const row of room.bunker.grid) {
-      for (const cell of row) {
-        if (!cell || !Array.isArray(cell.items)) continue;
-        const gridItemIdx = cell.items.findIndex(item => item.id === entry.item_id);
-        if (gridItemIdx !== -1) { cell.items.splice(gridItemIdx, 1); return; }
-      }
+    for (const bunkerRoom of room.bunker.rooms) {
+      if (!Array.isArray(bunkerRoom.items)) continue;
+      const roomItemIdx = bunkerRoom.items.findIndex(item => item.id === entry.item_id);
+      if (roomItemIdx !== -1) { bunkerRoom.items.splice(roomItemIdx, 1); return; }
     }
     return;
   }

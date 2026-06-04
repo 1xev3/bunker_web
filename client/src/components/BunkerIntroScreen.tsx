@@ -105,7 +105,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
   }, [stage]);
 
   const cursor = <span className="inline-block w-0.5 h-4 intro-cursor ml-0.5 align-middle animate-pulse" />;
-  const hasMap = bunker.grid?.length > 0;
+  const hasMap = (bunker.layout?.rooms?.length ?? 0) > 0;
 
   return (
     <div
@@ -228,7 +228,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                   <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
                     <Map size={13} /> Карта бункера
                   </p>
-                  <BunkerMap grid={bunker.grid} />
+                  <BunkerMap layout={bunker.layout} />
                 </div>
               )}
             </div>

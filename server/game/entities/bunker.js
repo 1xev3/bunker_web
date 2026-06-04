@@ -13,66 +13,102 @@ function resolveThemeText(def) {
   return next;
 }
 
-function generateGrid(sizeId, itemPool, config) {
-  const generationSettings = config.packSettings.bunker_generation;
-  const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.id === sizeId);
-  const roomCount = sizeIndex >= 0 ? config.ROOM_COUNTS[sizeIndex] : 5;
-  const grid = Array.from({ length: 5 }, () => Array(5).fill(null));
-  const rooms = [[2, 2]];
-  grid[2][2] = true;
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-  const frontier = [];
-  const addFrontier = (r, c) => {
-    DIRS.forEach(([dr, dc]) => {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5 && !grid[nr][nc]
-          && !frontier.some(([fr, fc]) => fr === nr && fc === nc)) {
-        frontier.push([nr, nc]);
-      }
-    });
+// ── Layout model ────────────────────────────────────────────────────────────
+// A bunker is a graph of rooms placed on an integer node lattice and linked by
+// corridors. The layout is generated with a randomized spanning tree so every
+// room is reachable from the entrance. The client renders it as a floor plan:
+//   { cols, rows, rooms: [{ id, x, y, isEntrance, items }], corridors: [{ ax, ay, bx, by }] }
+// where (x, y) are 0-based node coordinates within a cols×rows lattice.
+
+function buildLayout(roomCount) {
+  // Lattice large enough to hold every room with slack, so the grown tree
+  // forms an organic (non-rectangular) silhouette.
+  const side = Math.max(2, Math.ceil(Math.sqrt(roomCount)) + 1);
+
+  const occupied = new Map(); // "x,y" -> room
+  const rooms = [];
+  const corridors = [];
+  const key = (x, y) => `${x},${y}`;
+
+  let nextId = 0;
+  const place = (x, y, isEntrance) => {
+    const room = { id: isEntrance ? 'entrance' : `room_${nextId++}`, x, y, isEntrance, items: [] };
+    rooms.push(room);
+    occupied.set(key(x, y), room);
+    return room;
   };
 
-  addFrontier(2, 2);
+  const startX = Math.floor(side / 2);
+  const startY = Math.floor(side / 2);
+  place(startX, startY, true);
 
+  // Frontier of edges connecting a placed node to an unplaced neighbour.
+  const frontier = [];
+  const addFrontier = (x, y) => {
+    DIRS.forEach(([dx, dy]) => {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || nx >= side || ny < 0 || ny >= side) return;
+      if (occupied.has(key(nx, ny))) return;
+      frontier.push([x, y, nx, ny]);
+    });
+  };
+  addFrontier(startX, startY);
+
+  // roomCount includes the entrance.
   while (rooms.length < roomCount && frontier.length > 0) {
-    const idx = Math.floor(Math.random() * frontier.length);
-    const [r, c] = frontier.splice(idx, 1)[0];
-    grid[r][c] = true;
-    rooms.push([r, c]);
-    addFrontier(r, c);
+    const [fx, fy, tx, ty] = frontier.splice(Math.floor(Math.random() * frontier.length), 1)[0];
+    if (occupied.has(key(tx, ty))) continue;
+    place(tx, ty, false);
+    corridors.push({ ax: fx, ay: fy, bx: tx, by: ty });
+    addFrontier(tx, ty);
   }
 
+  return normalizeLayout({ rooms, corridors });
+}
+
+// Shifts all node coordinates so the bounding box starts at (0, 0) and reports
+// the lattice dimensions. Keeps the map centred/tight after add/remove.
+function normalizeLayout(layout) {
+  const { rooms, corridors } = layout;
+  if (rooms.length === 0) return { cols: 0, rows: 0, rooms, corridors };
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const r of rooms) {
+    if (r.x < minX) minX = r.x;
+    if (r.y < minY) minY = r.y;
+    if (r.x > maxX) maxX = r.x;
+    if (r.y > maxY) maxY = r.y;
+  }
+  for (const r of rooms) { r.x -= minX; r.y -= minY; }
+  for (const c of corridors) { c.ax -= minX; c.ay -= minY; c.bx -= minX; c.by -= minY; }
+
+  return { cols: maxX - minX + 1, rows: maxY - minY + 1, rooms, corridors };
+}
+
+function distributeItems(rooms, itemPool, generationSettings) {
+  const lootRooms = rooms.filter(r => !r.isEntrance);
+  rooms.forEach(r => { r.items = []; });
+  if (lootRooms.length === 0) return;
+
   const shuffled = [...itemPool].sort(() => Math.random() - 0.5);
-  const result = Array.from({ length: 5 }, () => Array(5).fill(null));
 
-  result[2][2] = { items: [], isEntrance: true };
-
-  const nonCenter = rooms.filter(([r, c]) => !(r === 2 && c === 2));
-
-  const maxEmptyRooms = Math.floor(nonCenter.length * generationSettings.max_empty_fraction);
-  const emptyCount = maxEmptyRooms > 0 ? randInt(0, maxEmptyRooms) : 0;
-  const filledCount = Math.max(1, nonCenter.length - emptyCount);
+  const maxEmpty = Math.floor(lootRooms.length * generationSettings.max_empty_fraction);
+  const emptyCount = maxEmpty > 0 ? randInt(0, maxEmpty) : 0;
+  const filledCount = Math.max(1, lootRooms.length - emptyCount);
 
   const base = shuffled.slice(0, filledCount);
   const extraCount = Math.min(randInt(0, generationSettings.max_extra_items), shuffled.length - filledCount);
   const extras = shuffled.slice(filledCount, filledCount + extraCount);
 
-  const roomItems = base.map(item => [item]);
-  extras.forEach(item => {
-    roomItems[Math.floor(Math.random() * roomItems.length)].push(item);
-  });
+  const buckets = base.map(item => [item]);
+  extras.forEach(item => { buckets[Math.floor(Math.random() * buckets.length)].push(item); });
 
-  // shuffle which rooms get items
-  const shuffledRooms = [...nonCenter].sort(() => Math.random() - 0.5);
-  shuffledRooms.forEach(([r, c], i) => {
-    result[r][c] = { items: roomItems[i] ?? [] };
-  });
-
-  return result;
-}
-
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  const shuffledRooms = [...lootRooms].sort(() => Math.random() - 0.5);
+  shuffledRooms.forEach((room, i) => { room.items = buckets[i] ?? []; });
 }
 
 class Bunker {
@@ -84,7 +120,10 @@ class Bunker {
     this.items = [];
     this.disaster_info = '';
     this.bunker_info = '';
-    this.grid = [];
+    this.rooms = [];
+    this.corridors = [];
+    this.cols = 0;
+    this.rows = 0;
   }
 
   generate(theme = null, config) {
@@ -104,47 +143,49 @@ class Bunker {
     this.disaster_info = resolvedTheme.description ?? '';
     this.bunker_info   = resolvedSize.description  ?? '';
 
-    this.grid = generateGrid(this.size.id, config.BUNKER_ITEMS, config);
-    this.items = this.grid.flat()
-      .filter(cell => cell && !cell.isEntrance)
-      .flatMap(cell => cell.items);
+    const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.id === this.size.id);
+    const roomCount = sizeIndex >= 0 ? config.ROOM_COUNTS[sizeIndex] : 5;
+
+    const layout = buildLayout(roomCount);
+    distributeItems(layout.rooms, config.BUNKER_ITEMS, config.packSettings.bunker_generation);
+    this.applyLayout(layout);
+  }
+
+  applyLayout(layout) {
+    this.rooms = layout.rooms;
+    this.corridors = layout.corridors;
+    this.cols = layout.cols;
+    this.rows = layout.rows;
+    this.items = this.rooms.filter(r => !r.isEntrance).flatMap(r => r.items);
+  }
+
+  // Loot-bearing rooms (everything except the entrance).
+  lootRooms() {
+    return this.rooms.filter(r => !r.isEntrance);
   }
 
   removeRandomRoom() {
-    const removable = [];
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        const cell = this.grid[r][c];
-        if (cell && !cell.isEntrance) removable.push([r, c]);
-      }
-    }
+    const removable = this.lootRooms();
     if (removable.length === 0) return null;
 
-    const [r, c] = removable[Math.floor(Math.random() * removable.length)];
-    const removedItems = this.grid[r][c].items ?? [];
-    this.grid[r][c] = null;
+    const room = removable[Math.floor(Math.random() * removable.length)];
+    const removedItems = room.items ?? [];
 
-    for (const item of removedItems) {
-      const idx = this.items.findIndex(i => i.id === item.id);
-      if (idx !== -1) this.items.splice(idx, 1);
-    }
+    this.rooms = this.rooms.filter(r => r !== room);
+    this.corridors = this.corridors.filter(
+      c => !((c.ax === room.x && c.ay === room.y) || (c.bx === room.x && c.by === room.y))
+    );
+    this.applyLayout(normalizeLayout({ rooms: this.rooms, corridors: this.corridors }));
     return removedItems;
   }
 
-  // Drops an item into a random existing (non-entrance) room and the flat
-  // `items` list. Returns true if placed.
+  // Drops an item into a random existing room and the flat `items` list.
   addItem(item) {
-    const cells = [];
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        const cell = this.grid[r][c];
-        if (cell && !cell.isEntrance) cells.push(cell);
-      }
-    }
-    if (cells.length === 0) return false;
-    const cell = cells[Math.floor(Math.random() * cells.length)];
-    if (!Array.isArray(cell.items)) cell.items = [];
-    cell.items.push(item);
+    const rooms = this.lootRooms();
+    if (rooms.length === 0) return false;
+    const room = rooms[Math.floor(Math.random() * rooms.length)];
+    if (!Array.isArray(room.items)) room.items = [];
+    room.items.push(item);
     this.items.push(item);
     return true;
   }
@@ -153,40 +194,41 @@ class Bunker {
   // random one. Returns the removed item or null.
   removeItem(itemId = null) {
     const matches = [];
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        const cell = this.grid[r][c];
-        if (!cell || !Array.isArray(cell.items)) continue;
-        cell.items.forEach((item, idx) => {
-          if (itemId == null || item.id === itemId) matches.push({ cell, idx, item });
-        });
-      }
+    for (const room of this.lootRooms()) {
+      if (!Array.isArray(room.items)) continue;
+      room.items.forEach((item, idx) => {
+        if (itemId == null || item.id === itemId) matches.push({ room, idx, item });
+      });
     }
     if (matches.length === 0) return null;
     const pick = itemId == null ? matches[Math.floor(Math.random() * matches.length)] : matches[0];
-    pick.cell.items.splice(pick.idx, 1);
+    pick.room.items.splice(pick.idx, 1);
     const gi = this.items.findIndex(i => i.id === pick.item.id);
     if (gi !== -1) this.items.splice(gi, 1);
     return pick.item;
   }
 
+  // Adds a new room at a free node adjacent to an existing one, linked by a
+  // corridor so the layout stays connected.
   addRoom(newItems = []) {
-    const frontier = [];
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        if (this.grid[r][c] !== null) continue;
-        const adjacent = DIRS.some(([dr, dc]) => {
-          const nr = r + dr, nc = c + dc;
-          return nr >= 0 && nr < 5 && nc >= 0 && nc < 5 && this.grid[nr][nc] !== null;
-        });
-        if (adjacent) frontier.push([r, c]);
+    const occupied = new Set(this.rooms.map(r => `${r.x},${r.y}`));
+    const candidates = [];
+    for (const r of this.rooms) {
+      for (const [dx, dy] of DIRS) {
+        const nx = r.x + dx, ny = r.y + dy;
+        if (!occupied.has(`${nx},${ny}`)) candidates.push({ x: nx, y: ny, from: r });
       }
     }
-    if (frontier.length === 0) return false;
+    if (candidates.length === 0) return false;
 
-    const [r, c] = frontier[Math.floor(Math.random() * frontier.length)];
-    this.grid[r][c] = { items: newItems };
+    const spot = candidates[Math.floor(Math.random() * candidates.length)];
+    const room = { id: `room_${Date.now()}`, x: spot.x, y: spot.y, isEntrance: false, items: newItems };
+    this.rooms.push(room);
+    this.corridors.push({ ax: spot.from.x, ay: spot.from.y, bx: spot.x, by: spot.y });
     for (const item of newItems) this.items.push(item);
+    this.applyLayout(normalizeLayout({ rooms: this.rooms, corridors: this.corridors }));
+    // applyLayout recomputes items from scratch, so keep the canonical list.
+    this.items = this.rooms.filter(r => !r.isEntrance).flatMap(r => r.items);
     return true;
   }
 
@@ -199,7 +241,12 @@ class Bunker {
       items: this.items,
       disaster_info: this.disaster_info,
       bunker_info: this.bunker_info,
-      grid: this.grid,
+      layout: {
+        cols: this.cols,
+        rows: this.rows,
+        rooms: this.rooms,
+        corridors: this.corridors,
+      },
     };
   }
 }

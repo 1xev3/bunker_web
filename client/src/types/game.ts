@@ -105,7 +105,27 @@ export interface FoodSupplyEntity extends ConfigEntity {
   amount: number;
 }
 
-export type BunkerCell = { items: ConfigEntity[]; isEntrance?: boolean } | null;
+export interface BunkerRoom {
+  id: string;
+  x: number;
+  y: number;
+  isEntrance?: boolean;
+  items: ConfigEntity[];
+}
+
+export interface BunkerCorridor {
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
+}
+
+export interface BunkerLayout {
+  cols: number;
+  rows: number;
+  rooms: BunkerRoom[];
+  corridors: BunkerCorridor[];
+}
 
 export interface BunkerInfo {
   theme: ConfigEntity;
@@ -115,7 +135,7 @@ export interface BunkerInfo {
   items: ConfigEntity[];
   disaster_info: string;
   bunker_info: string;
-  grid: BunkerCell[][];
+  layout: BunkerLayout;
 }
 
 export interface ScheduledEvent {

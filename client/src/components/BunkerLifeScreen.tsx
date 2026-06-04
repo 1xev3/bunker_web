@@ -433,9 +433,9 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
             <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
               <DoorOpen size={13} /> Карта бункера
             </p>
-            {roomState.bunker?.grid ? (
+            {roomState.bunker?.layout ? (
               <div className="mx-auto w-full max-w-xl">
-                <BunkerMap grid={roomState.bunker.grid} />
+                <BunkerMap layout={roomState.bunker.layout} />
               </div>
             ) : (
               <p className="text-sm text-zinc-600">Карта недоступна</p>

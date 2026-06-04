@@ -399,7 +399,30 @@ td, th {
 .ready-modal-count { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .ready-modal-icon { color: var(--accent); }
 
-/* Bunker map entrance */
+/* Bunker map — SVG floor plan */
+.bm-room {
+  fill: rgb(39 39 42 / 0.55);
+  stroke: rgb(82 82 91);
+  stroke-width: 1.5;
+  transition: fill 0.15s ease;
+}
+.bm-room:hover { fill: rgb(63 63 70 / 0.7); }
+
+.bm-entrance {
+  fill: color-mix(in srgb, var(--accent) 20%, rgb(24 24 27));
+  stroke: color-mix(in srgb, var(--accent) 80%, transparent);
+  stroke-width: 2;
+}
+
+.bm-corridor {
+  fill: color-mix(in srgb, var(--accent) 10%, rgb(24 24 27 / 0.5));
+  stroke: rgb(63 63 70 / 0.6);
+  stroke-width: 1;
+}
+
+.bm-door, .bm-door-text { color: color-mix(in srgb, var(--accent) 95%, #fff); }
+
+/* legacy entrance pill (no longer used by the map, kept harmless) */
 .bunker-entrance {
   border-color: color-mix(in srgb, var(--accent) 90%, transparent);
   background-color: color-mix(in srgb, var(--accent) 18%, transparent);
