@@ -9,6 +9,34 @@ function highlight(value) {
   return `${EVENT_HIGHLIGHT_START}${value}${EVENT_HIGHLIGHT_END}`;
 }
 
+// Collapses nested/adjacent highlight markers into a single span. Inline
+// alternatives and role substitutions are highlighted independently, so a role
+// name inside a chosen alternative would otherwise emit markers within markers,
+// which the client's non-greedy renderer can't parse.
+function flattenHighlights(value) {
+  if (typeof value !== 'string') return value;
+  let out = '';
+  let depth = 0;
+  let i = 0;
+  while (i < value.length) {
+    if (value.startsWith(EVENT_HIGHLIGHT_START, i)) {
+      if (depth === 0) out += EVENT_HIGHLIGHT_START;
+      depth += 1;
+      i += EVENT_HIGHLIGHT_START.length;
+    } else if (value.startsWith(EVENT_HIGHLIGHT_END, i)) {
+      if (depth > 0) {
+        depth -= 1;
+        if (depth === 0) out += EVENT_HIGHLIGHT_END;
+      }
+      i += EVENT_HIGHLIGHT_END.length;
+    } else {
+      out += value[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
 function parseDurationMonths(label) {
   if (!label) return 24;
   const m = label.match(/(\d+(?:[.,]\d+)?)\s*(год|года|лет|месяц|месяца|месяцев)/i);
@@ -33,8 +61,8 @@ function formatParticipantList(names) {
 // as plain text, so markers must not leak).
 function renderRoleText(template, roleMap, ctx, wrap = highlight) {
   if (typeof template !== 'string') return template;
-  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
-  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
+  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars, wrap);
+  return flattenHighlights(template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') {
       return wrap(formatParticipantList(Object.values(roleMap).map(p => p.name)));
     }
@@ -49,7 +77,7 @@ function renderRoleText(template, roleMap, ctx, wrap = highlight) {
     }
     const player = roleMap[key];
     return player ? wrap(player.name) : match;
-  });
+  }));
 }
 
 // Human-readable target of an effect. `on` is a role name (resolved to the
@@ -253,8 +281,8 @@ function pickRandomEvent(config, room) {
 // gone by the time the follow-up fires).
 function renderScheduledText(template, roleNames, roleMap, room, ctx, wrap = highlight) {
   if (typeof template !== 'string') return template;
-  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars);
-  return template.replace(EVENT_TEMPLATE_RE, (match, key) => {
+  if (ctx) template = resolveInlineText(template, ctx.def, ctx.vars, wrap);
+  return flattenHighlights(template.replace(EVENT_TEMPLATE_RE, (match, key) => {
     if (key === 'participants') return wrap(formatParticipantList(Object.values(roleNames)));
     const dotIdx = key.indexOf('.');
     if (dotIdx !== -1) {
@@ -267,7 +295,7 @@ function renderScheduledText(template, roleNames, roleMap, room, ctx, wrap = hig
       return roleNames[role] != null ? wrap(roleNames[role]) : match;
     }
     return roleNames[key] != null ? wrap(roleNames[key]) : match;
-  });
+  }));
 }
 
 // Materializes a scheduled event from its stored context ({ roles: {role:{id,name}} }).

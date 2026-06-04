@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ChevronRight, Map, ArrowLeft, Users } from 'lucide-react';
 import type { BunkerInfo, Player } from '../types/game';
 import BunkerMap from './BunkerMap';
+import { parseHighlightSegments, highlightVisibleLength, renderHighlightSegments } from './event/eventUtils';
 
 interface Props {
   bunker: BunkerInfo;
@@ -11,8 +12,13 @@ interface Props {
   onLeave: () => void;
 }
 
+// Typewriter over text that may carry highlight markers ("<<event-highlight>>").
+// It counts/reveals visible characters (markers stripped) and renders the
+// revealed prefix with accent-colored segments.
 function useTypewriter(text: string, speedMs: number, active: boolean, skip: boolean) {
-  const [displayed, setDisplayed] = useState('');
+  const segments = parseHighlightSegments(text);
+  const total = highlightVisibleLength(text);
+  const [count, setCount] = useState(0);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -20,23 +26,23 @@ function useTypewriter(text: string, speedMs: number, active: boolean, skip: boo
     if (!text) { setDone(true); return; }
 
     if (skip) {
-      setDisplayed(text);
+      setCount(total);
       setDone(true);
       return;
     }
 
-    setDisplayed('');
+    setCount(0);
     setDone(false);
     let i = 0;
     const id = setInterval(() => {
       i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) { clearInterval(id); setDone(true); }
+      setCount(i);
+      if (i >= total) { clearInterval(id); setDone(true); }
     }, speedMs);
     return () => clearInterval(id);
   }, [active, skip]);
 
-  return { displayed, done };
+  return { displayed: renderHighlightSegments(segments, count), done };
 }
 
 const S = { FLASH: 0, TITLE: 1, DISASTER: 2, BUNKER: 3, STATS: 4, MAP: 5, PLAYERS: 6, BUTTON: 7 };
@@ -191,7 +197,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {[
-                        { icon: <Ruler size={13} />, label: 'Размер',           value: bunker.size.label,     delay: '0ms'   },
+                        { icon: <Ruler size={13} />, label: 'Размер',           value: renderHighlightSegments(parseHighlightSegments(bunker.size.label)), delay: '0ms'   },
                         { icon: <Timer size={13} />, label: 'Время проживания', value: bunker.duration.label, delay: '80ms'  },
                         { icon: <Users size={13} />, label: 'Вместимость',      value: `${bunkerCapacityDisplay} чел.`, delay: '160ms' },
                         { icon: <Wheat size={13} />, label: 'Еда',              value: `${bunker.food.label} (${bunker.food.amount} на человека, ~${approxFoodMonths} мес. на ${bunkerCapacityDisplay})`, delay: '240ms' },

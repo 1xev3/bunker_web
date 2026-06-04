@@ -1,5 +1,6 @@
 import { ArrowLeft, Shield, Skull } from 'lucide-react';
 import type { RoomState } from '../types/game';
+import { renderEventText } from './event/eventUtils';
 
 interface Props {
   survived: boolean;
@@ -76,7 +77,7 @@ export default function BunkerEndScreen({ survived, roomState, onLeave }: Props)
           {bunker?.theme && (
             <div className="px-4 py-3 flex items-center justify-between">
               <span className="text-zinc-500 text-sm">Катастрофа</span>
-              <span className="text-zinc-300 text-sm font-medium text-right max-w-[60%]">{bunker.theme.label}</span>
+              <span className="text-zinc-300 text-sm font-medium text-right max-w-[60%]">{renderEventText(bunker.theme.label)}</span>
             </div>
           )}
           {bunker?.duration && (

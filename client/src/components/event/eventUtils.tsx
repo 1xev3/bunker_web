@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import type { BunkerInfo, Player, SelectedItem } from '../../types/game';
 import EventSelectableRow from './EventSelectableRow';
 
@@ -8,18 +8,52 @@ export interface ItemOption {
   owner: string;
 }
 
-const EVENT_HIGHLIGHT_RE = /(<<event-highlight>>.*?<<\/event-highlight>>)/g;
-const EVENT_HIGHLIGHT_START = '<<event-highlight>>';
-const EVENT_HIGHLIGHT_END = '<</event-highlight>>';
+const EVENT_HIGHLIGHT_SEGMENT_RE = /<<event-highlight>>([\s\S]*?)<<\/event-highlight>>/g;
+
+export interface HighlightSegment {
+  text: string;
+  highlighted: boolean;
+}
+
+// Splits a marker-annotated string into plain / accent-colored segments.
+export function parseHighlightSegments(text: string): HighlightSegment[] {
+  const segments: HighlightSegment[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  EVENT_HIGHLIGHT_SEGMENT_RE.lastIndex = 0;
+  while ((match = EVENT_HIGHLIGHT_SEGMENT_RE.exec(text)) !== null) {
+    if (match.index > lastIndex) segments.push({ text: text.slice(lastIndex, match.index), highlighted: false });
+    segments.push({ text: match[1], highlighted: true });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) segments.push({ text: text.slice(lastIndex), highlighted: false });
+  return segments;
+}
+
+// Total visible characters once markers are stripped (for the typewriter).
+export function highlightVisibleLength(text: string): number {
+  return parseHighlightSegments(text).reduce((sum, seg) => sum + seg.text.length, 0);
+}
+
+// Renders segments as JSX, optionally limited to the first `limit` visible
+// characters so a typewriter can reveal accent-colored text progressively.
+export function renderHighlightSegments(segments: HighlightSegment[], limit = Infinity) {
+  let remaining = limit;
+  const nodes: ReactNode[] = [];
+  segments.forEach((seg, index) => {
+    if (remaining <= 0) return;
+    const slice = seg.text.slice(0, remaining);
+    if (!slice) return;
+    remaining -= slice.length;
+    nodes.push(seg.highlighted
+      ? <span key={index} className="event-text-highlight">{slice}</span>
+      : <Fragment key={index}>{slice}</Fragment>);
+  });
+  return nodes;
+}
 
 export function renderEventText(text: string) {
-  return text.split(EVENT_HIGHLIGHT_RE).filter(Boolean).map((part, index) => {
-    if (part.startsWith(EVENT_HIGHLIGHT_START) && part.endsWith(EVENT_HIGHLIGHT_END)) {
-      const value = part.slice(EVENT_HIGHLIGHT_START.length, -EVENT_HIGHLIGHT_END.length);
-      return <span key={index} className="event-text-highlight">{value}</span>;
-    }
-    return <Fragment key={index}>{part}</Fragment>;
-  });
+  return renderHighlightSegments(parseHighlightSegments(text));
 }
 
 export function getItemKey(entry: SelectedItem): string {

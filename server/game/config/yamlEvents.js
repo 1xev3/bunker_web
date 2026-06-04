@@ -337,6 +337,15 @@ function randomOf(list) {
 // Inline text resolution: alternatives and event self-references
 // ---------------------------------------------------------------------------
 
+// Markers the client renders in the accent color (mirrored in eventHelpers.js
+// and client eventUtils.tsx). `highlightAlt` is the wrapper passed to
+// resolveAlternatives so a randomly chosen alternative stands out.
+const HIGHLIGHT_START = '<<event-highlight>>';
+const HIGHLIGHT_END = '<</event-highlight>>';
+function highlightAlt(value) {
+  return `${HIGHLIGHT_START}${value}${HIGHLIGHT_END}`;
+}
+
 // Reserved event fields exposed to {event.<field>} references.
 const EVENT_REF_FIELDS = new Set(['id', 'type', 'title', 'weight']);
 
@@ -363,8 +372,10 @@ function splitTopLevelPipes(body) {
 // brace scan (rather than a regex) so an alternative may itself contain nested
 // placeholders, e.g. "{...|горечь, а потом {patient} упал}". Groups without a
 // top-level pipe (plain "{patient}", "{event.x}") are left intact for later
-// passes.
-function resolveAlternatives(str) {
+// passes. `hl` wraps each chosen alternative so the client can render it in the
+// accent color; pass the identity (default) where markers must stay out of the
+// text (option labels, outcome messages).
+function resolveAlternatives(str, hl = v => v) {
   if (typeof str !== 'string' || str.indexOf('{') === -1) return str;
   let result = '';
   let i = 0;
@@ -381,8 +392,8 @@ function resolveAlternatives(str) {
     const body = str.slice(i + 1, j);
     const parts = splitTopLevelPipes(body);
     result += parts.length > 1
-      ? resolveAlternatives(randomOf(parts))      // an alternative: pick + recurse
-      : `{${resolveAlternatives(body)}}`;         // a placeholder: keep, recurse inside
+      ? hl(resolveAlternatives(randomOf(parts), hl))  // an alternative: pick, highlight + recurse
+      : `{${resolveAlternatives(body, hl)}}`;         // a placeholder: keep, recurse inside
     i = j + 1;
   }
   return result;
@@ -403,9 +414,9 @@ function buildEventVars(def) {
 // Resolves inline alternatives and {event.<name>} references. `vars` is the
 // pre-picked map from buildEventVars so the same name renders identically
 // across title and text. Unknown references are left untouched.
-function resolveInlineText(template, def, vars) {
+function resolveInlineText(template, def, vars, hl = v => v) {
   if (typeof template !== 'string') return template;
-  let out = resolveAlternatives(template);
+  let out = resolveAlternatives(template, hl);
   out = out.replace(EVENT_REF_RE, (match, name) => {
     if (vars && Object.prototype.hasOwnProperty.call(vars, name)) return vars[name];
     if (EVENT_REF_FIELDS.has(name) && def && def[name] != null) return String(def[name]);
@@ -602,5 +613,9 @@ module.exports = {
   getSelectKinds,
   buildEventVars,
   resolveInlineText,
+  resolveAlternatives,
+  highlightAlt,
+  HIGHLIGHT_START,
+  HIGHLIGHT_END,
   TARGET_KEYWORDS,
 };

@@ -1,4 +1,17 @@
+const { resolveAlternatives, highlightAlt } = require('../config/yamlEvents');
+
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+// Resolves inline alternatives ("{a|b|c}") in a theme/size's label and
+// description, picking one variant at random and wrapping it in highlight
+// markers so the client renders it in the accent color.
+function resolveThemeText(def) {
+  if (!def || typeof def !== 'object') return def;
+  const next = { ...def };
+  if (typeof next.label === 'string') next.label = resolveAlternatives(next.label, highlightAlt);
+  if (typeof next.description === 'string') next.description = resolveAlternatives(next.description, highlightAlt);
+  return next;
+}
 
 function generateGrid(sizeId, itemPool, config) {
   const generationSettings = config.packSettings.bunker_generation;
@@ -80,13 +93,16 @@ class Bunker {
       : config.BUNKER_THEMES[Math.floor(Math.random() * config.BUNKER_THEMES.length)];
     const sizeDef = config.BUNKER_SIZES[Math.floor(Math.random() * config.BUNKER_SIZES.length)];
 
-    this.theme = themeDef;
-    this.size = sizeDef;
+    const resolvedTheme = resolveThemeText(themeDef);
+    const resolvedSize = resolveThemeText(sizeDef);
+
+    this.theme = resolvedTheme;
+    this.size = resolvedSize;
     this.duration = config.BUNKER_DURATIONS[Math.floor(Math.random() * config.BUNKER_DURATIONS.length)];
     this.food = config.FOOD_SUPPLIES[Math.floor(Math.random() * config.FOOD_SUPPLIES.length)];
 
-    this.disaster_info = themeDef.description ?? '';
-    this.bunker_info   = sizeDef.description  ?? '';
+    this.disaster_info = resolvedTheme.description ?? '';
+    this.bunker_info   = resolvedSize.description  ?? '';
 
     this.grid = generateGrid(this.size.id, config.BUNKER_ITEMS, config);
     this.items = this.grid.flat()

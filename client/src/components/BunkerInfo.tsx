@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, AlertTriangle, Building2, Ruler, Timer, Wheat, Package, Map } from 'lucide-react';
 import type { BunkerInfo as BunkerInfoType } from '../types/game';
 import BunkerMap from './BunkerMap';
+import { renderEventText } from './event/eventUtils';
 
 interface Props {
   bunker: BunkerInfoType;
@@ -18,9 +19,9 @@ export default function BunkerInfo({ bunker }: Props) {
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-amber-500/80 text-base shrink-0">☢</span>
-          <span className="text-zinc-200 text-sm font-semibold truncate">{bunker.theme.label}</span>
+          <span className="text-zinc-200 text-sm font-semibold truncate">{renderEventText(bunker.theme.label)}</span>
           <span className="text-zinc-700 text-xs shrink-0">·</span>
-          <span className="text-zinc-500 text-xs shrink-0 hidden sm:block">{bunker.size.label}</span>
+          <span className="text-zinc-500 text-xs shrink-0 hidden sm:block">{renderEventText(bunker.size.label)}</span>
           <span className="text-zinc-700 text-xs shrink-0 hidden sm:block">·</span>
           <span className="text-zinc-500 text-xs shrink-0 hidden sm:block">{bunker.duration.label}</span>
         </div>
@@ -40,7 +41,7 @@ export default function BunkerInfo({ bunker }: Props) {
           )}
           <div className="space-y-3 pt-3 border-t border-zinc-800/60">
             <div className="grid grid-cols-3 gap-3">
-              <Stat icon={<Ruler size={11} />} label="Размер"           value={bunker.size.label} />
+              <Stat icon={<Ruler size={11} />} label="Размер"           value={renderEventText(bunker.size.label)} />
               <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration.label} />
               <Stat icon={<Wheat size={11} />} label="Еда"              value={`${bunker.food.label} (${bunker.food.amount} на человека)`} />
             </div>
@@ -73,12 +74,12 @@ function Section({ icon, title, text }: { icon: React.ReactNode; title: string; 
       <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
         <span className="text-zinc-500">{icon}</span> {title}
       </p>
-      <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">{text}</p>
+      <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">{renderEventText(text)}</p>
     </div>
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
     <div>
       <p className="text-zinc-600 text-xs mb-0.5 flex items-center gap-1">
