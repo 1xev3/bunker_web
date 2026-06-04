@@ -1,86 +1,71 @@
-# Конь захромал — выбор: лечить с расходом предметов, забить или выпустить.
+# Гриб-великан в подземелье — съесть сразу, исследовать или посеять споры.
 events:
-  - id: lame_horse
+  - id: giant_mushroom
     type: choice
     weight: 1
     when:
-      flag_unset: [horse_incident]
-    select:
-      kind: item
-      prompt_item: Выберите, чем лечить
-    vars:
-      horse: "{Верховая лошадь|Ездовой пони}"
-    title: "{event.horse} захромал"
+      flag_unset: [giant_mushroom_found]
+    title: Гриб-великан
     text: >-
-      {event.horse} не встаёт на правую ногу — похоже, надломилось копыто
-      или потянул сухожилие. Без лечения животное будет мучиться.
-      Запасов на долгое выхаживание может не хватить.
+      В дальнем углу подземелья вырос гриб размером с человека. По виду и запаху —
+      съедобный, и явно с магическим привкусом. Такая находка может обеспечить
+      запасами на недели, но с чем именно они столкнулись, пока непонятно.
     options:
-      - id: horse_treat
-        label: Лечить
-        description: Потратить перевязочный материал и время. Есть шанс поставить на ноги.
-        requires: [item]
-        consume_items: true
-        outcomes_by_selection:
-          all:
-            - text: Конь пошёл на поправку — через несколько дней снова в строю.
-              effects:
-                - { on: all, health: 5, sanity: 10 }
-                - { flag: { horse_incident: true } }
-          some:
-            - chance: 55
-              text: Поставили на ноги, но хромота осталась. Для тяжёлой работы уже не годен.
-              effects:
-                - { on: all, health: -5, sanity: -5 }
-                - { flag: { horse_incident: true } }
-            - text: Лечение не помогло — конь не поднялся. Пришлось добить.
-              effects:
-                - { on: all, health: -8, sanity: -15 }
-                - { food: 60 }
-                - { flag: { horse_incident: true } }
-          none:
-            - chance: 20
-              text: Конь выжил сам — видимо, не так серьёзно.
-              effects:
-                - { on: all, sanity: 5 }
-                - { flag: { horse_incident: true } }
-            - text: Без помощи конь мучился трое суток и не поднялся.
-              effects:
-                - { on: all, health: -8, sanity: -18 }
-                - { flag: { horse_incident: true } }
-      - id: horse_slaughter
-        label: Забить на мясо
-        description: Жестоко, но практично — голодные рты важнее.
+      - id: eat_it
+        label: Пустить на еду
+        description: Срезать и засолить прямо сейчас — долго не ждать.
         outcomes:
-          - chance: 65
+          - chance: 75
+            text: >-
+              Гриб оказался сочным и питательным. Несколько дней ели от пуза —
+              давно такого не было.
             effects:
-              - { food: 200 }
-              - { on: all, health: -3, sanity: -12 }
-              - { flag: { horse_incident: true } }
-          - effects:
-              - { food: 80 }
-              - { on: all, health: -6, sanity: -20 }
-              - { flag: { horse_incident: true } }
-      - id: horse_release
-        label: Выпустить
-        description: Открыть ворота — может, выживет снаружи.
+              - { food: 900 }
+              - { on: all, health: 8, sanity: 12 }
+              - { flag: { giant_mushroom_found: true } }
+          - text: >-
+              Вкусно, но с непривычки у многих расстроился желудок. Зато сыты —
+              и это уже немало.
+            effects:
+              - { food: 850 }
+              - { on: all, health: -6, sanity: 6 }
+              - { flag: { giant_mushroom_found: true } }
+      - id: study_first
+        label: Сначала исследовать
+        description: Проверить — вдруг у гриба полезные магические свойства.
         outcomes:
-          - chance: 60
+          - chance: 55
+            text: >-
+              Внутри обнаружили целебные споры. Из части приготовили настойку,
+              остальное пошло в котёл. И сытно, и на пользу здоровью.
             effects:
-              - { on: all, sanity: -6 }
-              - { flag: { horse_incident: true } }
-          - effects:
-              - { on: all, health: -5, sanity: -12 }
-              - { flag: { horse_incident: true } }
+              - { food: 300 }
+              - { on: all, health: 18, sanity: 14 }
+              - { flag: { giant_mushroom_found: true } }
+          - text: >-
+              Ничего особенного не нашли — просто большой гриб. Пустили на еду
+              без лишних церемоний.
+            effects:
+              - { food: 285 }
+              - { on: all, sanity: 8 }
+              - { flag: { giant_mushroom_found: true } }
+      - id: cultivate
+        label: Посеять споры
+        description: Срезать часть, а споры пустить в грибную ферму — вложение в будущее.
+        effects:
+          - { food: 70 }
+          - { on: all, sanity: 10 }
+          - { flag: { giant_mushroom_found: true } }
         schedule:
-          - { event: horse_returns, in: 3, chance: 25 }
+          - { event: mushroom_harvest, in: 4, chance: 80 }
 
-  - id: horse_returns
+  - id: mushroom_harvest
     type: flavor
     scheduled_only: true
-    title: Конь вернулся
+    title: Урожай грибов
     text: >-
-      У ворот раздалось знакомое ржание. {Верховая лошадь|Ездовой пони} стоит
-      снаружи — хромает, но жив. Видимо, снаружи его ждало ещё меньше хорошего.
+      Посеянные споры дали обильный урожай. Грибная ферма теперь производит
+      вдвое больше обычного — лучшее вложение за последние месяцы.
     effects:
-      - { on: all, health: 5, sanity: 10 }
+      - { food: 1600 }
+      - { on: all, health: 5, sanity: 12 }

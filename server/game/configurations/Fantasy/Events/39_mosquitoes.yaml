@@ -1,0 +1,161 @@
+# Комары в бункере — поначалу пара штук, но если запустить, рои заполняют комнаты.
+events:
+  - id: mosquitoes_first
+    type: choice
+    weight: 1
+    when:
+      flag_unset: [mosquitoes_dealt, mosquitoes_spreading]
+    title: Первые комары
+    text: >-
+      Кто-то заметил комаров в жилых помещениях — пока их с десяток, и они почти
+      не мешают. Но в замкнутом пространстве без вентиляции они плодятся
+      стремительно. Если не разобраться сейчас, потом будет куда хуже.
+    select:
+      kind: item
+      prompt_item: Выберите средство против комаров
+    options:
+      - id: repel_early
+        label: Вывести сразу
+        description: Использовать то, что есть — выкурить, вытравить, закрыть ходы.
+        requires: [item]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Средство сработало — комаров вывели ещё в зародыше.
+                В убежище снова тихо.
+              effects:
+                - { on: all, sanity: 6 }
+                - { flag: { mosquitoes_dealt: true } }
+          some:
+            - chance: 65
+              text: >-
+                Большую часть прогнали. Кое-где ещё гудят, но терпимо.
+              effects:
+                - { on: all, health: -4, sanity: -3 }
+              schedule:
+                - { event: mosquitoes_swarm, in: 2, chance: 55 }
+            - text: >-
+                Средств не хватило — разогнали, но не вывели.
+                Через несколько дней их снова прибавится.
+              effects:
+                - { on: all, health: -6, sanity: -6 }
+              schedule:
+                - { event: mosquitoes_swarm, in: 2, chance: 85 }
+          none:
+            - text: >-
+                Голыми руками комаров не прогонишь. Разлетелись по углам и продолжают плодиться.
+              effects:
+                - { on: all, health: -5, sanity: -7 }
+              schedule:
+                - { event: mosquitoes_swarm, in: 2, chance: 95 }
+      - id: ignore_mosquitoes
+        label: Не обращать внимания
+        description: Несколько комаров — не катастрофа. Пока что.
+        outcomes:
+          - chance: 15
+            text: Комары пропали сами — видимо, залетели случайно.
+            effects:
+              - { on: all, sanity: 3 }
+              - { flag: { mosquitoes_dealt: true } }
+          - text: >-
+              Никуда не делись. За несколько дней их стало заметно больше,
+              и теперь они уже мешают спать.
+            effects:
+              - { on: all, health: -5, sanity: -7 }
+              - { flag: { mosquitoes_spreading: true } }
+            schedule:
+              - { event: mosquitoes_swarm, in: 2, chance: 100 }
+
+  - id: mosquitoes_swarm
+    type: choice
+    scheduled_only: true
+    when:
+      flag_unset: [mosquitoes_dealt]
+    title: Комары заполняют комнаты
+    text: >-
+      Теперь в нескольких помещениях висят тучи комаров. Войти без защиты
+      невозможно — мгновенно облепляют лицо и руки. Из заражённых комнат
+      выходят только красные от укусов. Если не остановить сейчас, весь
+      бункер превратится в один большой рой.
+    select:
+      kinds: [item, profession]
+      prompt_item: Чем выкуривать?
+      prompt_profession: Кто возьмётся за дело?
+    options:
+      - id: fumigate
+        label: Задымить помещения
+        description: Пустить дым через вентиляцию — дорого, но надёжно.
+        requires: [item, profession]
+        consume_items: true
+        outcomes_by_selection:
+          all:
+            - text: >-
+                Задымили каждый угол. Рои рассеялись — комаров почти не осталось.
+                В заражённых комнатах снова можно находиться.
+              effects:
+                - { on: all, health: 5, sanity: 10 }
+                - { flag: { mosquitoes_dealt: true } }
+          some:
+            - chance: 55
+              text: >-
+                Справились частично. Несколько комнат чистые, но в остальных
+                всё ещё гудит.
+              effects:
+                - { on: all, health: -8, sanity: -9 }
+              schedule:
+                - { event: mosquitoes_plague, in: 2, chance: 65 }
+            - text: >-
+                Задымили, но недостаточно — комары вернулись через сутки.
+                Потратили средства зря.
+              effects:
+                - { on: all, health: -14, sanity: -12 }
+              schedule:
+                - { event: mosquitoes_plague, in: 2, chance: 90 }
+          none:
+            - text: Без нужного и умельца дымить нечем. Рои продолжают множиться.
+              effects:
+                - { on: all, health: -12, sanity: -15 }
+              schedule:
+                - { event: mosquitoes_plague, in: 1, chance: 100 }
+      - id: seal_rooms
+        label: Заблокировать заражённые комнаты
+        description: Запечатать входы и отказаться от этих помещений.
+        outcomes:
+          - chance: 55
+            text: >-
+              Закрытые комнаты удалось изолировать. Часть пространства потеряна,
+              зато в жилых отсеках снова можно дышать.
+            effects:
+              - { on: all, health: -8, sanity: -10 }
+              - { flag: { mosquitoes_dealt: true } }
+          - text: >-
+              Комары нашли щели. Изоляция продержалась двое суток — и прорвалась.
+              Рои расползаются дальше.
+            effects:
+              - { on: all, health: -16, sanity: -14 }
+            schedule:
+              - { event: mosquitoes_plague, in: 2, chance: 90 }
+      - id: wait_again
+        label: Перетерпеть
+        description: Авось рассеются сами. Или станет ещё хуже.
+        effects:
+          - { on: all, health: -18, sanity: -17 }
+        schedule:
+          - { event: mosquitoes_plague, in: 1, chance: 100 }
+
+  - id: mosquitoes_plague
+    type: flavor
+    scheduled_only: true
+    title: Рои везде
+    text: >-
+      Теперь комары — в каждой комнате. Тучи висят у потолка, облепляют стены,
+      лезут в еду и воду. Люди не спят, ходят в волдырях. У некоторых уже
+      начался жар — укусы в таком количестве небезопасны даже без яда.
+      Бункер превратился в сплошной гул.
+    effects:
+      - { food: "15%" }
+      - { on: all, health: -24, sanity: -22 }
+      - { on: random, status: { id: mosquito_fever, label: Комариная лихорадка, stat: health, value: -8, months: 2 } }
+      - { on: random, status: { id: mosquito_fever, label: Комариная лихорадка, stat: health, value: -8, months: 2 } }
+      - { flag: { mosquitoes_dealt: true } }

@@ -591,6 +591,41 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, 
   });
 }
 
+// True when a resolution produced nothing the outcome modal would render: no
+// narration text and no visible stat/roster/inventory/status changes. The modal
+// (EventOutcomeModal) and its buff snackbar key off exactly these fields, so an
+// empty result would show as a bare "Готов" button with no content.
+function isEmptyOutcome(effectResult, message) {
+  if (message != null && String(message).trim() !== '') return false;
+  const r = effectResult ?? {};
+  const hasVital = arr => Array.isArray(arr) && arr.some(c => c.delta !== 0);
+  return !(
+    (r.foodChange !== undefined && r.foodChange !== 0) ||
+    hasVital(r.healthChanges) ||
+    hasVital(r.sanityChanges) ||
+    (r.statusChanges?.length > 0) ||
+    (r.playersKilled?.length > 0) ||
+    (r.playersAdded?.length > 0) ||
+    (r.itemChanges?.length > 0) ||
+    r.roomChanged
+  );
+}
+
+// Surfaces an event's result. An empty result has nothing to confirm, so it
+// skips the modal and advances straight to the pending action; otherwise it
+// broadcasts the result and waits for everyone to acknowledge it.
+function settleOutcome(roomCode, room, eventId, outcome, effectResult, action, message = null) {
+  if (isEmptyOutcome(effectResult, message)) {
+    wsManager.broadcastState(roomCode, room);
+    if (checkGameOver(roomCode, room)) return;
+    if (action === 'next_month') scheduleNextMonth(roomCode, room);
+    return;
+  }
+  broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message);
+  if (checkGameOver(roomCode, room)) return;
+  waitForOutcomeConfirmations(roomCode, action);
+}
+
 function checkGameOver(roomCode, room) {
   if (room.getActivePlayers().length === 0) {
     room.status = 'finished';
@@ -762,11 +797,7 @@ function resolveFlavorEvent(roomCode) {
   room.activeEvent = null;
   resetEventSelection(room);
 
-  broadcastEventResolved(roomCode, room, event.id, 'resolved', effectResult);
-
-  if (checkGameOver(roomCode, room)) return;
-
-  waitForOutcomeConfirmations(roomCode, 'next_month');
+  settleOutcome(roomCode, room, event.id, 'resolved', effectResult, 'next_month');
 }
 
 const HUNGER_HEALTH_STATUS = { id: 'hunger', label: 'Голод', type: 'debuff', stat: 'health', delta: -35, months: 99 };
@@ -970,9 +1001,7 @@ function resolveChoiceEvent(roomCode, optionId) {
   room.activeEvent = null;
   resetEventSelection(room);
 
-  broadcastEventResolved(roomCode, room, event.id, option.id, effectResult, finalMessage);
-  if (checkGameOver(roomCode, room)) return;
-  waitForOutcomeConfirmations(roomCode, 'next_month');
+  settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage);
 }
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
