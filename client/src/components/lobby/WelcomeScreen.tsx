@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X } from 'lucide-react';
 import type { ClientMessage, RoomListing, PackListing } from '../../types/game';
 
 interface Props {
@@ -16,6 +16,10 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
   const [selectedPack, setSelectedPack] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
+  // Set once on mount when arriving via an invite link (`?room=CODE`); drives the
+  // invite banner and nickname autofocus so a guest knows what to do.
+  const [invitedCode, setInvitedCode] = useState<string | null>(null);
+  const nicknameRef = useRef<HTMLInputElement>(null);
 
   const selectedPackMeta = packs.find((p) => p.id === selectedPack)?.meta;
 
@@ -34,9 +38,13 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
     const params = new URLSearchParams(window.location.search);
     const codeFromUrl = params.get('room');
     if (codeFromUrl) {
+      const code = codeFromUrl.toUpperCase();
       // eslint-disable-next-line react-hooks/set-state-in-effect -- prefill the join form from the room code in the URL on mount
-      setRoomCode(codeFromUrl.toUpperCase());
+      setRoomCode(code);
       setTab('join');
+      setInvitedCode(code);
+      // The only thing a guest still needs to provide is a nickname — focus it.
+      nicknameRef.current?.focus();
     }
 
     fetch('/api/packs').then(r => r.json()).then((list: PackListing[]) => {
@@ -73,6 +81,14 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
     onConnect({ type: 'join', nickname: nickname.trim(), pack: selectedPack });
   };
 
+  const dismissInvite = () => {
+    setInvitedCode(null);
+    setRoomCode('');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('room');
+    window.history.replaceState({}, '', url);
+  };
+
   const handleJoin = (code: string) => {
     if (!validate()) return;
     if (!code.trim()) { setError('Введи код комнаты'); return; }
@@ -104,11 +120,38 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
 
         {/* Form */}
         <div className="card glow-card p-5 space-y-4">
+          {invitedCode && (
+            <div
+              className="rounded-xl border px-3.5 py-3 flex items-center gap-2.5"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--accent) 40%, transparent)',
+                background: 'rgba(var(--accent-rgb), 0.10)',
+              }}
+            >
+              <Ticket size={16} className="text-accent shrink-0" />
+              <div className="flex-1 min-w-0 leading-tight">
+                <p className="text-sm text-zinc-200">
+                  Приглашение в комнату{' '}
+                  <span className="font-mono font-bold tracking-wider text-accent">{invitedCode}</span>
+                </p>
+                <p className="text-zinc-500 text-xs mt-0.5">Введите никнейм и нажмите «Войти».</p>
+              </div>
+              <button
+                type="button"
+                onClick={dismissInvite}
+                aria-label="Отменить приглашение"
+                className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors p-1 -m-1 rounded-md hover:bg-zinc-800/60"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
           <div>
             <label className="block text-zinc-500 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
               <User size={12} className="text-zinc-500" /> Никнейм
             </label>
             <input
+              ref={nicknameRef}
               className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none transition-all accent-input"
               placeholder="Введи никнейм"
               value={nickname}

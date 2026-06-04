@@ -273,7 +273,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     };
   }, [clearHeartbeat, connect, setPlayerId]);
 
-  const handleLeave = useCallback(() => {
+  const handleLeave = useCallback((opts?: { skipHistory?: boolean }) => {
     intentionalCloseRef.current = true;
     clearTimeout(reconnectRef.current);
     clearHeartbeat();
@@ -284,11 +284,31 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     localStorage.removeItem('bunker_room');
     localStorage.removeItem('bunker_player_id');
     setPlayerId(null);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('room');
-    window.history.pushState({}, '', url);
+    // When leaving was triggered by the browser Back button, the URL has already
+    // been popped to `/` — pushing again would add a redundant history entry.
+    if (opts?.skipHistory !== true) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('room');
+      window.history.pushState({}, '', url);
+    }
     window.location.reload();
   }, [clearHeartbeat, setPlayerId]);
+
+  // Make the browser Back button leave the room. Entering a room pushes a
+  // `?room=ABCD` history entry (see the `joined` handler), so pressing Back pops
+  // it off and fires popstate with no `room` param — that's our cue to leave.
+  useEffect(() => {
+    const onPopState = () => {
+      // Editor navigation is owned by App's router; don't treat it as a leave.
+      if (window.location.pathname.startsWith('/packs/')) return;
+      const stillInRoom = new URLSearchParams(window.location.search).has('room');
+      if (!stillInRoom && myPlayerIdRef.current) {
+        handleLeave({ skipHistory: true });
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [handleLeave, myPlayerIdRef]);
 
   const roomCode = roomState?.room_code;
   const handleIntroContinue = useCallback(() => {
