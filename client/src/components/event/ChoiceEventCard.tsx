@@ -5,8 +5,8 @@ import {
   getItemKey,
   getPlayerItemOptions,
   getBunkerItemOptions,
-  SelectableItemList,
 } from './eventUtils';
+import { SelectableItemList } from './SelectableItemList';
 import EventSelectableRow from './EventSelectableRow';
 
 interface Props {

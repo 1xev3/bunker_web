@@ -1,5 +1,5 @@
-import type { Player, ClientMessage, AttributeKey } from '../types/game';
-import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
+import type { Player, ClientMessage, AttributeKey } from '../../types/game';
+import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 
 interface Props {
   player: Player;

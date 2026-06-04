@@ -1,8 +1,8 @@
 import React from 'react';
 import { User, Globe, Dumbbell, Sparkles, Briefcase, Heart, Gamepad2, AlertTriangle, Package, Backpack, Plus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../types/game';
-import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../types/game';
+import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../../types/game';
+import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 
 const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
   gender: User,
@@ -17,8 +17,8 @@ const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
   backpack: Backpack,
   additional: Plus,
 };
-import { getProfessionIcon } from '../config/professions';
-import { getGenderIcons, getRaceIcon } from '../config/genders';
+import { getProfessionIcon } from '../../config/professions';
+import { getGenderIcons, getRaceIcon } from '../../config/genders';
 
 interface Props {
   players: Player[];
@@ -33,6 +33,7 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
     const Icon = getProfessionIcon(value.value);
     return (
       <span className={className}>
+        {/* eslint-disable-next-line react-hooks/static-components -- Icon is an existing lucide component selected by value, not defined here */}
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
         {value.display}
       </span>
@@ -54,6 +55,7 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
     const Icon = getRaceIcon(value.value);
     return (
       <span className={className}>
+        {/* eslint-disable-next-line react-hooks/static-components -- Icon is an existing lucide component selected by value, not defined here */}
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
         {value.display}
       </span>

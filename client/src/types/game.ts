@@ -318,8 +318,14 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
-  | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> };
+  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: PlayerRef[]; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
+  | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: PlayerRef[] };
+
+/** Minimal player reference used in event/report payloads ({ id, name }). */
+export interface PlayerRef {
+  id: string;
+  name: string;
+}
 
 export interface VitalChange {
   id: string;
@@ -341,6 +347,30 @@ export interface ItemChange {
   item: string;
   quantity?: number;
   action: 'given' | 'removed' | 'bunker_added' | 'bunker_removed';
+}
+
+/** A resolved event's result, surfaced by the outcome modal (mirrors the
+ *  `event_resolved` server message, without the discriminant). */
+export interface EventOutcome {
+  outcome: string;
+  message?: string | null;
+  health_changes?: VitalChange[];
+  sanity_changes?: VitalChange[];
+  status_changes?: StatusChange[];
+  food_change?: number;
+  event_id?: string;
+  players_killed?: PlayerRef[];
+  room_changed?: boolean;
+  players_added?: PlayerRef[];
+  item_changes?: ItemChange[];
+}
+
+/** A passive monthly tick summary, shown as a transient snackbar. */
+export interface MonthlyNotice {
+  health_changes?: VitalChange[];
+  sanity_changes?: VitalChange[];
+  status_changes?: StatusChange[];
+  players_killed?: PlayerRef[];
 }
 
 export type ClientMessage =

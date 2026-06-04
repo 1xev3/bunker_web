@@ -1,6 +1,6 @@
 import { ArrowLeft, Shield, Skull } from 'lucide-react';
-import type { RoomState } from '../types/game';
-import { renderEventText } from './event/eventUtils';
+import type { RoomState } from '../../types/game';
+import { renderEventText } from '../event/eventUtils';
 
 interface Props {
   survived: boolean;

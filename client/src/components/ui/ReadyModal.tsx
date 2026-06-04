@@ -1,5 +1,5 @@
 import { Shield, Check } from 'lucide-react';
-import type { Player, ClientMessage } from '../types/game';
+import type { Player, ClientMessage } from '../../types/game';
 
 interface Props {
   capacity: number;

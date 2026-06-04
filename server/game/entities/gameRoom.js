@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const { Player, ATTRIBUTE_KEYS } = require('./player');
 const Bunker = require('./bunker');
 const { loadPack, getDefaultPackName } = require('../gameConfig');
+const { serializeRoom } = require('./roomSerializer');
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -94,42 +95,7 @@ class GameRoom {
   }
 
   toDict(viewerId = null) {
-    const publicEvent = this.activeEvent
-      ? Object.fromEntries(Object.entries(this.activeEvent).filter(([key]) => !key.startsWith('__')))
-      : null;
-    return {
-      room_code: this.roomCode,
-      admin_id: this.adminId,
-      pack: this.packName,
-      pack_meta: this.config.packMeta ?? { name: this.packName, author: '', color: '#f59e0b' },
-      pack_settings: this.config.packSettings,
-      status: this.status,
-      is_voting: this.isVoting,
-      round: this.round,
-      bunker_capacity: this.bunkerCapacity,
-      current_month: this.currentMonth,
-      total_months: this.totalMonths,
-      food: this.food,
-      food_max: this.foodMax,
-      active_event: publicEvent,
-      choice_votes: { ...this.choiceVotes },
-      choice_pending_selection: this.choicePendingSelection ?? null,
-      active_event_selection: {
-        selected_player_id: this.activeEventSelection.selected_player_id ?? null,
-        selected_professions: [...this.activeEventSelection.selected_professions],
-        selected_items: this.activeEventSelection.selected_items.map(item => ({ ...item })),
-      },
-      month_start_time: this.monthStartTime,
-      month_duration: this.monthDuration,
-      confirmed_bunker_life: [...this.confirmedBunkerLife],
-      resolve_confirmations: [...this.resolveConfirmations],
-      outcome_confirmations: this.outcomeConfirmations ? [...this.outcomeConfirmations] : null,
-      scheduled_events: this.scheduledEvents,
-      players: this.players.map(p => p.toDict(viewerId)),
-      bunker: this.status !== 'waiting' ? this.bunker.toDict() : null,
-      votes: this.isVoting ? { ...this.votes } : {},
-      voted_players: [...this.votedPlayers],
-    };
+    return serializeRoom(this, viewerId);
   }
 }
 

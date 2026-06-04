@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import ToggleSwitch from '../ToggleSwitch';
+import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface EventSelectableRowProps {
   selected: boolean;

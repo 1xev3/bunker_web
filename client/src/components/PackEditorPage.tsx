@@ -23,6 +23,7 @@ export default function PackEditorPage({ packId, onBack, onOpenPack }: Props) {
 
   useEffect(() => {
     let isCancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset fetch status when the selected pack changes
     setIsLoading(true);
     setError('');
 

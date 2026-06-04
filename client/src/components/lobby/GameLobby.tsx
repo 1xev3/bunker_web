@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck } from 'lucide-react';
-import type { RoomState, ClientMessage } from '../types/game';
+import type { RoomState, ClientMessage } from '../../types/game';
 
 interface Props {
   roomState: RoomState;

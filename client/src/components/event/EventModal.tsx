@@ -1,7 +1,7 @@
-import type { BunkerInfo, GameEvent, Player, ClientMessage, PackSettings, EventSelection } from '../types/game';
-import PassiveEventCard from './event/PassiveEventCard';
-import FoodReplenishCard from './event/FoodReplenishCard';
-import ChoiceEventCard from './event/ChoiceEventCard';
+import type { BunkerInfo, GameEvent, Player, ClientMessage, PackSettings, EventSelection } from '../../types/game';
+import PassiveEventCard from './PassiveEventCard';
+import FoodReplenishCard from './FoodReplenishCard';
+import ChoiceEventCard from './ChoiceEventCard';
 
 interface Props {
   event: GameEvent;

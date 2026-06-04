@@ -1,5 +1,5 @@
 import { Vote, Check, PauseCircle } from 'lucide-react';
-import type { Player, ClientMessage, RoomState } from '../types/game';
+import type { Player, ClientMessage, RoomState } from '../../types/game';
 
 interface Props {
   players: Player[];

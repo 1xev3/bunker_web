@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package } from 'lucide-react';
-import type { ClientMessage, RoomListing, PackListing } from '../types/game';
+import type { ClientMessage, RoomListing, PackListing } from '../../types/game';
 
 interface Props {
   onConnect: (msg: ClientMessage) => void;
@@ -34,6 +34,7 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
     const params = new URLSearchParams(window.location.search);
     const codeFromUrl = params.get('room');
     if (codeFromUrl) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- prefill the join form from the room code in the URL on mount
       setRoomCode(codeFromUrl.toUpperCase());
       setTab('join');
     }

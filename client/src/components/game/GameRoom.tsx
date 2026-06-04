@@ -1,9 +1,9 @@
 import { ArrowLeft, Trophy, Shuffle, EyeOff } from 'lucide-react';
-import type { RoomState, ClientMessage, Player } from '../types/game';
-import BunkerInfo from './BunkerInfo';
+import type { RoomState, ClientMessage, Player } from '../../types/game';
+import BunkerInfo from '../bunker/BunkerInfo';
 import StatusTable from './StatusTable';
 import VotingModal from './VotingModal';
-import AdminPanel from './AdminPanel';
+import AdminPanel from '../admin/AdminPanel';
 
 interface Props {
   roomState: RoomState;

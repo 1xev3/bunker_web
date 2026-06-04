@@ -1,5 +1,5 @@
 import { DoorOpen } from 'lucide-react';
-import type { BunkerLayout } from '../types/game';
+import type { BunkerLayout } from '../../types/game';
 
 interface Props {
   layout: BunkerLayout | undefined | null;

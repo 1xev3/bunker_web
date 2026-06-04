@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ChevronDown, AlertTriangle, Building2, Ruler, Timer, Wheat, Package, Map } from 'lucide-react';
-import type { BunkerInfo as BunkerInfoType } from '../types/game';
+import type { BunkerInfo as BunkerInfoType } from '../../types/game';
 import BunkerMap from './BunkerMap';
-import { renderEventText } from './event/eventUtils';
+import { renderEventText } from '../event/eventUtils';
 
 interface Props {
   bunker: BunkerInfoType;

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ChevronRight, Map, ArrowLeft, Users } from 'lucide-react';
-import type { BunkerInfo, Player } from '../types/game';
+import type { BunkerInfo, Player } from '../../types/game';
 import BunkerMap from './BunkerMap';
-import { parseHighlightSegments, highlightVisibleLength, renderHighlightSegments } from './event/eventUtils';
+import { parseHighlightSegments, highlightVisibleLength, renderHighlightSegments } from '../event/eventUtils';
 
 interface Props {
   bunker: BunkerInfo;
@@ -23,6 +23,7 @@ function useTypewriter(text: string, speedMs: number, active: boolean, skip: boo
 
   useEffect(() => {
     if (!active) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- empty text reveals instantly
     if (!text) { setDone(true); return; }
 
     if (skip) {
@@ -72,14 +73,17 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
   }, [stage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
     if (title.done && stage === S.TITLE) setStage(bunker.disaster_info ? S.DISASTER : S.BUNKER);
   }, [title.done, stage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
     if (disaster.done && stage === S.DISASTER) setStage(bunker.bunker_info ? S.BUNKER : S.STATS);
   }, [disaster.done, stage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
     if (desc.done && stage === S.BUNKER) setStage(S.STATS);
   }, [desc.done, stage]);
 

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ServerMessage, ClientMessage, Player, VitalChange, StatusChange, ItemChange } from './types/game';
+import type { ServerMessage, ClientMessage, Player, EventOutcome, MonthlyNotice } from './types/game';
 import { useGameState } from './hooks/useGameState';
-import WelcomeScreen from './components/WelcomeScreen';
-import GameLobby from './components/GameLobby';
-import GameRoom from './components/GameRoom';
-import BunkerIntroScreen from './components/BunkerIntroScreen';
-import BunkerLifeScreen from './components/BunkerLifeScreen';
-import ReadyModal from './components/ReadyModal';
-import BunkerEndScreen from './components/BunkerEndScreen';
+import WelcomeScreen from './components/lobby/WelcomeScreen';
+import GameLobby from './components/lobby/GameLobby';
+import GameRoom from './components/game/GameRoom';
+import BunkerIntroScreen from './components/bunker/BunkerIntroScreen';
+import BunkerLifeScreen from './components/bunkerLife/BunkerLifeScreen';
+import ReadyModal from './components/ui/ReadyModal';
+import BunkerEndScreen from './components/bunker/BunkerEndScreen';
 
 const HEARTBEAT_INTERVAL_MS = 10000;
 const HEARTBEAT_TIMEOUT_MS = 15000;
@@ -34,8 +34,16 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const intentionalCloseRef = useRef(false);
+  const connectRef = useRef<((authMsg: ClientMessage) => void) | undefined>(undefined);
 
   const { roomState, handleMessage, myPlayerIdRef, resetState } = useGameState();
+  // Reactive mirror of myPlayerIdRef so render reads state (not a ref); the ref is
+  // kept for synchronous access inside callbacks/effects. setPlayerId updates both.
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const setPlayerId = useCallback((id: string | null) => {
+    myPlayerIdRef.current = id;
+    setMyPlayerId(id);
+  }, [myPlayerIdRef]);
   const [isConnectionLost, setIsConnectionLost] = useState(false);
   const [showBunkerIntro, setShowBunkerIntro] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
@@ -44,8 +52,8 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
   const [showReadyModal, setShowReadyModal] = useState(false);
   const [readyCapacity, setReadyCapacity] = useState<number>(2);
-  const [eventOutcome, setEventOutcome] = useState<{ outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; event_id?: string; players_killed?: Array<{ id: string; name: string }>; room_changed?: boolean; players_added?: Array<{ id: string; name: string }>; item_changes?: ItemChange[] } | null>(null);
-  const [monthlyNotice, setMonthlyNotice] = useState<{ health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: Array<{ id: string; name: string }> } | null>(null);
+  const [eventOutcome, setEventOutcome] = useState<EventOutcome | null>(null);
+  const [monthlyNotice, setMonthlyNotice] = useState<MonthlyNotice | null>(null);
   const monthlyNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [bunkerLifeResult, setBunkerLifeResult] = useState<{ survived: boolean } | null>(null);
   const prevOutcomeConfirmationsRef = useRef<string[] | null | undefined>(undefined);
@@ -132,7 +140,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           localStorage.removeItem('bunker_token');
           localStorage.removeItem('bunker_room');
           localStorage.removeItem('bunker_player_id');
-          myPlayerIdRef.current = null;
+          setPlayerId(null);
           setIsConnectionLost(false);
           resetState();
           showFlashMessage('error', 'Сессия истекла или комната больше не существует. Подключитесь заново.');
@@ -145,7 +153,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       if (msg.type === 'joined') {
         localStorage.setItem('bunker_token', msg.token);
         localStorage.setItem('bunker_room', msg.room_code);
-        myPlayerIdRef.current = msg.player_id;
+        setPlayerId(msg.player_id);
         localStorage.setItem('bunker_player_id', msg.player_id);
         const url = new URL(window.location.href);
         url.searchParams.set('room', msg.room_code);
@@ -203,17 +211,24 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       if (token) {
         wsLog('connection lost — scheduling rejoin in 2s');
         setIsConnectionLost(true);
-        reconnectRef.current = setTimeout(() => connect({ type: 'rejoin', token }), 2000);
+        reconnectRef.current = setTimeout(() => connectRef.current?.({ type: 'rejoin', token }), 2000);
       } else {
         wsLog('closed with no token — not reconnecting');
       }
     };
-  }, [clearHeartbeat, handleMessage, markHeartbeat, myPlayerIdRef, resetState, showFlashMessage, startHeartbeat]);
+  }, [clearHeartbeat, handleMessage, markHeartbeat, setPlayerId, resetState, showFlashMessage, startHeartbeat]);
+
+  // Keep the latest `connect` reachable from the onclose reconnect timer without
+  // referencing it before its own declaration.
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     if (roomState?.status === 'running' && roomState.bunker) {
       const key = `bunker_intro_seen_${roomState.room_code}`;
       if (!sessionStorage.getItem(key)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot reveal of the intro when the bunker first appears
         setShowBunkerIntro(true);
       }
     }
@@ -221,6 +236,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
 
   useEffect(() => {
     if (!roomState?.is_voting) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset local vote flag when a voting round ends
       setHasVoted(false);
     }
   }, [roomState?.is_voting]);
@@ -237,6 +253,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   // always nulls active_event before resolving (they're mutually exclusive), so
   // a fresh active_event means the previous outcome flow is done — drop it.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a fresh event supersedes any lingering outcome modal
     if (roomState?.active_event) setEventOutcome(null);
   }, [roomState?.active_event?.id]);
 
@@ -244,7 +261,8 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     const token = localStorage.getItem('bunker_token');
     if (token) {
       const savedId = localStorage.getItem('bunker_player_id');
-      if (savedId) myPlayerIdRef.current = savedId;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the persisted player id on mount before reconnecting
+      if (savedId) setPlayerId(savedId);
       connect({ type: 'rejoin', token });
     }
     return () => {
@@ -253,7 +271,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       clearHeartbeat();
       wsRef.current?.close();
     };
-  }, [clearHeartbeat, connect, myPlayerIdRef]);
+  }, [clearHeartbeat, connect, setPlayerId]);
 
   const handleLeave = useCallback(() => {
     intentionalCloseRef.current = true;
@@ -265,19 +283,20 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     localStorage.removeItem('bunker_token');
     localStorage.removeItem('bunker_room');
     localStorage.removeItem('bunker_player_id');
-    myPlayerIdRef.current = null;
+    setPlayerId(null);
     const url = new URL(window.location.href);
     url.searchParams.delete('room');
     window.history.pushState({}, '', url);
     window.location.reload();
-  }, [clearHeartbeat, myPlayerIdRef]);
+  }, [clearHeartbeat, setPlayerId]);
 
+  const roomCode = roomState?.room_code;
   const handleIntroContinue = useCallback(() => {
     setShowBunkerIntro(false);
-    if (roomState?.room_code) {
-      sessionStorage.setItem(`bunker_intro_seen_${roomState.room_code}`, '1');
+    if (roomCode) {
+      sessionStorage.setItem(`bunker_intro_seen_${roomCode}`, '1');
     }
-  }, [roomState?.room_code]);
+  }, [roomCode]);
 
   useEffect(() => {
     const color = roomState?.pack_meta?.color ?? '#f59e0b';
@@ -285,7 +304,6 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     document.documentElement.style.setProperty('--accent-rgb', hexToRgb(color));
   }, [roomState?.pack_meta?.color]);
 
-  const myPlayerId = myPlayerIdRef.current;
   const connectionOverlay = isConnectionLost && roomState && myPlayerId ? (
     <div className="connection-overlay" role="alert" aria-live="assertive">
       <div className="connection-overlay__panel">
@@ -330,7 +348,6 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           onLeave={handleLeave}
           eventOutcome={eventOutcome}
           outcomeConfirmations={roomState.outcome_confirmations}
-          onDismissEventOutcome={() => setEventOutcome(null)}
           monthlyNotice={monthlyNotice}
           isConnectionLost={isConnectionLost}
         />
