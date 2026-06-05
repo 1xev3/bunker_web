@@ -26,7 +26,9 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const isAdmin = roomState.admin_id === myPlayerId;
   const playerCount = roomState.players.length;
-  const canStart = isAdmin && (playerCount >= 4 || import.meta.env.DEV);
+  // Server fills the room up to the minimum with bots on start, so the admin
+  // can always start regardless of how many humans have joined.
+  const canStart = isAdmin;
 
   const copy = (kind: 'code' | 'link') => {
     const text = kind === 'code' ? roomState.room_code : window.location.href;
