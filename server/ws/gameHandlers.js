@@ -6,9 +6,8 @@ const { getDefaultPackName } = require('../game/gameConfig');
 const GameRoom = require('../game/entities/gameRoom');
 const { confirmBotsForBunkerLife, tryStartBunkerLife } = require('./bunkerLifeHandlers');
 
-const IS_DEV = process.env.NODE_ENV !== 'production';
 const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '4', 10);
-const DEV_BOT_NAMES = ['Сокол', 'Механик', 'Радар', 'Титан', 'Искра', 'Шторм', 'Кедр', 'Вектор'];
+const DEV_BOT_NAMES = ['Котакбас', 'Ванючка', 'Бабаджон', 'Пельмень', 'Станис', 'Казел', 'upinexo'];
 
 function handleJoin(ws, msg) {
   const { nickname, room_code } = msg;
@@ -103,7 +102,7 @@ function fillRoomWithDevBots(room) {
 function handleStartGame(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
-  if (IS_DEV) fillRoomWithDevBots(room);
+  fillRoomWithDevBots(room);
   if (room.players.length < 4) return;
 
   room.status = 'running';
