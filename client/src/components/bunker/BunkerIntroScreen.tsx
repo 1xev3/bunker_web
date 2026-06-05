@@ -172,7 +172,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
             )}
 
             {/* Two-column layout: situation + stats left, shelter + map right */}
-            <div className={`grid gap-5 items-stretch ${hasMap && stage >= S.BUNKER ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
+            <div className={`grid gap-5 items-stretch ${hasMap ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
               {/* Left: situation outside + stats */}
               <div className="space-y-4">
                 {bunker.disaster_info && stage >= S.TITLE && (
@@ -255,9 +255,6 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
             {/* Players list */}
             {stage >= S.PLAYERS && players.length > 0 && (
               <div className="card p-4 animate-fade-in-up">
-                <p className="term-label mb-3">
-                  <Users size={13} /> Участники · {players.length}
-                </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {players.map((p, i) => (
                     <div
