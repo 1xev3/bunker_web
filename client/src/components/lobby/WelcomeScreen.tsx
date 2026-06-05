@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X, Eye } from 'lucide-react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X, Eye, Loader2 } from 'lucide-react';
 import type { ClientMessage, RoomListing, PackListing } from '../../types/game';
 
 interface Props {
@@ -16,6 +16,10 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
   const [selectedPack, setSelectedPack] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
+  // Gate the UI behind a neutral loader until `/api/packs` resolves, so the
+  // accent color is already the pack's color on first paint instead of flashing
+  // from the default amber to purple over a slow connection.
+  const [packsLoaded, setPacksLoaded] = useState(false);
   // Set once on mount when arriving via an invite link (`?room=CODE`); drives the
   // invite banner and nickname autofocus so a guest knows what to do.
   const [invitedCode, setInvitedCode] = useState<string | null>(null);
@@ -23,7 +27,9 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
 
   const selectedPackMeta = packs.find((p) => p.id === selectedPack)?.meta;
 
-  useEffect(() => {
+  // useLayoutEffect so the color lands before the browser paints — paired with
+  // the loader gate, the welcome screen is revealed already in the pack color.
+  useLayoutEffect(() => {
     if (selectedPackMeta?.color) {
       const hex = selectedPackMeta.color;
       document.documentElement.style.setProperty('--accent', hex);
@@ -35,6 +41,16 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
   }, [selectedPackMeta?.color]);
 
   useEffect(() => {
+    const startedAt = Date.now();
+    let revealTimer: ReturnType<typeof setTimeout> | undefined;
+    // Hold the loader for at least MIN_LOADER_MS so a fast fetch doesn't make it
+    // flash on and off — a brief, steady loader reads better than a flicker.
+    const MIN_LOADER_MS = 300;
+    const revealWhenReady = () => {
+      const remaining = Math.max(0, MIN_LOADER_MS - (Date.now() - startedAt));
+      revealTimer = setTimeout(() => setPacksLoaded(true), remaining);
+    };
+
     const params = new URLSearchParams(window.location.search);
     const codeFromUrl = params.get('room');
     if (codeFromUrl) {
@@ -53,14 +69,14 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
         const ids = list.map((p) => p.id);
         setSelectedPack(currentPack => (currentPack && ids.includes(currentPack) ? currentPack : list[0].id));
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(revealWhenReady);
 
     const fetchRooms = () =>
       fetch('/api/rooms').then(r => r.json()).then(setRooms).catch(() => {});
 
     fetchRooms();
     const interval = setInterval(fetchRooms, 3000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); clearTimeout(revealTimer); };
   }, []);
 
   const validate = () => {
@@ -101,6 +117,17 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
     setError('');
     onConnect({ type: 'spectate', room_code: code.trim().toUpperCase() });
   };
+
+  // Neutral (no --accent) fullscreen loader while packs load — avoids the
+  // amber→pack-color flash by not revealing the themed UI until the color is set.
+  if (!packsLoaded) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
+        <Loader2 size={32} className="text-zinc-500 animate-spin" />
+        <p className="text-zinc-500 text-sm tracking-wide">Загрузка…</p>
+      </div>
+    );
+  }
 
   return (
     <div

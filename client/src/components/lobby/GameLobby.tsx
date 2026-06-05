@@ -26,7 +26,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const isAdmin = roomState.admin_id === myPlayerId;
   const playerCount = roomState.players.length;
-  const canStart = isAdmin && (playerCount >= 2 || import.meta.env.DEV);
+  const canStart = isAdmin && (playerCount >= 4 || import.meta.env.DEV);
 
   const copy = (kind: 'code' | 'link') => {
     navigator.clipboard.writeText(kind === 'code' ? roomState.room_code : window.location.href);
@@ -131,7 +131,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                   {canStart ? (
                     <><Rocket size={15} /> Начать игру</>
                   ) : (
-                    <><Clock size={15} /> Нужно минимум 2 игрока</>
+                    <><Clock size={15} /> Нужно минимум 4 игрока</>
                   )}
                 </button>
               ) : (
@@ -201,8 +201,8 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                   );
                 })}
 
-                {/* Empty slot hint while waiting for a second player */}
-                {playerCount < 2 && (
+                {/* Empty slot hint while waiting for enough players */}
+                {playerCount < 4 && (
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-dashed border-zinc-800 text-zinc-600">
                     <div className="w-9 h-9 rounded-full border border-dashed border-zinc-700 flex items-center justify-center shrink-0">
                       <Users size={14} className="text-zinc-700" />

@@ -104,7 +104,7 @@ function handleStartGame(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
   if (IS_DEV) fillRoomWithDevBots(room);
-  if (room.players.length < 2) return;
+  if (room.players.length < 4) return;
 
   room.status = 'running';
   room.bunker.generate(null, room.config);
