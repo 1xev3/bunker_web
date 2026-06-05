@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import GameApp from './GameApp';
 import PackEditorPage from './components/PackEditorPage';
+import VersionBadge from './components/VersionBadge';
 import './index.css';
 
 type AppRoute =
@@ -39,13 +40,21 @@ export default function App() {
 
   if (route.type === 'pack-editor') {
     return (
-      <PackEditorPage
-        packId={route.packId}
-        onBack={openGame}
-        onOpenPack={openPackEditor}
-      />
+      <>
+        <PackEditorPage
+          packId={route.packId}
+          onBack={openGame}
+          onOpenPack={openPackEditor}
+        />
+        <VersionBadge />
+      </>
     );
   }
 
-  return <GameApp onOpenPackEditor={openPackEditor} />;
+  return (
+    <>
+      <GameApp onOpenPackEditor={openPackEditor} />
+      <VersionBadge />
+    </>
+  );
 }
