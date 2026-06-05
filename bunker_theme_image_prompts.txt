@@ -1,0 +1,220 @@
+================================================================================
+ПРОМПТЫ ДЛЯ ГЕНЕРАЦИИ ИЗОБРАЖЕНИЙ (THUMBNAILS) ТЕМ БУНКЕРА
+================================================================================
+Источник тем: server/game/configurations/Fantasy/Bunker.yaml (BUNKER_THEMES)
+
+Промпты написаны на английском (большинство генераторов изображений работают
+с ним лучше всего). Для каждой темы дано: рекомендуемое имя файла, основной
+промпт и negative prompt.
+
+Общий стиль для всех тем (можно добавлять к любому промпту):
+  dark fantasy concept art, grimdark, cinematic dramatic lighting, highly
+  detailed, painterly digital illustration, ominous atmosphere, muted desaturated
+  palette with strong accent color, 16:9 thumbnail composition, ArtStation trending
+
+Общий negative prompt (для всех):
+  text, watermark, signature, logo, modern technology, cars, guns, low quality,
+  blurry, cartoonish, cute, bright cheerful colors, photorealistic faces deformed
+
+================================================================================
+1. Пробуждение древнего дракона  (image: dragon.svg)
+--------------------------------------------------------------------------------
+file: dragon
+prompt:
+  A colossal primordial dragon erupting from a burning mountain range, wings
+  blotting out a blood-red sky, entire cities ablaze far below, rivers of fire,
+  black ash falling like snow, charred ruins, epic scale, terror and devastation.
+
+================================================================================
+2. Разлом магического купола
+--------------------------------------------------------------------------------
+file: magic_dome_rift
+prompt:
+  A shattered colossal arcane dome over a ruined capital city, raw wild magic
+  pouring out as crackling iridescent energy, districts collapsing into reality
+  pockets, glowing tears in the air, twisted distorted streets, eerie violet and
+  cyan glow, catastrophic magical breach.
+
+================================================================================
+3. Нашествие нежити
+--------------------------------------------------------------------------------
+file: undead_invasion
+prompt:
+  A horde of risen dead crawling from burial mounds across a desolate moor,
+  necromantic black obelisks glowing in the distance, gaunt eyeless corpses,
+  fog and bone fields, ruined temples with scorched altars, sickly green
+  necrotic light, oppressive dread.
+
+================================================================================
+4. Война трёх корон
+--------------------------------------------------------------------------------
+file: war_three_crowns
+prompt:
+  A grim medieval battlefield under three burning banners, fields fertilized
+  with corpses, wells choked with bodies, ravaged village smoldering, mercenaries
+  and deserters silhouetted, ash and smoke, three distant crowns motif, brutal
+  endless war, blood-soaked earth.
+
+================================================================================
+5. Чума чёрной луны
+--------------------------------------------------------------------------------
+file: black_moon_plague
+prompt:
+  A plague-ravaged village under a black eclipse moon, withered fanatics with
+  festering mouths crawling on all fours, mass graves and burning pyres,
+  diseased rot spreading, locked gates, sickly grey-green pallor, lunar
+  shadow, despair and contagion.
+
+================================================================================
+6. Падение небесного города
+--------------------------------------------------------------------------------
+file: skycity_fall
+prompt:
+  A vast floating mage-city crashing onto the plains, enormous impact crater
+  still glowing, ethereal storms raining acid, broken spires, bodies falling
+  from a fractured sky, surviving wizards scavenging artifacts, cataclysmic
+  scale, dust and arcane lightning.
+
+================================================================================
+7. Проклятие вечной зимы
+--------------------------------------------------------------------------------
+file: eternal_winter
+prompt:
+  A frozen continent locked in endless ice, thousands of living beings frozen
+  with open eyes beneath the surface, blue hands reaching up through frost,
+  dead crops, frost spirits drifting, pale blue desolation, howling blizzard,
+  cold dread and starvation.
+
+================================================================================
+8. Вторжение из Нижнего мира
+--------------------------------------------------------------------------------
+file: underworld_invasion
+prompt:
+  A torn open hellgate spewing demons into the mortal world, flayed cities,
+  entrails draped on belltowers, town squares turned to slaughterhouses, fallen
+  paladins, defiled shrines, smoke and bile haze, infernal red glow, soul
+  hunters prowling, visceral horror (no explicit gore close-up).
+
+================================================================================
+9. Гнев древнего леса
+--------------------------------------------------------------------------------
+file: ancient_forest_wrath
+prompt:
+  An awakened ancient forest at war with humanity, monstrous gnarled trees
+  draped with bodies like fruit, roots bursting through the ground entangling
+  the living, beasts moving as one mind, deep green gloom, twisted bark faces,
+  whispering canopy, primal vengeful nature.
+
+================================================================================
+10. Бунт артефактов
+--------------------------------------------------------------------------------
+file: artifact_revolt
+prompt:
+  Enchanted objects come alive and turning on their owners, animated armor
+  crushing knights, swords slashing on their own, haunted mirrors showing deaths,
+  a treasure vault turned massacre, glowing runes, cold calculated malice,
+  candlelit gloom, sentient cursed relics.
+
+================================================================================
+11. Пески пожрали империю
+--------------------------------------------------------------------------------
+file: sands_devoured_empire
+prompt:
+  A cursed desert swallowing an entire empire, cities half-buried under endless
+  dunes, mummified figures with open mouths, dried wells, sand spirits in
+  swirling storms, a caravan lost in circles, scorching ochre and amber haze,
+  relentless creeping sand, doom and thirst.
+
+================================================================================
+12. Мор из бездны
+--------------------------------------------------------------------------------
+file: abyssal_plague
+prompt:
+  A coastal town overrun by deep-sea horrors after a sealed idol was raised,
+  creatures with too many mouths and human teeth emerging from black waves,
+  fishing nets full of bones, drowned faces, tainted water, salt-rotten fog,
+  cold teal and abyssal darkness, eldritch dread.
+
+================================================================================
+13. Слом печатей титанов
+--------------------------------------------------------------------------------
+file: titan_seals_broken
+prompt:
+  Colossal titans returning as seven seals shatter, each footstep crushing
+  villages, fortresses crumbling, the earth splitting with smaller creatures
+  pouring from chasms, dust raining from cracked sky, apocalyptic scale, tiny
+  fleeing figures, awe and annihilation.
+
+================================================================================
+14. Охота инквизиции на магов
+--------------------------------------------------------------------------------
+file: inquisition_witch_hunt
+prompt:
+  A grim inquisition burning mages, endless pyres day and night, hooded
+  inquisitors, torture racks, frenzied mobs with torches and stones, smoke
+  over a fearful town, fanatical religious terror, ember orange against cold
+  shadow, paranoia and denunciation.
+
+================================================================================
+15. Рождение кровавого бога
+--------------------------------------------------------------------------------
+file: blood_god_birth
+prompt:
+  A cult completing a dark ritual birthing a newborn blood deity, massive bone
+  and flesh altars, mad priests in flayed-skin robes, sky weeping crimson,
+  sacrificial chambers, deep red and black, occult sigils, insatiable hunger
+  and madness, ominous divine horror (no explicit gore close-up).
+
+================================================================================
+16. Шторм дикой магии
+--------------------------------------------------------------------------------
+file: wild_magic_storm
+prompt:
+  Towering magical storms rewriting reality on the fly, lightning that transmutes
+  people, villages vanishing leaving shadows on walls, melted silhouettes frozen
+  mid-run, chaotic prismatic energy bolts, warped landscape, surreal dread,
+  electric chaos across the land.
+
+================================================================================
+17. Возвращение короля фей
+--------------------------------------------------------------------------------
+file: fae_king_return
+prompt:
+  The fae king tearing through the veil into the mortal world, eerie otherworldly
+  gardens of bark and teeth, hollow changeling dolls, empty cradles, time gone
+  mad, moonlit twisted faerie forest, deceptive beauty turned sinister, cold
+  silver and bruised purple, uncanny dread.
+
+================================================================================
+18. Падение орд чудовищ
+--------------------------------------------------------------------------------
+file: monster_horde
+prompt:
+  A vast horde of orcs, trolls and giants under a warlord chieftain rolling
+  across the land, palisades of skulls, smoking pillage fires, impaled stakes
+  along ruined roads, no survivors left, dark brutal warband, smoke and dread,
+  overwhelming savage invasion.
+
+================================================================================
+19. Раскол ордена света
+--------------------------------------------------------------------------------
+file: order_of_light_schism
+prompt:
+  A holy order of light shattered into civil war, fractions branding each other
+  heretics, burning cities for purification, fallen heroes with desecrated holy
+  armor, sanctified blades over the innocent, golden light corrupted into cruelty,
+  zealous holy war, tragic fanaticism.
+
+================================================================================
+20. Сон мира заканчивается
+--------------------------------------------------------------------------------
+file: world_dream_ends
+prompt:
+  Reality unraveling as the world is revealed to be the dream of an ancient waking
+  entity, familiar places dissolving with their people, corridors made of flesh,
+  faceless figures filling the streets, walls turning soft and warm, surreal
+  cosmic horror, fading memory, impossible dreamlike collapse, muted unsettling tones.
+
+================================================================================
+КОНЕЦ ФАЙЛА
+================================================================================

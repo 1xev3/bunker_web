@@ -51,6 +51,8 @@ const S = { FLASH: 0, TITLE: 1, DISASTER: 2, BUNKER: 3, STATS: 4, MAP: 5, PLAYER
 export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onContinue, onLeave }: Props) {
   const [stage, setStage] = useState(S.FLASH);
   const [skipped, setSkipped] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const themeImage = bunker.theme.image;
   const bunkerCapacityDisplay = Math.max(1, bunkerCapacity ?? players.filter(player => player.is_active).length);
   const totalFood = bunker.food.amount * bunkerCapacityDisplay;
   const approxFoodMonths = Math.floor(totalFood / (bunkerCapacityDisplay * 90));
@@ -178,6 +180,14 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                     <p className="flex items-center gap-2 text-red-400/70 text-xs uppercase tracking-widest mb-2.5">
                       <AlertTriangle size={11} /> Ситуация снаружи
                     </p>
+                    {themeImage && !imageError && (
+                      <img
+                        src={themeImage}
+                        alt={bunker.theme.label}
+                        onError={() => setImageError(true)}
+                        className="w-full max-h-72 object-cover rounded-lg border border-red-900/40 shadow-lg mb-3"
+                      />
+                    )}
                     <p className="text-zinc-300 text-sm leading-relaxed">
                       {disaster.displayed}
                       {stage === S.DISASTER && cursor}

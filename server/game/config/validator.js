@@ -4,6 +4,7 @@ const { normalizeConfig, validateStructuredConfig } = require('./structuredConfi
 const { validateEvent } = require('./yamlEvents');
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
 const TARGET_TYPES = new Set(['none', 'self', 'other', 'pair']);
 const ATTRIBUTE_KEYS = new Set(['gender', 'race', 'body', 'health', 'hobby', 'phobia', 'inventory', 'additional']);
 
@@ -152,6 +153,18 @@ function validateNamedObjectArray(value, scope, errors) {
     }
     if (item.description !== undefined && typeof item.description !== 'string') {
       addError(errors, `${scope}[${index}].description`, 'если поле указано, оно должно быть строкой');
+    }
+    if (item.image !== undefined) {
+      if (typeof item.image !== 'string' || item.image.trim() === '') {
+        addError(errors, `${scope}[${index}].image`, 'если поле указано, оно должно быть непустой строкой (имя файла в папке Images/)');
+      } else {
+        const image = item.image.trim();
+        const isUrl = /^https?:\/\//i.test(image);
+        const ext = image.slice(image.lastIndexOf('.')).toLowerCase();
+        if (!isUrl && !ALLOWED_IMAGE_EXTENSIONS.has(ext)) {
+          addError(errors, `${scope}[${index}].image`, `недопустимое расширение файла (разрешены: ${[...ALLOWED_IMAGE_EXTENSIONS].join(', ')})`);
+        }
+      }
     }
   });
 }

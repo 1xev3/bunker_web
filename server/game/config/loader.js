@@ -165,9 +165,38 @@ function loadPack(packName = getDefaultPackName()) {
   const rawConfig = PACK_FILES.reduce((cfg, file) => ({ ...cfg, ...readConfigFile(dir, file) }), {});
   Object.assign(rawConfig, readEventsDirectory(dir) ?? {});
   const config = normalizeConfig(rawConfig);
+  config.packId = packName;
   config.packMeta = readPackMeta(packName);
   config.packSettings = normalizePackSettings(rawConfig);
   return config;
+}
+
+// Allowed image extensions and the maximum file size we will serve. Anything
+// else in the Images/ directory is ignored so a pack can never have us hand out
+// an oversized or non-image file.
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
+
+// Resolves a theme/size image filename to an absolute path on disk, or null if
+// it does not exist, has a disallowed extension, or exceeds the size limit.
+// `path.basename` strips any directory components from both the pack name and
+// the file name, so a crafted value can never escape the pack's Images/
+// directory (path traversal guard).
+function getPackImagePath(packName, fileName) {
+  if (typeof packName !== 'string' || typeof fileName !== 'string') return null;
+  const safePack = path.basename(packName);
+  const safeFile = path.basename(fileName);
+  if (!safePack || !safeFile) return null;
+  if (!ALLOWED_IMAGE_EXTENSIONS.has(path.extname(safeFile).toLowerCase())) return null;
+  const resolved = path.join(CONFIGS_DIR, safePack, 'Images', safeFile);
+  let stat;
+  try {
+    stat = fs.statSync(resolved);
+  } catch {
+    return null;
+  }
+  if (!stat.isFile() || stat.size > MAX_IMAGE_BYTES) return null;
+  return resolved;
 }
 
 function getPackStats(packName) {
@@ -199,4 +228,4 @@ function getPackStats(packName) {
   };
 }
 
-module.exports = { loadPack, listPacks, getDefaultPackName, validatePack, readPackMeta, getPackStats };
+module.exports = { loadPack, listPacks, getDefaultPackName, validatePack, readPackMeta, getPackStats, getPackImagePath };

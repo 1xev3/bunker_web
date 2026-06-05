@@ -128,7 +128,7 @@ export interface BunkerLayout {
 }
 
 export interface BunkerInfo {
-  theme: ConfigEntity;
+  theme: ConfigEntity & { image?: string };
   size: ConfigEntity;
   duration: BunkerDurationEntity;
   food: FoodSupplyEntity;

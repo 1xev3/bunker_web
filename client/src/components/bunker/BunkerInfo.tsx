@@ -10,6 +10,8 @@ interface Props {
 
 export default function BunkerInfo({ bunker }: Props) {
   const [open, setOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const themeImage = bunker.theme.image;
 
   return (
     <div className="card overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
@@ -39,8 +41,23 @@ export default function BunkerInfo({ bunker }: Props) {
               <div className={`grid gap-4 items-stretch ${hasMap ? 'grid-cols-1 sm:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
                 {/* Left: text content */}
                 <div className="space-y-4">
-                  {bunker.disaster_info && (
-                    <Section icon={<AlertTriangle size={11} />} title="Ситуация снаружи" text={bunker.disaster_info} />
+                  {(bunker.disaster_info || (themeImage && !imageError)) && (
+                    <div>
+                      <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <span className="text-zinc-500"><AlertTriangle size={11} /></span> Ситуация снаружи
+                      </p>
+                      {themeImage && !imageError && (
+                        <img
+                          src={themeImage}
+                          alt={renderEventText(bunker.theme.label)}
+                          onError={() => setImageError(true)}
+                          className="w-full max-h-56 object-cover rounded-lg border border-zinc-800 shadow-md mb-2.5"
+                        />
+                      )}
+                      {bunker.disaster_info && (
+                        <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">{renderEventText(bunker.disaster_info)}</p>
+                      )}
+                    </div>
                   )}
                   {bunker.bunker_info && (
                     <Section icon={<Building2 size={11} />} title="Бункер" text={bunker.bunker_info} />

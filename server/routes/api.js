@@ -1,5 +1,5 @@
 const { rooms, wsManager } = require('../state');
-const { loadPack, listPacks, getDefaultPackName, getPackStats } = require('../game/gameConfig');
+const { loadPack, listPacks, getDefaultPackName, getPackStats, getPackImagePath } = require('../game/gameConfig');
 
 function setupApiRoutes(app) {
   app.get('/api/config', (req, res) => {
@@ -18,6 +18,12 @@ function setupApiRoutes(app) {
     const pack = listPacks().find((p) => p.id === req.params.id);
     if (!pack) return res.status(404).json({ error: 'Pack not found' });
     res.json(pack.meta);
+  });
+
+  app.get('/api/packs/:id/images/:file', (req, res) => {
+    const imagePath = getPackImagePath(req.params.id, req.params.file);
+    if (!imagePath) return res.status(404).json({ error: 'Image not found' });
+    res.sendFile(imagePath);
   });
 
   app.get('/api/packs/:id/stats', (req, res) => {

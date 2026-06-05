@@ -13,6 +13,17 @@ function resolveThemeText(def) {
   return next;
 }
 
+// Turns a theme's `image` (a file name living in the pack's Images/ directory)
+// into a URL the client can load. Absolute URLs are passed through untouched so
+// a pack may also point at an external image.
+function resolveThemeImage(def, packId) {
+  if (!def || typeof def.image !== 'string' || def.image.trim() === '') return def;
+  const image = def.image.trim();
+  if (/^https?:\/\//i.test(image) || image.startsWith('/')) return { ...def, image };
+  if (!packId) return def;
+  return { ...def, image: `/api/packs/${encodeURIComponent(packId)}/images/${encodeURIComponent(image)}` };
+}
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -132,7 +143,7 @@ class Bunker {
       : config.BUNKER_THEMES[Math.floor(Math.random() * config.BUNKER_THEMES.length)];
     const sizeDef = config.BUNKER_SIZES[Math.floor(Math.random() * config.BUNKER_SIZES.length)];
 
-    const resolvedTheme = resolveThemeText(themeDef);
+    const resolvedTheme = resolveThemeImage(resolveThemeText(themeDef), config.packId);
     const resolvedSize = resolveThemeText(sizeDef);
 
     this.theme = resolvedTheme;
