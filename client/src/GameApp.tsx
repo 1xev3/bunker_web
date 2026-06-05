@@ -286,6 +286,18 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     prevOutcomeConfirmationsRef.current = oc;
   }, [roomState?.outcome_confirmations]);
 
+  // Hydrate the outcome modal from room state when the transient `event_resolved`
+  // message was missed — e.g. the player was disconnected when it fired and
+  // reconnected into an open outcome gate. The server clears `pending_outcome`
+  // together with `outcome_confirmations`, so the clear effect above still wins.
+  useEffect(() => {
+    const po = roomState?.pending_outcome ?? null;
+    if (po && roomState?.outcome_confirmations) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- recover a missed outcome broadcast from authoritative state
+      setEventOutcome(prev => prev ?? po);
+    }
+  }, [roomState?.pending_outcome, roomState?.outcome_confirmations]);
+
   // A new event must never stay hidden behind a stale outcome modal. The server
   // always nulls active_event before resolving (they're mutually exclusive), so
   // a fresh active_event means the previous outcome flow is done — drop it.

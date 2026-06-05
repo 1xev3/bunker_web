@@ -33,6 +33,23 @@ function spawnNewborn(room, parent, name) {
   return child;
 }
 
+// Survivors never start the bunker phase below this, so even a terminal illness
+// leaves a fighting chance rather than an instant death.
+const MIN_START_HEALTH = 15;
+
+// Starting bunker health derived from a survivor's health attribute. The
+// condition's `severity` (points of health it costs at the worst stage) is
+// scaled by the current stage's `multiplier`. Engine-universal: it reads only
+// the generic severity/stage numbers the pack assigns, never a specific disease.
+function startingVitalHealth(player, config) {
+  const state = (config.HEALTH_STATES ?? []).find(e => e.value.id === player.health?.stateId);
+  const severity = typeof state?.value?.severity === 'number' ? state.value.severity : 0;
+  if (severity <= 0) return 100;
+  const stage = (config.HEALTH_STAGES ?? []).find(e => e.value.id === player.health?.stageId);
+  const stageMult = typeof stage?.value?.multiplier === 'number' ? stage.value.multiplier : 1;
+  return Math.max(MIN_START_HEALTH, Math.round(100 - severity * stageMult));
+}
+
 function updateFood(room, delta) {
   const before = room.food;
   room.food = Math.max(0, room.food + delta);
@@ -622,6 +639,7 @@ function tallyWinningOption(votes, optionIds) {
 }
 
 module.exports = {
+  startingVitalHealth,
   updateFood,
   applyMonthlyVitals,
   buildFlavorEffects,

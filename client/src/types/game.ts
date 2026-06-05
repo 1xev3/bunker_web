@@ -278,6 +278,7 @@ export interface RoomState {
   confirmed_bunker_life: string[];
   resolve_confirmations: string[];
   outcome_confirmations: string[] | null;
+  pending_outcome: EventOutcome | null;
   players: Player[];
   bunker: BunkerInfo | null;
   votes: Record<string, string>;

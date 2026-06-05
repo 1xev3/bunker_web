@@ -92,12 +92,12 @@ function validateEventSettings(settings, scope, errors) {
   }
 }
 
-function validateWeightedTable(value, scope, errors, valueValidator = () => {}, { allowMultiplier = false } = {}) {
+function validateWeightedTable(value, scope, errors, valueValidator = () => {}, { allowMultiplier = false, allowSeverity = false } = {}) {
   if (!Array.isArray(value) || value.length === 0) {
     addError(errors, scope, 'ожидается непустой массив пар [значение, вес]');
     return;
   }
-  const maxLen = allowMultiplier ? 3 : 2;
+  const maxLen = (allowMultiplier || allowSeverity) ? 3 : 2;
   value.forEach((entry, index) => {
     // Object syntax: { label, weight, groups? }
     if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'label' in entry) {
@@ -109,6 +109,9 @@ function validateWeightedTable(value, scope, errors, valueValidator = () => {}, 
       }
       if (allowMultiplier && entry.multiplier !== undefined && (typeof entry.multiplier !== 'number' || !Number.isFinite(entry.multiplier) || entry.multiplier < 0)) {
         addError(errors, `${scope}[${index}].multiplier`, 'множитель должен быть неотрицательным числом');
+      }
+      if (allowSeverity && entry.severity !== undefined && (typeof entry.severity !== 'number' || !Number.isFinite(entry.severity) || entry.severity < 0)) {
+        addError(errors, `${scope}[${index}].severity`, 'тяжесть должна быть неотрицательным числом');
       }
       return;
     }
@@ -330,10 +333,10 @@ function validatePackContent(packName, files) {
     validateStringArray(files.People.TRAITS, 'People -> TRAITS', errors);
     validateWeightedTable(files.People.HEALTH_STATES, 'People -> HEALTH_STATES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
-    });
+    }, { allowSeverity: true });
     validateWeightedTable(files.People.HEALTH_STAGES, 'People -> HEALTH_STAGES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
-    });
+    }, { allowMultiplier: true });
     validateStringArray(files.People.HOBBIES, 'People -> HOBBIES', errors);
     validateStringArray(files.People.PHOBIAS, 'People -> PHOBIAS', errors);
     validateStringArray(files.People.ADDITIONAL_INFO, 'People -> ADDITIONAL_INFO', errors);

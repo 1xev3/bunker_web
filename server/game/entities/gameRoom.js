@@ -40,6 +40,8 @@ class GameRoom {
     this.resolveConfirmations = new Set(); // players who confirmed current event resolve
     this.outcomeConfirmations = null; // null | Set — players who confirmed outcome
     this.pendingOutcomeAction = null; // 'next_month' | 'month_tick_continue'
+    this.pendingOutcomeReport = null; // last event_resolved payload, mirrored in state so reconnecting players can still see (and confirm) the outcome modal
+
     this.flags = {};
     this.createdAt = Date.now();
     this.lastActivity = Date.now();

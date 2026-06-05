@@ -37,6 +37,7 @@ function serializeRoom(room, viewerId = null) {
     confirmed_bunker_life: [...room.confirmedBunkerLife],
     resolve_confirmations: [...room.resolveConfirmations],
     outcome_confirmations: room.outcomeConfirmations ? [...room.outcomeConfirmations] : null,
+    pending_outcome: room.pendingOutcomeReport ?? null,
     scheduled_events: room.scheduledEvents,
     players: room.players.map(p => p.toDict(viewerId)),
     bunker: room.status !== 'waiting' ? room.bunker.toDict() : null,

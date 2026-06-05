@@ -138,8 +138,27 @@ function normalizeConfig(config) {
     return normalized;
   });
   next.TRAITS = plainEntities(config.TRAITS ?? [], 'trait');
-  next.HEALTH_STATES = weightedEntities(config.HEALTH_STATES ?? [], 'health_state');
-  next.HEALTH_STAGES = weightedEntities(config.HEALTH_STAGES ?? [], 'health_stage');
+  next.HEALTH_STATES = (config.HEALTH_STATES ?? []).map((entry, index) => {
+    const normalized = weightedEntity(entry, 'health_state', index);
+    // Optional survival severity: how many points of starting bunker health this
+    // condition costs at the worst stage. Array `[label, weight, severity]` or
+    // object `{ label, weight, severity }`. Healthy / unset → 0.
+    const raw = Array.isArray(entry)
+      ? entry[2]
+      : (entry && typeof entry === 'object' ? entry.severity : undefined);
+    normalized.value.severity = typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 0;
+    return normalized;
+  });
+  next.HEALTH_STAGES = (config.HEALTH_STAGES ?? []).map((entry, index) => {
+    const normalized = weightedEntity(entry, 'health_stage', index);
+    // Optional severity scale of a stage (Лёгкое → При смерти). Array
+    // `[label, weight, multiplier]` or object `{ ..., multiplier }`. Defaults to 1.
+    const raw = Array.isArray(entry)
+      ? entry[2]
+      : (entry && typeof entry === 'object' ? entry.multiplier : undefined);
+    normalized.value.multiplier = typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : 1;
+    return normalized;
+  });
   next.HOBBIES = plainEntities(config.HOBBIES ?? [], 'hobby');
   next.PHOBIAS = plainEntities(config.PHOBIAS ?? [], 'phobia');
   next.ADDITIONAL_INFO = plainEntities(config.ADDITIONAL_INFO ?? [], 'additional');

@@ -87,43 +87,116 @@ TRAITS:
   - Эгоистичный
   - Озабоченный
 
-# Объектный синтаксис: { label, weight, groups? }
+# Объектный синтаксис: { label, weight, groups?, severity? }
 # Старый формат [значение, вес] тоже работает (без групп).
+# severity — насколько болезнь критична для выживания: сколько очков
+# стартового здоровья в бункере она отнимает при худшей стадии (см. HEALTH_STAGES).
+# «Здоров» / без поля → 0.
 HEALTH_STATES:
-  - { label: Здоров,               weight: 0.35, groups: [healthy] }
-  - { label: Диабет,               weight: 0.05, groups: [disease, chronic] }
-  - { label: Астма,                weight: 0.05, groups: [disease, chronic, respiratory] }
-  - { label: Аллергия,             weight: 0.05, groups: [disease, chronic] }
-  - { label: Болезнь сердца,       weight: 0.05, groups: [disease, chronic, serious] }
-  - { label: Проблемы со зрением,  weight: 0.05, groups: [disability, chronic] }
-  - { label: Неизвестная болезнь,  weight: 0.05, groups: [disease] }
-  - { label: Анемия,               weight: 0.05, groups: [disease, chronic] }
-  - { label: Артрит,               weight: 0.05, groups: [disease, chronic, disability] }
-  - { label: Мигрень,              weight: 0.05, groups: [disease, chronic] }
-  - { label: Депрессия,            weight: 0.05, groups: [mental, chronic] }
-  - { label: Гипертония,           weight: 0.05, groups: [disease, chronic, serious] }
-  - { label: Язва желудка,         weight: 0.05, groups: [disease, chronic] }
-  - { label: Бессонница,           weight: 0.05, groups: [mental, chronic] }
-  - { label: Эпилепсия,            weight: 0.05, groups: [disease, chronic, serious] }
-  - { label: ВИЧ,                  weight: 0.05, groups: [disease, chronic, serious, infectious] }
-  - { label: СПИД,                 weight: 0.05, groups: [disease, chronic, serious, infectious] }
-  - { label: Аутизм,               weight: 0.05, groups: [mental, disability, chronic] }
-  - { label: Серая хворь,          weight: 0.05, groups: [disease, magical] }
-  - { label: Гандонство,           weight: 0.05, groups: [mental] }
-  - { label: Хворь,                weight: 0.05, groups: [disease] }
-  - { label: Магич. отравление,    weight: 0.05, groups: [disease, magical, serious] }
-  - { label: Отравление,           weight: 0.05, groups: [disease, serious, injured] }
+  - label: Здоров
+    weight: 0.35
+    groups: [healthy]
+  - label: Диабет
+    weight: 0.05
+    groups: [disease, chronic]
+    severity: 30
+  - label: Астма
+    weight: 0.05
+    groups: [disease, chronic, respiratory]
+    severity: 35
+  - label: Аллергия
+    weight: 0.05
+    groups: [disease, chronic]
+    severity: 15
+  - label: Болезнь сердца
+    weight: 0.05
+    groups: [disease, chronic, serious]
+    severity: 50
+  - label: Проблемы со зрением
+    weight: 0.05
+    groups: [disability, chronic]
+    severity: 15
+  - label: Неизвестная болезнь
+    weight: 0.05
+    groups: [disease]
+    severity: 40
+  - label: Анемия
+    weight: 0.05
+    groups: [disease, chronic]
+    severity: 30
+  - label: Артрит
+    weight: 0.05
+    groups: [disease, chronic, disability]
+    severity: 25
+  - label: Мигрень
+    weight: 0.05
+    groups: [disease, chronic]
+    severity: 15
+  - label: Депрессия
+    weight: 0.05
+    groups: [mental, chronic]
+    severity: 20
+  - label: Гипертония
+    weight: 0.05
+    groups: [disease, chronic, serious]
+    severity: 45
+  - label: Язва желудка
+    weight: 0.05
+    groups: [disease, chronic]
+    severity: 25
+  - label: Бессонница
+    weight: 0.05
+    groups: [mental, chronic]
+    severity: 15
+  - label: Эпилепсия
+    weight: 0.05
+    groups: [disease, chronic, serious]
+    severity: 45
+  - label: ВИЧ
+    weight: 0.05
+    groups: [disease, chronic, serious, infectious]
+    severity: 50
+  - label: СПИД
+    weight: 0.05
+    groups: [disease, chronic, serious, infectious]
+    severity: 65
+  - label: Аутизм
+    weight: 0.05
+    groups: [mental, disability, chronic]
+    severity: 20
+  - label: Серая хворь
+    weight: 0.05
+    groups: [disease, magical]
+    severity: 35
+  - label: Гандонство
+    weight: 0.05
+    groups: [mental]
+    severity: 10
+  - label: Хворь
+    weight: 0.05
+    groups: [disease]
+    severity: 30
+  - label: Магич. отравление
+    weight: 0.05
+    groups: [disease, magical, serious]
+    severity: 50
+  - label: Отравление
+    weight: 0.05
+    groups: [disease, serious, injured]
+    severity: 45
 
+# [label, weight, multiplier] — третий параметр масштабирует тяжесть болезни
+# (severity) для этой стадии. По умолчанию 1.
 HEALTH_STAGES:
-  - [Лёгкое, 0.5]
-  - [Среднее, 0.3]
-  - [Тяжёлое, 0.2]
-  - [При смерти, 0.05]
+  - [Лёгкое, 0.5, 0.25]
+  - [Среднее, 0.3, 0.5]
+  - [Тяжёлое, 0.2, 0.8]
+  - [При смерти, 0.05, 1.0]
 
 # Объектный синтаксис: { label, groups? }
 # Старая строка тоже работает (без групп).
 HOBBIES:
-  - { label: Рыбалка в подземных озёрах,         groups: [outdoor, survival, food] }
+  - { label: Рыбалка в подземных озёрах,          groups: [outdoor, survival, food] }
   - { label: Выращивание алхимических трав,       groups: [intellectual, nature, survival] }
   - { label: Выживание в зачарованном лесу,       groups: [outdoor, survival, nature] }
   - { label: Ремонт артефактов,                   groups: [craftsman, magic, intellectual] }

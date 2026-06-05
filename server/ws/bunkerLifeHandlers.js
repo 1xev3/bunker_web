@@ -12,6 +12,7 @@ const {
   materializeScheduledEvent,
 } = require('./eventHelpers');
 const {
+  startingVitalHealth,
   updateFood,
   applyMonthlyVitals,
   buildFlavorEffects,
@@ -68,11 +69,15 @@ function resetEventSelection(room) {
   room.choiceVotes = {};
   room.choicePendingSelection = null;
   room.resolveConfirmations = new Set();
+  room.pendingOutcomeReport = null;
 }
 
 function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null) {
-  wsManager.broadcast(roomCode, {
-    type: 'event_resolved',
+  // The outcome modal is gated on per-player confirmation, so its payload must
+  // survive a reconnect: mirror it in room state (serialized as `pending_outcome`)
+  // in addition to the one-shot broadcast. Without this, a player who is offline
+  // when this fires reconnects with no modal to confirm and soft-locks the gate.
+  const report = {
     event_id: eventId,
     outcome,
     message,
@@ -84,7 +89,9 @@ function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, 
     room_changed: effectResult.roomChanged ?? false,
     players_added: uniquePlayerRefs(effectResult.playersAdded),
     item_changes: effectResult.itemChanges ?? [],
-  });
+  };
+  room.pendingOutcomeReport = report;
+  wsManager.broadcast(roomCode, { type: 'event_resolved', ...report });
 }
 
 // True when a resolution produced nothing the outcome modal would render: no
@@ -157,6 +164,7 @@ function executeOutcomeAction(roomCode) {
   const action = room.pendingOutcomeAction;
   room.outcomeConfirmations = null;
   room.pendingOutcomeAction = null;
+  room.pendingOutcomeReport = null;
   wsManager.broadcastState(roomCode, room);
   if (action === 'next_month') {
     scheduleNextMonth(roomCode, room);
@@ -344,7 +352,9 @@ function tryStartBunkerLife(roomCode, room) {
   room.scheduledEvents = [];
   room.activeEvent = null;
   for (const player of active) {
-    player.vital_status = { health: 100, sanity: 100, statuses: [] };
+    // Starting health reflects the survivor's health attribute — the sick
+    // characters the council argued about enter the bunker already weakened.
+    player.vital_status = { health: startingVitalHealth(player, room.config), sanity: 100, statuses: [] };
   }
   resetEventSelection(room);
   room.monthStartTime = Date.now();
@@ -437,6 +447,9 @@ function handleCastChoiceVote(roomCode, playerId, msg) {
   if (!room || !room.activeEvent || !isActivePlayer(room, playerId)) return;
   const event = room.activeEvent;
   if (event.event_type !== 'choice' || !Array.isArray(event.options)) return;
+  // Once the council's pick is locked in (pickers shown, awaiting confirm), a
+  // late vote must not re-tally and swap the winning option out from under it.
+  if (room.choicePendingSelection) return;
 
   const optionIds = event.options.map(o => o.id);
   const optionId = typeof msg?.option_id === 'string' && optionIds.includes(msg.option_id) ? msg.option_id : null;
