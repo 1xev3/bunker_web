@@ -29,7 +29,27 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
   const canStart = isAdmin && (playerCount >= 4 || import.meta.env.DEV);
 
   const copy = (kind: 'code' | 'link') => {
-    navigator.clipboard.writeText(kind === 'code' ? roomState.room_code : window.location.href);
+    const text = kind === 'code' ? roomState.room_code : window.location.href;
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        /* ignore */
+      }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(fallback);
+    } else {
+      fallback();
+    }
     setCopied(kind);
     setTimeout(() => setCopied(null), 2000);
   };
