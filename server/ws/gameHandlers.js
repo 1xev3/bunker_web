@@ -107,7 +107,7 @@ function handleStartGame(roomCode, playerId) {
 
   room.status = 'running';
   room.bunker.generate(null, room.config);
-  room.bunkerCapacity = Math.max(2, Math.floor(room.players.length / 2) - 1);
+  room.bunkerCapacity = Math.floor(room.players.length / 2);
 
   for (const player of room.players) {
     player.generateCharacter(room.config);
