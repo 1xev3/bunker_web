@@ -89,7 +89,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm animate-fade-in-up overflow-y-auto py-6">
-      <div className="bg-zinc-900 border border-orange-900/50 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 flex flex-col">
+      <div className="bg-zinc-900 border border-zinc-700/40 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 flex flex-col">
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start gap-3">
             <Utensils size={22} className="text-orange-400 shrink-0 mt-0.5" />

@@ -88,6 +88,39 @@ class GameRoom {
     this.votedPlayers = new Set();
   }
 
+  // Hands out secret role-play goals to a random subset of players, per the
+  // pack's SecretGoals config. Goals are cosmetic and never repeat within a game.
+  assignSecretGoals() {
+    const cfg = this.config.secretGoals;
+    if (!cfg || cfg.goals.length === 0) return;
+
+    const players = [...this.players];
+    const byPercent = cfg.percent != null ? Math.round(cfg.percent * players.length) : 0;
+    const target = Math.min(
+      players.length,
+      cfg.goals.length,
+      cfg.percent != null ? byPercent : cfg.count
+    );
+    if (target <= 0) return;
+
+    // Shuffle players and goals, then pair the first `target` of each.
+    for (const pool of [players]) {
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+    }
+    const goals = [...cfg.goals];
+    for (let i = goals.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [goals[i], goals[j]] = [goals[j], goals[i]];
+    }
+
+    for (let i = 0; i < target; i++) {
+      players[i].secret_goal = goals[i];
+    }
+  }
+
   revealAllPlayers() {
     for (const player of this.players) {
       player.revealAll();

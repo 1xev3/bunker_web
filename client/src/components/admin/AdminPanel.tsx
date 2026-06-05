@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Vote, UserX, Flag, Check, X, Crown, PauseCircle, Eye, Users } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../../types/game';
 import AbilityCard from './AbilityCard';
+import SecretGoalCard from './SecretGoalCard';
 import KickPlayerModal from './KickPlayerModal';
 import RevealPlayerAttributeModal from './RevealPlayerAttributeModal';
 import UseAbilityModal from './UseAbilityModal';
@@ -26,6 +27,7 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
   const isFinished = roomState.status === 'finished';
   const myPlayer = roomState.players.find(p => p.id === myPlayerId) ?? null;
   const ability = myPlayer?.profession_ability ?? null;
+  const secretGoal = myPlayer?.secret_goal ?? null;
 
   const activeTargets = useMemo(
     () => roomState.players.filter(p => p.is_active && (ability?.allowSelf || p.id !== myPlayerId)),
@@ -33,9 +35,11 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
   );
 
   const showAbility = Boolean(ability);
+  const showGoal = Boolean(secretGoal);
+  const showSidebar = showAbility || showGoal;
   const showAdminControls = isAdmin && !isFinished;
 
-  if (!showAbility && !showAdminControls) return null;
+  if (!showSidebar && !showAdminControls) return null;
 
   const abilityDisabled = Boolean(
     roomState.status !== 'running'
@@ -56,16 +60,21 @@ export default function AdminPanel({ roomState, myPlayerId, send }: Props) {
   return (
     <>
       <div className="card shadow-[0_10px_30px_rgba(0,0,0,0.16)] px-4 py-3">
-        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <Crown size={11} className="text-zinc-500" /> Управление
+        <p className="term-label mb-3">
+          <Crown size={11} /> Управление
         </p>
-        <div className={`grid gap-4 ${showAbility && showAdminControls ? 'xl:grid-cols-[420px_minmax(0,1fr)] xl:items-start' : ''}`}>
-          {showAbility && ability && (
-            <AbilityCard
-              ability={ability}
-              disabled={abilityDisabled}
-              onOpen={() => setAdminModal({ type: 'ability' })}
-            />
+        <div className={`grid gap-4 ${showSidebar && showAdminControls ? 'xl:grid-cols-[420px_minmax(0,1fr)] xl:items-start' : ''}`}>
+          {showSidebar && (
+            <div className="space-y-4">
+              {showAbility && ability && (
+                <AbilityCard
+                  ability={ability}
+                  disabled={abilityDisabled}
+                  onOpen={() => setAdminModal({ type: 'ability' })}
+                />
+              )}
+              {showGoal && secretGoal && <SecretGoalCard goal={secretGoal} />}
+            </div>
           )}
 
           {showAdminControls && (

@@ -62,7 +62,7 @@ export default function EventOutcomeModal({ outcome, activePlayers, myPlayerId, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
-      <div className="mx-4 flex w-full max-w-lg flex-col rounded-2xl border border-amber-900/40 bg-zinc-900 shadow-2xl">
+      <div className="mx-4 flex w-full max-w-lg flex-col rounded-2xl border border-zinc-700/40 bg-zinc-900 shadow-2xl">
         {outcome.message && (
           <div className="border-b border-zinc-800 p-5">
             <div className="flex items-start gap-3">

@@ -49,6 +49,31 @@ body {
   min-height: 100vh;
 }
 
+/* --- Bunker atmosphere ----------------------------------------------------
+   Two non-interactive full-viewport layers unify every screen:
+   ::before  — faint concrete/noise grain, painted BEHIND content (z-index -1)
+   ::after   — CRT scanlines + corner vignette, painted ON TOP (CRT glass) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+
+/* Soft corner vignette only — painted BEHIND content, no scanlines/flicker. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.34) 100%);
+}
+
 code, kbd, samp, pre, .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -552,6 +577,40 @@ td, th {
 .status-link:hover { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .status-ctrl-row { background-color: color-mix(in srgb, var(--accent) 9%, transparent); }
 .status-ctrl-btn:hover { color: var(--accent); }
+
+/* --- Terminal / stencil headings ------------------------------------------ */
+/* Monospace UPPERCASE label with a leading sector marker ("// LABEL"). */
+.term-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5ch;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #71717a;
+}
+
+/* Section divider: stencil label flanked by hazard-striped rules. */
+.term-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.term-divider::before,
+.term-divider::after {
+  content: "";
+  height: 6px;
+  flex: 1;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--accent) 38%, transparent) 0,
+    color-mix(in srgb, var(--accent) 38%, transparent) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  opacity: 0.5;
+}
 
 /* Bunker intro */
 .intro-cursor { background-color: var(--accent); }

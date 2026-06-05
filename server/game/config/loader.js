@@ -38,6 +38,20 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Optional pack feature: secret per-player role-play goals. The file is purely
+// cosmetic (goals never affect game outcome), so a missing/broken file just
+// yields an empty, disabled feature instead of failing pack validation.
+function normalizeSecretGoals(raw) {
+  if (!isPlainObject(raw)) return { count: 0, percent: null, goals: [] };
+  const settings = isPlainObject(raw.SETTINGS) ? raw.SETTINGS : {};
+  const goals = Array.isArray(raw.GOALS)
+    ? raw.GOALS.filter((g) => typeof g === 'string' && g.trim()).map((g) => g.trim())
+    : [];
+  const count = Number.isFinite(settings.count) ? Math.max(0, Math.floor(settings.count)) : 0;
+  const percent = Number.isFinite(settings.percent) ? Math.min(1, Math.max(0, settings.percent)) : null;
+  return { count, percent, goals };
+}
+
 function countSectionEntries(value) {
   if (Array.isArray(value)) return value.length;
   if (isPlainObject(value)) return Object.keys(value).length;
@@ -168,6 +182,11 @@ function loadPack(packName = getDefaultPackName()) {
   config.packId = packName;
   config.packMeta = readPackMeta(packName);
   config.packSettings = normalizePackSettings(rawConfig);
+  try {
+    config.secretGoals = normalizeSecretGoals(readConfigFile(dir, 'SecretGoals'));
+  } catch {
+    config.secretGoals = { count: 0, percent: null, goals: [] };
+  }
   return config;
 }
 

@@ -335,6 +335,8 @@ function tryStartBunkerLife(roomCode, room) {
   if (room.confirmedBunkerLife.size < active.length) return false;
 
   room.status = 'bunker_life';
+  // Survival phase begins — force-reveal every characteristic of every player.
+  room.revealAllPlayers();
   room.currentMonth = 0;
   room.totalMonths = room.bunker.duration?.months ?? parseDurationMonths(room.bunker.duration?.label);
   room.food = (room.bunker.food?.amount ?? 0) * active.length;

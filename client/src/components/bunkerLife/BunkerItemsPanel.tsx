@@ -7,7 +7,7 @@ export default function BunkerItemsPanel({ bunker, players }: { bunker: RoomStat
   return (
     <div className="card flex flex-col gap-4 px-4 py-4">
       <div>
-        <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+        <p className="term-label mb-2">
           <Package size={13} className="text-amber-400" /> Имущество бункера
         </p>
         {bunkerItems.length === 0 ? (
@@ -24,7 +24,7 @@ export default function BunkerItemsPanel({ bunker, players }: { bunker: RoomStat
       </div>
 
       <div className="border-t border-zinc-800/80 pt-3">
-        <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+        <p className="term-label mb-2">
           <Backpack size={13} className="text-sky-400" /> Инвентарь выживших
         </p>
         <div className="flex flex-col gap-3">

@@ -8,6 +8,7 @@ import GameRoom from './components/game/GameRoom';
 import BunkerIntroScreen from './components/bunker/BunkerIntroScreen';
 import BunkerLifeScreen from './components/bunkerLife/BunkerLifeScreen';
 import ReadyModal from './components/ui/ReadyModal';
+import SecretGoalModal from './components/ui/SecretGoalModal';
 import BunkerEndScreen from './components/bunker/BunkerEndScreen';
 
 const HEARTBEAT_INTERVAL_MS = 10000;
@@ -51,6 +52,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   // re-spectate without a stale closure. Spectators hold no session token.
   const spectateRoomRef = useRef<string | null>(null);
   const [showBunkerIntro, setShowBunkerIntro] = useState(false);
+  const [showSecretGoal, setShowSecretGoal] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
@@ -255,6 +257,19 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
     }
   }, [roomState?.status, roomState?.room_code, roomState?.bunker]);
+
+  // Reveal the secret goal once, right after the bunker intro is dismissed (or on
+  // rejoin once the intro was already seen). Gated per-room so it shows a single
+  // time. Only the owning player receives a non-null secret_goal from the server.
+  const mySecretGoal = roomState?.players.find(p => p.id === myPlayerId)?.secret_goal ?? null;
+  useEffect(() => {
+    if (showBunkerIntro || roomState?.status !== 'running' || !mySecretGoal) return;
+    const key = `secret_goal_seen_${roomState.room_code}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot reveal after the intro phase
+    setShowSecretGoal(true);
+  }, [showBunkerIntro, roomState?.status, roomState?.room_code, mySecretGoal]);
 
   useEffect(() => {
     if (!roomState?.is_voting) {
@@ -463,6 +478,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           myPlayerId={myPlayerId}
           send={send}
         />
+      )}
+      {showSecretGoal && mySecretGoal && (
+        <SecretGoalModal goal={mySecretGoal} onClose={() => setShowSecretGoal(false)} />
       )}
       {spectatorBanner}
       {connectionOverlay}

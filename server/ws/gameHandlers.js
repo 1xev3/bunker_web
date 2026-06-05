@@ -113,6 +113,7 @@ function handleStartGame(roomCode, playerId) {
   for (const player of room.players) {
     player.generateCharacter(room.config);
   }
+  room.assignSecretGoals();
 
   wsManager.broadcastState(roomCode, room);
 }

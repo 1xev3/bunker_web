@@ -1,4 +1,4 @@
-import { AlertTriangle, Users, UserRound } from 'lucide-react';
+import { AlertTriangle, Users, UserRound, Info } from 'lucide-react';
 import type { BunkerInfo, GameEvent, Player, ClientMessage, SelectedItem, EventSelection, EventOption, OutcomeOdds, OutcomeEffectChip } from '../../types/game';
 import {
   renderEventText,
@@ -8,6 +8,8 @@ import {
 } from './eventUtils';
 import { SelectableItemList } from './SelectableItemList';
 import EventSelectableRow from './EventSelectableRow';
+import EventHelpPanel from './EventHelpPanel';
+import { usePersistentToggle } from '../../hooks/usePersistentToggle';
 
 interface Props {
   event: GameEvent;
@@ -136,6 +138,7 @@ function OutcomesBreakdown({ odds }: { odds: OutcomeOdds[] }) {
 }
 
 export default function ChoiceEventCard({ event, activePlayers, bunker, eventSelection, choiceVotes, choicePendingSelection, myPlayerId, send, disabled = false }: Props) {
+  const [showHelp, toggleHelp] = usePersistentToggle('event-help-open', true);
   const options = event.options ?? [];
   const myVote = choiceVotes[myPlayerId] ?? null;
   const totalVoted = Object.keys(choiceVotes).length;
@@ -225,7 +228,11 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
-      <div className="mx-4 flex w-full max-w-lg flex-col rounded-2xl border border-amber-900/40 bg-zinc-900 shadow-2xl">
+      {/* Both windows sit in one centered flex row. Animating the help panel's
+          width keeps the row continuously re-centered, so the main window slides
+          back to centre as the panel collapses (and aside as it expands). */}
+      <div className="flex items-stretch px-4">
+        <div className="flex w-[min(32rem,calc(100vw-2rem))] shrink-0 flex-col rounded-2xl border border-zinc-700/40 bg-zinc-900 shadow-2xl">
         <div className="border-b border-zinc-800 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle size={22} className="mt-0.5 shrink-0 text-amber-400" />
@@ -233,6 +240,17 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
               <h2 className="text-lg font-bold text-zinc-100">{renderEventText(event.title)}</h2>
               <p className="mt-1 text-sm leading-relaxed text-zinc-400">{renderEventText(event.description)}</p>
             </div>
+            <button
+              type="button"
+              onClick={toggleHelp}
+              aria-label={showHelp ? 'Скрыть помощь' : 'Как работают события'}
+              aria-pressed={showHelp}
+              className={`shrink-0 rounded-lg p-1.5 transition-colors ${
+                showHelp ? 'bg-amber-950/40 text-amber-300' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+              }`}
+            >
+              <Info size={18} />
+            </button>
           </div>
           {event.participants && event.participants.length > 0 && (
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-zinc-800/60 px-3 py-2">
@@ -385,6 +403,20 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                 : `Проголосовало ${totalVoted} из ${activePlayers.length}. Решение примут, когда выскажутся все.`}
             </p>
           )}
+        </div>
+        </div>
+
+        {/* Help panel: its width animates between 0 and the card width, so the
+            row recenters frame-by-frame and the main window appears to slide. */}
+        <div
+          className={`overflow-hidden transition-[width,opacity,margin] duration-300 ease-out ${
+            showHelp ? 'ml-4 w-[min(32rem,calc(100vw-2rem))] opacity-100' : 'w-0 opacity-0'
+          }`}
+          aria-hidden={!showHelp}
+        >
+          <div className="h-full w-[min(32rem,calc(100vw-2rem))]">
+            <EventHelpPanel onClose={toggleHelp} />
+          </div>
         </div>
       </div>
     </div>

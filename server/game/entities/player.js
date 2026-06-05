@@ -113,6 +113,7 @@ class Player {
     this.backpack = [];
     this.additional = null;
     this.description = '';
+    this.secret_goal = null; // private role-play goal, visible only to this player
     this.config = null;
     this.profession_ability_used = false;
     this.profession_ability_variant = null;
@@ -233,6 +234,7 @@ class Player {
       revealed_attributes: { ...this.revealed_attributes },
       attributes: attrs,
       description: viewerId === this.id ? this.description : '',
+      secret_goal: viewerId === this.id ? this.secret_goal : null,
       profession_ability: getProfessionAbilityInfo(this, viewerId),
       vital_status: {
         health: this.vital_status?.health ?? 100,

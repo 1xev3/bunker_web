@@ -124,7 +124,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
 
         <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(260px,320px)_1fr] xl:grid-cols-[minmax(260px,320px)_1fr_minmax(260px,340px)]">
           <div className="card flex flex-col gap-2.5 px-4 py-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+            <p className="term-label">
               <User size={13} /> Выжившие · {activePlayers.length}
             </p>
             {activePlayers.map(player => (
@@ -133,12 +133,12 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           </div>
 
           <div className="card flex flex-col gap-3 px-4 py-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
+            <p className="term-label shrink-0">
               <DoorOpen size={13} /> Карта бункера
             </p>
             {roomState.bunker?.layout ? (
-              <div className="mx-auto w-full max-w-xl">
-                <BunkerMap layout={roomState.bunker.layout} />
+              <div className="relative min-h-0 flex-1">
+                <BunkerMap layout={roomState.bunker.layout} svgClassName="absolute inset-0 h-full w-full" />
               </div>
             ) : (
               <p className="text-sm text-zinc-600">Карта недоступна</p>

@@ -43,13 +43,13 @@ export default function BunkerInfo({ bunker }: Props) {
                 <div className="space-y-4">
                   {(bunker.disaster_info || (themeImage && !imageError)) && (
                     <div>
-                      <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                      <p className="term-label mb-1.5">
                         <span className="text-zinc-500"><AlertTriangle size={11} /></span> Ситуация снаружи
                       </p>
                       {themeImage && !imageError && (
                         <img
                           src={themeImage}
-                          alt={renderEventText(bunker.theme.label)}
+                          alt={bunker.theme.label}
                           onError={() => setImageError(true)}
                           className="w-full max-h-56 object-cover rounded-lg border border-zinc-800 shadow-md mb-2.5"
                         />
@@ -100,7 +100,7 @@ export default function BunkerInfo({ bunker }: Props) {
 function Section({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
     <div>
-      <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+      <p className="term-label mb-1.5">
         <span className="text-zinc-500">{icon}</span> {title}
       </p>
       <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">{renderEventText(text)}</p>

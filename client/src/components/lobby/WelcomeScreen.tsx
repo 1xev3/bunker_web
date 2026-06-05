@@ -260,11 +260,9 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
         {/* Room list */}
         {rooms.length > 0 && (
           <div className="space-y-2">
-            <p className="text-zinc-600 text-xs uppercase tracking-widest px-1 flex items-center gap-2">
-              <span className="inline-block w-4 h-px bg-zinc-800"></span>
-              Активные комнаты
-              <span className="inline-block flex-1 h-px bg-zinc-800"></span>
-            </p>
+            <div className="term-divider px-1">
+              <span className="term-label shrink-0">Активные комнаты</span>
+            </div>
             {rooms.map(room => (
               <div
                 key={room.room_code}

@@ -80,8 +80,8 @@ export default function BunkerMap({ layout, compact = false, svgClassName }: Pro
             <foreignObject x={x} y={y} width={ROOM} height={ROOM} pointerEvents="none">
               <div
                 {...{ xmlns: 'http://www.w3.org/1999/xhtml' }}
-                className="w-full h-full flex flex-col items-center justify-center text-center px-1 leading-tight overflow-hidden"
-                style={{ fontSize: compact ? 9 : 11 }}
+                className="w-full h-full flex flex-col items-center justify-center text-center px-0.5 overflow-hidden"
+                style={{ fontSize: compact ? 8 : 10, lineHeight: 1.15 }}
               >
                 {room.isEntrance ? (
                   <>
@@ -94,7 +94,7 @@ export default function BunkerMap({ layout, compact = false, svgClassName }: Pro
                     style={{
                       display: '-webkit-box',
                       WebkitBoxOrient: 'vertical',
-                      WebkitLineClamp: 3,
+                      WebkitLineClamp: 5,
                       overflow: 'hidden',
                     }}
                   >

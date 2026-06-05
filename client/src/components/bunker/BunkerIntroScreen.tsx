@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ChevronRight, Map, ArrowLeft, Users } from 'lucide-react';
+import { AlertTriangle, Building2, Ruler, Timer, Wheat, Package, ArrowRight, Map, ArrowLeft, Users } from 'lucide-react';
 import type { BunkerInfo, Player } from '../../types/game';
 import BunkerMap from './BunkerMap';
 import { parseHighlightSegments, highlightVisibleLength, renderHighlightSegments } from '../event/eventUtils';
@@ -113,9 +113,23 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
   const cursor = <span className="inline-block w-0.5 h-4 intro-cursor ml-0.5 align-middle animate-pulse" />;
   const hasMap = (bunker.layout?.rooms?.length ?? 0) > 0;
 
+  // Shelter description — placed in the map column when a map exists, otherwise
+  // it stays in the single info column.
+  const shelterCard = stage >= S.BUNKER ? (
+    <div className="card p-4 animate-fade-in-up">
+      <p className="flex items-center gap-2 text-zinc-400/70 text-xs uppercase tracking-widest mb-2.5">
+        <Building2 size={11} /> Убежище
+      </p>
+      <p className="text-zinc-300 text-sm leading-relaxed">
+        {desc.displayed}
+        {stage === S.BUNKER && cursor}
+      </p>
+    </div>
+  ) : null;
+
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col"
+      className="h-screen overflow-hidden bg-zinc-950 flex flex-col"
       style={{
         backgroundImage: `
           radial-gradient(ellipse at 0% 0%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
@@ -123,25 +137,8 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
         `,
       }}
     >
-      <header
-        className="topbar px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2.5 intro-label text-xs tracking-[0.25em] uppercase">
-          <span className="radiation-icon text-base">☢</span>
-          <span>Экстренное уведомление</span>
-          <span className="radiation-icon text-base">☢</span>
-        </div>
-        <button
-          onClick={onLeave}
-          className="text-zinc-500 hover:text-zinc-100 text-sm transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
-        >
-          <ArrowLeft size={14} /> Выйти
-        </button>
-      </header>
-
       <div
-        className={`flex-1 flex items-center justify-center p-4 sm:p-6 relative ${stage < S.BUTTON ? 'cursor-pointer' : ''}`}
+        className={`flex-1 min-h-0 overflow-y-auto flex justify-center p-4 sm:p-6 relative ${stage < S.BUTTON ? 'cursor-pointer' : ''}`}
         onClick={handleSkip}
       >
         {/* Skip hint */}
@@ -153,7 +150,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
 
         {/* Flash intro */}
         {stage === S.FLASH && (
-          <div className="text-center space-y-5 select-none">
+          <div className="text-center space-y-5 select-none my-auto">
             <div className="text-7xl animate-emergency-flash">☢</div>
             <div className="text-2xl sm:text-3xl font-bold tracking-[0.3em] uppercase animate-emergency-flash">
               Экстренное уведомление
@@ -162,50 +159,51 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
         )}
 
         {stage > S.FLASH && (
-          <div className="max-w-6xl w-full space-y-5">
-            {/* Title */}
-            <div className="text-center animate-fade-in-up">
-              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 leading-tight min-h-[2.5rem]">
-                {title.displayed}
-                {stage === S.TITLE && cursor}
-              </h1>
-            </div>
+          <div className="max-w-6xl w-full space-y-5 my-auto">
+            {/* Scenario title — shown standalone only when there is no
+                "Ситуация снаружи" card to host it (see disaster header below). */}
+            {!bunker.disaster_info && (
+              <div className="text-center animate-fade-in-up">
+                <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 leading-tight min-h-[2.5rem]">
+                  {title.displayed}
+                  {stage === S.TITLE && cursor}
+                </h1>
+              </div>
+            )}
 
-            {/* Two-column layout: info left, map right */}
-            <div className={`grid gap-5 items-stretch ${stage >= S.MAP && hasMap ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
-              {/* Left: text info */}
+            {/* Two-column layout: situation + stats left, shelter + map right */}
+            <div className={`grid gap-5 items-stretch ${hasMap && stage >= S.BUNKER ? 'grid-cols-1 lg:grid-cols-[3fr_2fr]' : 'grid-cols-1'}`}>
+              {/* Left: situation outside + stats */}
               <div className="space-y-4">
-                {stage >= S.DISASTER && (
+                {bunker.disaster_info && stage >= S.TITLE && (
                   <div className="rounded-xl border border-red-900/40 bg-red-950/10 p-4 animate-fade-in-up">
-                    <p className="flex items-center gap-2 text-red-400/70 text-xs uppercase tracking-widest mb-2.5">
-                      <AlertTriangle size={11} /> Ситуация снаружи
+                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-2.5">
+                      <span className="flex items-center gap-2 text-red-400/70 text-xs uppercase tracking-widest">
+                        <AlertTriangle size={11} /> Ситуация снаружи
+                      </span>
+                      <span className="text-zinc-100 text-base font-semibold leading-tight">
+                        {title.displayed}
+                        {stage === S.TITLE && cursor}
+                      </span>
                     </p>
                     {themeImage && !imageError && (
                       <img
                         src={themeImage}
                         alt={bunker.theme.label}
                         onError={() => setImageError(true)}
-                        className="w-full max-h-72 object-cover rounded-lg border border-red-900/40 shadow-lg mb-3"
+                        className="w-full max-h-[28vh] object-cover rounded-lg border border-red-900/40 shadow-lg mb-3"
                       />
                     )}
-                    <p className="text-zinc-300 text-sm leading-relaxed">
-                      {disaster.displayed}
-                      {stage === S.DISASTER && cursor}
-                    </p>
+                    {stage >= S.DISASTER && (
+                      <p className="text-zinc-300 text-sm leading-relaxed">
+                        {disaster.displayed}
+                        {stage === S.DISASTER && cursor}
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {stage >= S.BUNKER && (
-                  <div className="card p-4 animate-fade-in-up">
-                    <p className="flex items-center gap-2 text-zinc-400/70 text-xs uppercase tracking-widest mb-2.5">
-                      <Building2 size={11} /> Убежище
-                    </p>
-                    <p className="text-zinc-300 text-sm leading-relaxed">
-                      {desc.displayed}
-                      {stage === S.BUNKER && cursor}
-                    </p>
-                  </div>
-                )}
+                {!hasMap && shelterCard}
 
                 {stage >= S.STATS && (
                   <div className="space-y-3">
@@ -236,15 +234,20 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                 )}
               </div>
 
-              {/* Right: map — fills full height of the left column */}
-              {stage >= S.MAP && hasMap && (
-                <div className="card p-3 animate-fade-in-up flex flex-col">
-                  <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3 shrink-0">
-                    <Map size={13} /> Карта бункера
-                  </p>
-                  <div className="flex-1 min-h-0 relative">
-                    <BunkerMap layout={bunker.layout} svgClassName="absolute inset-0 w-full h-full" />
-                  </div>
+              {/* Right: shelter description + bunker map */}
+              {hasMap && stage >= S.BUNKER && (
+                <div className="flex flex-col gap-4">
+                  {shelterCard}
+                  {stage >= S.MAP && (
+                    <div className="card p-3 animate-fade-in-up flex flex-1 min-h-0 flex-col">
+                      <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3 shrink-0">
+                        <Map size={13} /> Карта бункера
+                      </p>
+                      <div className="flex-1 min-h-0 relative">
+                        <BunkerMap layout={bunker.layout} svgClassName="absolute inset-0 w-full h-full" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -252,28 +255,44 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
             {/* Players list */}
             {stage >= S.PLAYERS && players.length > 0 && (
               <div className="card p-4 animate-fade-in-up">
-                <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3">
-                  <Users size={13} /> Участники ({players.length})
+                <p className="term-label mb-3">
+                  <Users size={13} /> Участники · {players.length}
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {players.map(p => (
-                    <div key={p.id} className="flex items-center gap-2 min-w-0">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${p.is_active ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
-                      <span className="text-zinc-300 text-sm truncate">{p.name}</span>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {players.map((p, i) => (
+                    <div
+                      key={p.id}
+                      className={`flex min-w-0 items-center gap-2.5 border px-2.5 py-2 ${
+                        p.is_active
+                          ? 'border-zinc-700 bg-zinc-900/50'
+                          : 'border-zinc-800 bg-zinc-950/40 opacity-50'
+                      }`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-zinc-700 bg-zinc-800 text-xs font-bold uppercase text-zinc-300">
+                        {p.name.trim().charAt(0) || '?'}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">{p.name}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-zinc-600">{String(i + 1).padStart(2, '0')}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Continue button */}
+            {/* Action row: leave + continue */}
             {stage >= S.BUTTON && (
-              <div className="flex justify-center pt-2 animate-fade-in-up">
+              <div className="flex items-center justify-center gap-3 pt-2 animate-fade-in-up">
+                <button
+                  onClick={e => { e.stopPropagation(); onLeave(); }}
+                  className="flex items-center gap-2 border border-zinc-700 bg-zinc-900/60 px-5 py-3 text-sm font-semibold text-zinc-300 transition-all hover:border-zinc-500 hover:text-zinc-100 cursor-pointer"
+                >
+                  <ArrowLeft size={15} /> Выйти
+                </button>
                 <button
                   onClick={e => { e.stopPropagation(); onContinue(); }}
-                  className="btn-primary flex items-center gap-2 px-7 py-3 text-zinc-100 font-semibold rounded-xl text-sm cursor-pointer"
+                  className="btn-primary flex items-center gap-2 px-7 py-3 text-zinc-100 font-semibold text-sm cursor-pointer"
                 >
-                  Продолжить <ChevronRight size={15} />
+                  <ArrowRight size={15} /> Продолжить
                 </button>
               </div>
             )}

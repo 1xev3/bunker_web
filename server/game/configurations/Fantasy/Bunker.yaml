@@ -214,10 +214,10 @@ FOOD_SUPPLIES:
     amount: 8640
 
 ROOM_COUNTS:
-  - 3
   - 5
   - 7
   - 9
+  - 11
 
 BUNKER_ITEMS:
   - Медицинское круги магии

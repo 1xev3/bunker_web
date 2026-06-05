@@ -59,6 +59,8 @@ export interface Player {
   revealed_attributes: Record<AttributeKey, boolean>;
   attributes: PlayerAttributes;
   description: string;
+  /** Private role-play goal, present only on the viewer's own player. */
+  secret_goal: string | null;
   profession_ability: ProfessionAbilityInfo | null;
   vital_status: VitalStatus;
 }

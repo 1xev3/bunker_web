@@ -70,8 +70,8 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
             <div className="md:col-span-2 space-y-4">
               <div className="card glow-card p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-zinc-500 text-xs uppercase tracking-widest flex items-center gap-1.5">
-                    <Copy size={11} className="text-zinc-500" /> Код комнаты
+                  <p className="term-label">
+                    <Copy size={11} /> Код комнаты
                   </p>
                   <span
                     className="text-[11px] font-medium px-2 py-0.5 rounded-md border flex items-center gap-1"
@@ -146,11 +146,11 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
             {/* Right: players */}
             <div className="md:col-span-3 card p-5 flex flex-col">
-              <p className="text-zinc-500 text-xs uppercase tracking-widest mb-4 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Users size={11} className="text-zinc-500" /> Игроки в комнате
+              <p className="mb-4 flex items-center justify-between">
+                <span className="term-label">
+                  <Users size={11} /> Игроки в комнате
                 </span>
-                <span className="font-mono text-zinc-500">
+                <span className="font-mono text-xs text-zinc-500">
                   <span className="text-zinc-300">{playerCount}</span> / {MAX_PLAYERS}
                 </span>
               </p>
