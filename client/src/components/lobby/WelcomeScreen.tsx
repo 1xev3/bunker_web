@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X } from 'lucide-react';
+import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X, Eye } from 'lucide-react';
 import type { ClientMessage, RoomListing, PackListing } from '../../types/game';
 
 interface Props {
@@ -93,6 +93,13 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
     if (!validate()) return;
     if (!code.trim()) { setError('Введи код комнаты'); return; }
     onConnect({ type: 'join', nickname: nickname.trim(), room_code: code.trim().toUpperCase() });
+  };
+
+  // Spectating needs no nickname — just a room code.
+  const handleWatch = (code: string) => {
+    if (!code.trim()) { setError('Введи код комнаты'); return; }
+    setError('');
+    onConnect({ type: 'spectate', room_code: code.trim().toUpperCase() });
   };
 
   return (
@@ -233,6 +240,13 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
               >
                 <LogIn size={15} /> Войти в комнату
               </button>
+              <button
+                type="button"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 flex items-center justify-center gap-2"
+                onClick={() => handleWatch(roomCode)}
+              >
+                <Eye size={15} /> Смотреть как зритель
+              </button>
             </div>
           )}
 
@@ -252,28 +266,47 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
               <span className="inline-block flex-1 h-px bg-zinc-800"></span>
             </p>
             {rooms.map(room => (
-              <button
+              <div
                 key={room.room_code}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-800/60 hover:border-zinc-600 px-4 py-3 flex items-center justify-between transition-all group"
-                onClick={() => { setRoomCode(room.room_code); setTab('join'); }}
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-800/60 hover:border-zinc-600 px-4 py-3 flex items-center justify-between transition-all group gap-2"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                  onClick={() => { setRoomCode(room.room_code); setTab('join'); }}
+                >
                   <span className="font-mono font-bold text-zinc-200 tracking-widest group-hover:text-accent transition-colors room-code-hover">{room.room_code}</span>
                   <span className="text-zinc-500 text-xs flex items-center gap-1">
                     <Users size={11} className="text-zinc-500" /> {room.player_count}
                   </span>
+                  {(room.spectator_count ?? 0) > 0 && (
+                    <span className="text-zinc-500 text-xs flex items-center gap-1">
+                      <Eye size={11} className="text-zinc-500" /> {room.spectator_count}
+                    </span>
+                  )}
+                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium flex items-center gap-1 ${
+                    room.status === 'waiting'
+                      ? 'badge-waiting'
+                      : 'border-zinc-700 text-zinc-500 bg-zinc-900/50'
+                  }`}>
+                    {room.status === 'waiting'
+                      ? <><Clock size={10} /> ожидание</>
+                      : <><Gamepad2 size={10} /> в игре</>
+                    }
+                  </span>
+                  <button
+                    type="button"
+                    title="Смотреть как зритель"
+                    aria-label="Смотреть как зритель"
+                    className="shrink-0 rounded-lg border border-zinc-700 p-1.5 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-100"
+                    onClick={() => handleWatch(room.room_code)}
+                  >
+                    <Eye size={14} />
+                  </button>
                 </div>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium flex items-center gap-1 ${
-                  room.status === 'waiting'
-                    ? 'badge-waiting'
-                    : 'border-zinc-700 text-zinc-500 bg-zinc-900/50'
-                }`}>
-                  {room.status === 'waiting'
-                    ? <><Clock size={10} /> ожидание</>
-                    : <><Gamepad2 size={10} /> в игре</>
-                  }
-                </span>
-              </button>
+              </div>
             ))}
           </div>
         )}

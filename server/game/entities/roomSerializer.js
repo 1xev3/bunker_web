@@ -1,6 +1,7 @@
 // Wire-format serialization for a GameRoom. Kept separate from the entity so the
 // room owns only its state and behavior, while the shape sent to clients (the
 // per-viewer snapshot consumed by the client reducer) lives in one place.
+const { wsManager } = require('../../state');
 
 // Builds the per-viewer room snapshot. `viewerId` controls what each player is
 // allowed to see (delegated to Player.toDict); pass null for a full view.
@@ -15,6 +16,7 @@ function serializeRoom(room, viewerId = null) {
     pack_meta: room.config.packMeta ?? { name: room.packName, author: '', color: '#f59e0b' },
     pack_settings: room.config.packSettings,
     status: room.status,
+    spectator_count: wsManager.spectatorCount(room.roomCode),
     is_voting: room.isVoting,
     round: room.round,
     bunker_capacity: room.bunkerCapacity,

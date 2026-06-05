@@ -2,6 +2,7 @@ const { rooms, wsManager, pendingAdminTransfers } = require('../state');
 const {
   handleJoin,
   handleRejoin,
+  handleSpectate,
   handleStartGame,
   handleRevealAttr,
   handleRevealAll,
@@ -28,6 +29,7 @@ function setupWebSocket(wss) {
   wss.on('connection', (ws) => {
     let roomCode = null;
     let playerId = null;
+    let spectatorId = null;
     wsLog('connection opened (awaiting join/rejoin)');
 
     ws.on('message', async (raw) => {
@@ -36,7 +38,17 @@ function setupWebSocket(wss) {
 
       if (msg.type !== 'ping') wsLog(`recv type=${msg.type} room=${roomCode ?? '-'} player=${playerId ?? '-'}`);
 
-      if (!playerId) {
+      if (!playerId && !spectatorId) {
+        if (msg.type === 'spectate') {
+          const result = handleSpectate(ws, msg);
+          if (!result) {
+            wsLog('spectate rejected: room not found');
+            return ws.send(JSON.stringify({ type: 'error', message: 'Комната не найдена' }));
+          }
+          ({ roomCode, spectatorId } = result);
+          wsLog(`spectating room=${roomCode} spectator=${spectatorId}`);
+          return;
+        }
         if (msg.type === 'join') {
           let result = null;
           try {
@@ -72,6 +84,12 @@ function setupWebSocket(wss) {
       const room = rooms.get(roomCode);
       if (!room) { wsLog(`no room ${roomCode} for ${msg.type}`); return; }
       room.touch();
+
+      // Spectators are read-only: they may keep the socket alive but never act.
+      if (spectatorId) {
+        if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
 
       try {
       switch (msg.type) {
@@ -114,7 +132,21 @@ function setupWebSocket(wss) {
     });
 
     ws.on('close', (code, reason) => {
-      wsLog(`close room=${roomCode ?? '-'} player=${playerId ?? '-'} code=${code} reason=${reason || '-'}`);
+      wsLog(`close room=${roomCode ?? '-'} player=${playerId ?? spectatorId ?? '-'} code=${code} reason=${reason || '-'}`);
+
+      if (spectatorId) {
+        wsManager.disconnectSpectator(roomCode, spectatorId);
+        const room = rooms.get(roomCode);
+        // Don't keep an abandoned room alive just for a departed spectator.
+        if (room && wsManager.getConnected(roomCode).size === 0 && wsManager.spectatorCount(roomCode) === 0) {
+          rooms.delete(roomCode);
+          wsManager.dropRoom(roomCode);
+        } else if (room) {
+          wsManager.broadcastState(roomCode, room); // refresh spectator count
+        }
+        return;
+      }
+
       if (!roomCode || !playerId) return;
       wsManager.disconnect(roomCode, playerId);
       const room = rooms.get(roomCode);
@@ -123,6 +155,7 @@ function setupWebSocket(wss) {
       if (wsManager.getConnected(roomCode).size === 0) {
         wsLog(`room ${roomCode} empty — deleting`);
         rooms.delete(roomCode);
+        wsManager.dropRoom(roomCode);
         return;
       }
 

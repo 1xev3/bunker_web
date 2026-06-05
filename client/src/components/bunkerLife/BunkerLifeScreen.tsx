@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Brain, Calendar, HeartPulse, Utensils, DoorOpen, User } from 'lucide-react';
+import { ArrowLeft, Brain, Calendar, HeartPulse, Utensils, DoorOpen, User, Eye } from 'lucide-react';
 import type { ClientMessage, EventOutcome, MonthlyNotice, RoomState } from '../../types/game';
 import EventModal from '../event/EventModal';
 import BunkerMap from '../bunker/BunkerMap';
@@ -78,6 +78,11 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           <span className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400">
             <Calendar size={10} /> Месяц {roomState.current_month}{roomState.total_months > 0 && <span className="text-zinc-600"> / {roomState.total_months}</span>}
           </span>
+          {(roomState.spectator_count ?? 0) > 0 && (
+            <span className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400">
+              <Eye size={10} /> {roomState.spectator_count}
+            </span>
+          )}
         </div>
         <button onClick={onLeave} className="flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-sm text-zinc-500 transition-all hover:border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100">
           <ArrowLeft size={14} /> Выйти

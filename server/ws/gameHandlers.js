@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const { rooms, sessions, wsManager, pendingAdminTransfers } = require('../state');
 const { Player, publicAttribute, ATTRIBUTE_KEYS } = require('../game/entities/player');
 const { applyProfessionAbility } = require('../game/abilities/professionAbilities');
@@ -59,6 +60,24 @@ function handleRejoin(ws, msg) {
   ws.send(JSON.stringify({ type: 'room_state', data: room.toDict(session.playerId) }));
   wsManager.broadcast(session.roomCode, { type: 'player_reconnected', player_id: session.playerId });
   return { roomCode: session.roomCode, playerId: session.playerId };
+}
+
+// Join a room as a read-only spectator. Spectators have a synthetic id that
+// matches no player, so every "is this me / am I admin" check on the client
+// naturally resolves to a watch-only view. They hold no session/rejoin token.
+function handleSpectate(ws, msg) {
+  const code = typeof msg.room_code === 'string' ? msg.room_code.toUpperCase() : '';
+  if (!code) return null;
+  const room = rooms.get(code);
+  if (!room) return null;
+
+  const spectatorId = `spectator-${randomUUID()}`;
+  wsManager.connectSpectator(room.roomCode, spectatorId, ws);
+  ws.send(JSON.stringify({ type: 'spectating', spectator_id: spectatorId, room_code: room.roomCode }));
+  ws.send(JSON.stringify({ type: 'room_state', data: room.toDict(null) }));
+  // Let everyone (including other spectators) see the updated spectator count.
+  wsManager.broadcastState(room.roomCode, room);
+  return { roomCode: room.roomCode, spectatorId };
 }
 
 function fillRoomWithDevBots(room) {
@@ -367,6 +386,7 @@ function transferAdmin(roomCode) {
 module.exports = {
   handleJoin,
   handleRejoin,
+  handleSpectate,
   handleStartGame,
   handleRevealAttr,
   handleRevealAll,

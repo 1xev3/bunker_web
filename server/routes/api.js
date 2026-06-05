@@ -1,4 +1,4 @@
-const { rooms } = require('../state');
+const { rooms, wsManager } = require('../state');
 const { loadPack, listPacks, getDefaultPackName, getPackStats } = require('../game/gameConfig');
 
 function setupApiRoutes(app) {
@@ -32,7 +32,12 @@ function setupApiRoutes(app) {
     const list = [];
     for (const [code, room] of rooms) {
       if (room.status !== 'finished') {
-        list.push({ room_code: code, player_count: room.players.length, status: room.status });
+        list.push({
+          room_code: code,
+          player_count: room.players.length,
+          status: room.status,
+          spectator_count: wsManager.spectatorCount(code),
+        });
       }
     }
     res.json(list);

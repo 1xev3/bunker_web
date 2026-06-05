@@ -258,6 +258,7 @@ export interface RoomState {
   pack_meta: PackMeta;
   pack_settings: PackSettings;
   status: GameStatus;
+  spectator_count?: number;
   is_voting: boolean;
   round: number;
   bunker_capacity: number | null;
@@ -285,6 +286,7 @@ export interface RoomListing {
   room_code: string;
   player_count: number;
   status: GameStatus;
+  spectator_count?: number;
 }
 
 export type SelectedItem =
@@ -307,6 +309,7 @@ export interface EventSelection {
 export type ServerMessage =
   | { type: 'room_state'; data: RoomState }
   | { type: 'joined'; token: string; player_id: string; room_code: string }
+  | { type: 'spectating'; spectator_id: string; room_code: string }
   | { type: 'error'; message: string }
   | { type: 'pong' }
   | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue }
@@ -376,6 +379,7 @@ export interface MonthlyNotice {
 export type ClientMessage =
   | { type: 'join'; nickname: string; room_code?: string; pack?: string }
   | { type: 'rejoin'; token: string }
+  | { type: 'spectate'; room_code: string }
   | { type: 'ping' }
   | { type: 'start_game' }
   | { type: 'reveal_attribute'; attribute: AttributeKey }

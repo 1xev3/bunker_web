@@ -1,4 +1,4 @@
-import { ArrowLeft, Trophy, Shuffle, EyeOff } from 'lucide-react';
+import { ArrowLeft, Trophy, Shuffle, EyeOff, Eye } from 'lucide-react';
 import type { RoomState, ClientMessage, Player } from '../../types/game';
 import BunkerInfo from '../bunker/BunkerInfo';
 import StatusTable from './StatusTable';
@@ -78,6 +78,14 @@ export default function GameRoom({
             <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
               Завершена
             </span>
+          )}
+          {(roomState.spectator_count ?? 0) > 0 && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className="text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Eye size={10} /> {roomState.spectator_count}
+              </span>
+            </>
           )}
         </div>
         <button

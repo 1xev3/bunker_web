@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Eye } from 'lucide-react';
 import type { ServerMessage, ClientMessage, Player, EventOutcome, MonthlyNotice } from './types/game';
 import { useGameState } from './hooks/useGameState';
 import WelcomeScreen from './components/lobby/WelcomeScreen';
@@ -45,6 +46,10 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     setMyPlayerId(id);
   }, [myPlayerIdRef]);
   const [isConnectionLost, setIsConnectionLost] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
+  // Room code we're spectating, kept in a ref so the onclose reconnect timer can
+  // re-spectate without a stale closure. Spectators hold no session token.
+  const spectateRoomRef = useRef<string | null>(null);
   const [showBunkerIntro, setShowBunkerIntro] = useState(false);
   const [votingResult, setVotingResult] = useState<{ eliminated: Player | null; isTie: boolean } | null>(null);
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
@@ -161,6 +166,18 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         return;
       }
 
+      if (msg.type === 'spectating') {
+        // The spectator id matches no player, so every screen renders read-only.
+        setIsSpectator(true);
+        setPlayerId(msg.spectator_id);
+        spectateRoomRef.current = msg.room_code;
+        localStorage.setItem('bunker_spectate_room', msg.room_code);
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', msg.room_code);
+        window.history.pushState({}, '', url);
+        return;
+      }
+
       if (msg.type === 'voting_result') {
         setVotingResult({ eliminated: msg.eliminated, isTie: msg.is_tie });
         setHasVoted(false);
@@ -212,6 +229,11 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         wsLog('connection lost — scheduling rejoin in 2s');
         setIsConnectionLost(true);
         reconnectRef.current = setTimeout(() => connectRef.current?.({ type: 'rejoin', token }), 2000);
+      } else if (spectateRoomRef.current) {
+        wsLog('connection lost — scheduling re-spectate in 2s');
+        setIsConnectionLost(true);
+        const room = spectateRoomRef.current;
+        reconnectRef.current = setTimeout(() => connectRef.current?.({ type: 'spectate', room_code: room }), 2000);
       } else {
         wsLog('closed with no token — not reconnecting');
       }
@@ -259,11 +281,15 @@ export default function GameApp({ onOpenPackEditor }: Props) {
 
   useEffect(() => {
     const token = localStorage.getItem('bunker_token');
+    const spectateRoom = localStorage.getItem('bunker_spectate_room');
     if (token) {
       const savedId = localStorage.getItem('bunker_player_id');
       // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the persisted player id on mount before reconnecting
       if (savedId) setPlayerId(savedId);
       connect({ type: 'rejoin', token });
+    } else if (spectateRoom) {
+      spectateRoomRef.current = spectateRoom;
+      connect({ type: 'spectate', room_code: spectateRoom });
     }
     return () => {
       intentionalCloseRef.current = true;
@@ -283,6 +309,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     localStorage.removeItem('bunker_token');
     localStorage.removeItem('bunker_room');
     localStorage.removeItem('bunker_player_id');
+    localStorage.removeItem('bunker_spectate_room');
+    spectateRoomRef.current = null;
+    setIsSpectator(false);
     setPlayerId(null);
     // When leaving was triggered by the browser Back button, the URL has already
     // been popped to `/` — pushing again would add a redundant history entry.
@@ -324,6 +353,12 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     document.documentElement.style.setProperty('--accent-rgb', hexToRgb(color));
   }, [roomState?.pack_meta?.color]);
 
+  const spectatorBanner = isSpectator ? (
+    <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-amber-700/50 bg-zinc-900/90 px-4 py-1.5 text-xs text-amber-300 shadow-lg backdrop-blur flex items-center gap-1.5 pointer-events-none">
+      <Eye size={13} /> Режим зрителя — вы наблюдаете за игрой
+    </div>
+  ) : null;
+
   const connectionOverlay = isConnectionLost && roomState && myPlayerId ? (
     <div className="connection-overlay" role="alert" aria-live="assertive">
       <div className="connection-overlay__panel">
@@ -353,6 +388,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           send={send}
           onLeave={handleLeave}
         />
+        {spectatorBanner}
         {connectionOverlay}
       </>
     );
@@ -371,6 +407,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           monthlyNotice={monthlyNotice}
           isConnectionLost={isConnectionLost}
         />
+        {spectatorBanner}
         {connectionOverlay}
       </>
     );
@@ -386,6 +423,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           onContinue={handleIntroContinue}
           onLeave={handleLeave}
         />
+        {spectatorBanner}
         {connectionOverlay}
       </>
     );
@@ -399,6 +437,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           roomState={roomState}
           onLeave={handleLeave}
         />
+        {spectatorBanner}
         {connectionOverlay}
       </>
     );
@@ -416,7 +455,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         flashMessage={flashMessage}
         onLeave={handleLeave}
       />
-      {showReadyModal && (
+      {showReadyModal && !isSpectator && (
         <ReadyModal
           capacity={readyCapacity}
           activePlayers={roomState.players.filter((p) => p.is_active)}
@@ -425,6 +464,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
           send={send}
         />
       )}
+      {spectatorBanner}
       {connectionOverlay}
     </>
   );

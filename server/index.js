@@ -3,7 +3,7 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
 
-const { sessions, rooms } = require('./state');
+const { sessions, rooms, wsManager } = require('./state');
 const setupApiRoutes = require('./routes/api');
 const setupWebSocket = require('./ws/connection');
 
@@ -28,6 +28,7 @@ setInterval(() => {
   for (const [code, room] of rooms) {
     if (room.status === 'finished' || Date.now() - room.lastActivity > 3 * hour) {
       rooms.delete(code);
+      wsManager.dropRoom(code);
     }
   }
 }, 30 * 60 * 1000);
