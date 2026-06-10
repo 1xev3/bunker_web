@@ -25,7 +25,7 @@ events:
             effects:
               - { food: 180 }
               - { on: all, sanity: 8 }
-              - { add_bunker_item: random }
+              - { add_bunker_item: { category: medicine } }
               - { flag: { supply_cache_found: true } }
           - effects:
               - { food: 140 }

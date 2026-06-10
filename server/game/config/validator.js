@@ -37,6 +37,24 @@ function validateStringArray(value, scope, errors) {
   });
 }
 
+// Item sections (INVENTORY, BACKPACK_ITEMS, BUNKER_ITEMS) may be a flat list or
+// a category map { category: [items...] }. Validates either form with the given
+// per-list validator.
+function validateItemSection(value, scope, errors, validateList) {
+  if (isPlainObject(value)) {
+    const categories = Object.keys(value);
+    if (categories.length === 0) {
+      addError(errors, scope, 'ожидается непустой массив или карта категорий');
+      return;
+    }
+    for (const category of categories) {
+      validateList(value[category], `${scope} -> ${category}`, errors);
+    }
+    return;
+  }
+  validateList(value, scope, errors);
+}
+
 function validateNumberInRange(value, scope, errors, min, max) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
     addError(errors, scope, `ожидается число от ${min} до ${max}`);
@@ -345,11 +363,11 @@ function validatePackContent(packName, files) {
   if (!isPlainObject(files.Inventory)) {
     addError(errors, 'Inventory', 'корневой объект не найден');
   } else {
-    validateStringArray(files.Inventory.INVENTORY, 'Inventory -> INVENTORY', errors);
+    validateItemSection(files.Inventory.INVENTORY, 'Inventory -> INVENTORY', errors, validateStringArray);
     if (!Number.isInteger(files.Inventory.BACKPACK_ITEMS_COUNT_MAX) || files.Inventory.BACKPACK_ITEMS_COUNT_MAX < 1) {
       addError(errors, 'Inventory -> BACKPACK_ITEMS_COUNT_MAX', 'ожидается целое число не меньше 1');
     }
-    validateBackpackItems(files.Inventory.BACKPACK_ITEMS, 'Inventory -> BACKPACK_ITEMS', errors);
+    validateItemSection(files.Inventory.BACKPACK_ITEMS, 'Inventory -> BACKPACK_ITEMS', errors, validateBackpackItems);
   }
 
   if (!isPlainObject(files.Bunker)) {
@@ -359,7 +377,7 @@ function validatePackContent(packName, files) {
     validateNamedObjectArray(files.Bunker.BUNKER_SIZES, 'Bunker -> BUNKER_SIZES', errors);
     validateDurationArray(files.Bunker.BUNKER_DURATIONS, 'Bunker -> BUNKER_DURATIONS', errors);
     validateFoodSupplies(files.Bunker.FOOD_SUPPLIES, 'Bunker -> FOOD_SUPPLIES', errors);
-    validateStringArray(files.Bunker.BUNKER_ITEMS, 'Bunker -> BUNKER_ITEMS', errors);
+    validateItemSection(files.Bunker.BUNKER_ITEMS, 'Bunker -> BUNKER_ITEMS', errors, validateStringArray);
 
     if (!Array.isArray(files.Bunker.ROOM_COUNTS) || files.Bunker.ROOM_COUNTS.length === 0) {
       addError(errors, 'Bunker -> ROOM_COUNTS', 'ожидается непустой массив целых чисел');

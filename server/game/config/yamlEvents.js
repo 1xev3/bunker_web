@@ -137,6 +137,11 @@ function validateEffect(effect, scope, errors) {
       if (v.quantity !== undefined && (typeof v.quantity !== 'number' || v.quantity < 1)) {
         errors.push(`${scope}.${key}.quantity: ожидается число >= 1`);
       }
+      // `category` (give_item/add_bunker_item only) picks a random item tagged
+      // with that group from the pack's item pools.
+      if (v.category !== undefined && (typeof v.category !== 'string' || v.category.trim() === '')) {
+        errors.push(`${scope}.${key}.category: ожидается непустая строка-категория`);
+      }
     }
   }
   if (effect.steal_item !== undefined) {
@@ -502,9 +507,10 @@ function buildEffectPrimitives(effects, roleMap, room, participantIds) {
     if (eff.remove_room) out.push({ type: 'remove_room' });
     if (eff.give_item !== undefined) {
       const spec = isPlainObject(eff.give_item) ? eff.give_item : { item: eff.give_item };
-      const random = spec.item === 'random' || spec.item == null;
+      const category = typeof spec.category === 'string' ? spec.category : null;
+      const random = !category && (spec.item === 'random' || spec.item == null);
       const quantity = Number(spec.quantity) > 0 ? Math.floor(Number(spec.quantity)) : 1;
-      for (const id of ids) out.push({ type: 'give_item', target: id, item_id: random ? null : spec.item, random, quantity });
+      for (const id of ids) out.push({ type: 'give_item', target: id, item_id: random ? null : spec.item, random, quantity, category });
     }
     if (eff.remove_item !== undefined) {
       const spec = isPlainObject(eff.remove_item) ? eff.remove_item : { item: eff.remove_item };
@@ -513,8 +519,9 @@ function buildEffectPrimitives(effects, roleMap, room, participantIds) {
     }
     if (eff.add_bunker_item !== undefined) {
       const spec = isPlainObject(eff.add_bunker_item) ? eff.add_bunker_item : { item: eff.add_bunker_item };
-      const random = spec.item === 'random' || spec.item == null;
-      out.push({ type: 'add_bunker_item', item_id: random ? null : spec.item, random });
+      const category = typeof spec.category === 'string' ? spec.category : null;
+      const random = !category && (spec.item === 'random' || spec.item == null);
+      out.push({ type: 'add_bunker_item', item_id: random ? null : spec.item, random, category });
     }
     if (eff.remove_bunker_item !== undefined) {
       const spec = isPlainObject(eff.remove_bunker_item) ? eff.remove_bunker_item : { item: eff.remove_bunker_item };

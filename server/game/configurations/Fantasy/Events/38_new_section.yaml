@@ -33,7 +33,7 @@ events:
               effects:
                 - { on: digger, sanity: 8 }
                 - { add_room: true }
-                - { add_bunker_item: random }
+                - { add_bunker_item: { category: valuables } }
           some:
             - chance: 55
               text: Отсек пробили, но второпях — вышла пыльная, зато рабочая каморка.

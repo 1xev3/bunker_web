@@ -171,10 +171,12 @@ options:
 - { on: chosen, give_item: rope }           # выдать предмет в рюкзак
 - { on: chosen, give_item: { item: rope, quantity: 2 } }
 - { on: chosen, give_item: random }         # случайный предмет из пула пака
+- { on: chosen, give_item: { category: medicine } }  # случайный предмет нужной категории
 - { on: thief, remove_item: random }        # отнять случайный предмет (рюкзак/инвентарь)
 - { on: thief, remove_item: lantern }       # отнять конкретный предмет
 - { add_bunker_item: medkit }               # добавить предмет в случайную комнату
 - { add_bunker_item: random }
+- { add_bunker_item: { category: repair } } # добавить случайный предмет категории
 - { remove_bunker_item: random }            # пропажа предмета из бункера
 - { steal_item: { from: others, to: thief } }  # отнять предмет у одного и отдать другому (тот же предмет)
 - { steal_item: { from: thief, to: random, item: random } }
@@ -193,6 +195,13 @@ options:
 владелец, у кого есть вещи) к другой (`to`). Предмет задаётся id из пулов пака
 (`BACKPACK_ITEMS`, `BUNKER_ITEMS`), значением `random` или объектом
 `{ item, quantity? }`. Изменения показываются в итогах события (`item_changes`).
+
+`give_item` и `add_bunker_item` дополнительно понимают `category` —
+`{ category: medicine }` выдаёт случайный предмет, помеченный этой категорией
+(см. карты категорий в `Inventory.yaml` / `Bunker.yaml`). Если в пуле нет
+предметов такой категории, берётся любой, чтобы эффект не пропал. Слаги
+категорий пака: `medicine repair power water air food farming home comms magic
+defense transport animals valuables navigation light dangerous`.
 
 В тексте исхода `choice`-события можно подставить название появившегося/
 отнятого предмета: `{item}` — первый затронутый предмет, `{items}` — все

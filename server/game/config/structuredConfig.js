@@ -67,18 +67,65 @@ function normalizeRange(entry, prefix, index) {
 }
 
 function normalizeBackpackItem(item, index, prefix = 'backpack_item') {
-  if (item && typeof item === 'object' && !Array.isArray(item) && item.id && item.label) {
-    return {
-      min: item.min ?? item.quantity ?? 1,
-      max: item.max ?? item.quantity ?? item.min ?? 1,
-      ...item,
-    };
-  }
   if (Array.isArray(item)) {
     const [label, min, max] = item;
     return { id: `${prefix}_${index + 1}`, label, min, max };
   }
+  if (item && typeof item === 'object' && typeof item.label === 'string') {
+    return {
+      ...item,
+      id: item.id ?? `${prefix}_${index + 1}`,
+      label: item.label,
+      min: item.min ?? item.quantity ?? 1,
+      max: item.max ?? item.quantity ?? item.min ?? 1,
+    };
+  }
   return { id: `${prefix}_${index + 1}`, label: String(item), min: 1, max: 1 };
+}
+
+// --- Categorized item sections -------------------------------------------
+// INVENTORY / BACKPACK_ITEMS / BUNKER_ITEMS accept either a flat list or a
+// category map { category: [items...] }. The map form tags every item with
+// `groups: [category]` so events can hand out items of a matching category
+// (give_item/add_bunker_item with `category`). Both forms coexist, so old packs
+// keep working unchanged.
+
+function entryGroups(entry) {
+  return entry && typeof entry === 'object' && !Array.isArray(entry) && Array.isArray(entry.groups)
+    ? entry.groups
+    : [];
+}
+
+// Normalizes a section into a flat list of { entry, groups }, where `entry`
+// keeps its original shape (string / [label,min,max] / object) and `groups` is
+// the full category list (the map key plus any groups already on the entry).
+function flattenItemSection(section) {
+  if (Array.isArray(section)) {
+    return section.map(entry => ({ entry, groups: entryGroups(entry) }));
+  }
+  if (section && typeof section === 'object') {
+    return Object.entries(section).flatMap(([category, list]) =>
+      (Array.isArray(list) ? list : []).map(entry => ({
+        entry,
+        groups: [...new Set([category, ...entryGroups(entry)])],
+      })));
+  }
+  return [];
+}
+
+// Re-attaches `groups` onto an entry, promoting string/array forms to object
+// form so the group survives variant expansion and normalization.
+function applyGroups(entry, groups) {
+  if (!groups || groups.length === 0) return entry;
+  if (typeof entry === 'string') return { label: entry, groups };
+  if (Array.isArray(entry)) {
+    const [label, min, max] = entry;
+    return { label, min, max, groups };
+  }
+  if (entry && typeof entry === 'object') {
+    return { ...entry, groups: [...new Set([...(entry.groups ?? []), ...groups])] };
+  }
+  return entry;
 }
 
 function normalizeNamedObjects(values, prefix) {
@@ -205,9 +252,15 @@ function normalizeConfig(config) {
   next.HOBBIES = plainEntities(config.HOBBIES ?? [], 'hobby');
   next.PHOBIAS = plainEntities(config.PHOBIAS ?? [], 'phobia');
   next.ADDITIONAL_INFO = plainEntities(config.ADDITIONAL_INFO ?? [], 'additional');
-  next.INVENTORY = plainEntities((config.INVENTORY ?? []).flatMap(item => expandVariantString(item)), 'inventory');
-  next.BACKPACK_ITEMS = (config.BACKPACK_ITEMS ?? [])
-    .flatMap(item => expandBackpackItemVariants(item))
+  next.INVENTORY = plainEntities(
+    flattenItemSection(config.INVENTORY ?? []).flatMap(({ entry, groups }) => {
+      const label = typeof entry === 'string' ? entry : (entry?.label ?? String(entry));
+      return expandVariantString(label).map(l => (groups.length ? { label: l, groups } : l));
+    }),
+    'inventory',
+  );
+  next.BACKPACK_ITEMS = flattenItemSection(config.BACKPACK_ITEMS ?? [])
+    .flatMap(({ entry, groups }) => expandBackpackItemVariants(applyGroups(entry, groups)))
     .map((item, index) => normalizeBackpackItem(item, index));
 
   next.BUNKER_THEMES = normalizeNamedObjects(config.BUNKER_THEMES ?? [], 'bunker_theme');
@@ -216,7 +269,10 @@ function normalizeConfig(config) {
   next.FOOD_SUPPLIES = (config.FOOD_SUPPLIES ?? [])
     .map((value, index) => normalizeFoodSupply(value, index))
     .map((item, order) => ({ ...item, order }));
-  next.BUNKER_ITEMS = plainEntities(config.BUNKER_ITEMS ?? [], 'bunker_item');
+  next.BUNKER_ITEMS = plainEntities(
+    flattenItemSection(config.BUNKER_ITEMS ?? []).map(({ entry, groups }) => applyGroups(entry, groups)),
+    'bunker_item',
+  );
 
   const inventoryByLabel = new Map(next.INVENTORY.map(item => [item.label, item]));
   const backpackByLabel = new Map(next.BACKPACK_ITEMS.map(item => [item.label, item]));

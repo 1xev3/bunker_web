@@ -252,9 +252,16 @@ function uniquePlayerRefs(players) {
 // Resolves an item reference to a concrete { id, label }. With `random` (or no
 // id) it picks any item from the given pack pools; otherwise it looks the id up
 // to recover its label, falling back to the id itself.
-function resolveItemRef(config, itemId, random, pools) {
-  const all = pools.flat().filter(Boolean);
-  if (random || !itemId) {
+function resolveItemRef(config, itemId, random, pools, category) {
+  let all = pools.flat().filter(Boolean);
+  // `category` narrows the pool to items tagged with that group, then picks one
+  // at random. If nothing matches, fall back to the full pool so the effect
+  // never silently no-ops on a misconfigured category.
+  if (category) {
+    const matching = all.filter(i => Array.isArray(i.groups) && i.groups.includes(category));
+    if (matching.length > 0) all = matching;
+  }
+  if (random || category || !itemId) {
     if (all.length === 0) return null;
     const pick = all[Math.floor(Math.random() * all.length)];
     return { id: pick.id, label: pick.label ?? pick.id };
@@ -424,7 +431,7 @@ function applyKillRandomActiveEffect(room, effect, context, result) {
 
 function applyGiveItemEffect(room, effect, context, result) {
   const item = resolveItemRef(room.config, effect.item_id, effect.random,
-    [room.config?.BACKPACK_ITEMS ?? [], room.config?.BUNKER_ITEMS ?? []]);
+    [room.config?.BACKPACK_ITEMS ?? [], room.config?.BUNKER_ITEMS ?? []], effect.category);
   if (!item) return;
   const qty = effect.quantity > 0 ? effect.quantity : 1;
   for (const target of getEffectTargets(room, effect)) {
@@ -457,7 +464,7 @@ function applyRemoveItemEffect(room, effect, context, result) {
 }
 
 function applyAddBunkerItemEffect(room, effect, context, result) {
-  const item = resolveItemRef(room.config, effect.item_id, effect.random, [room.config?.BUNKER_ITEMS ?? []]);
+  const item = resolveItemRef(room.config, effect.item_id, effect.random, [room.config?.BUNKER_ITEMS ?? []], effect.category);
   if (item && room.bunker.addItem({ id: item.id, label: item.label })) {
     result.roomChanged = true;
     result.itemChanges.push({ item: item.label, action: 'bunker_added' });
