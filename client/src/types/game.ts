@@ -55,6 +55,8 @@ export type PlayerAttributes = Record<AttributeKey, AttributeValue | null> & {
 export interface Player {
   id: string;
   name: string;
+  /** Сгенерированное ФИО; присутствует только после раскрытия пола (иначе null). */
+  full_name: string | null;
   is_active: boolean;
   revealed_attributes: Record<AttributeKey, boolean>;
   attributes: PlayerAttributes;
@@ -315,7 +317,7 @@ export type ServerMessage =
   | { type: 'spectating'; spectator_id: string; room_code: string }
   | { type: 'error'; message: string }
   | { type: 'pong' }
-  | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue }
+  | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue; full_name?: string | null }
   | { type: 'vote_confirmed' }
   | { type: 'voting_result'; eliminated: Player | null; is_tie: boolean; votes: Record<string, number> }
   | { type: 'game_ended'; winner: Player | null; from_bunker_life?: boolean; survived?: boolean }

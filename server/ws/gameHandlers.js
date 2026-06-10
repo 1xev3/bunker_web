@@ -6,6 +6,18 @@ const { getDefaultPackName } = require('../game/gameConfig');
 const GameRoom = require('../game/entities/gameRoom');
 const { confirmBotsForBunkerLife, tryStartBunkerLife } = require('./bunkerLifeHandlers');
 
+// Сообщение о раскрытии атрибута. Когда раскрывается пол, прикладываем ФИО,
+// иначе у других игроков оно не появится (точечный патч не несёт full_name).
+function attributeRevealedMsg(player, attr, config) {
+  return {
+    type: 'attribute_revealed',
+    player_id: player.id,
+    attribute: attr,
+    value: publicAttribute(attr, player[attr], config),
+    ...(attr === 'gender' ? { full_name: player.full_name } : {}),
+  };
+}
+
 const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '4', 10);
 const DEV_BOT_NAMES = ['Котакбас', 'Ванючка', 'Бабаджон', 'Пельмень', 'Станис', 'Казел', 'upinexo'];
 
@@ -124,12 +136,7 @@ function handleRevealAttr(roomCode, playerId, msg) {
   if (!player) return;
   const attr = msg.attribute;
   if (player.revealAttribute(attr)) {
-    wsManager.broadcast(roomCode, {
-      type: 'attribute_revealed',
-      player_id: playerId,
-      attribute: attr,
-      value: publicAttribute(attr, player[attr], room.config),
-    });
+    wsManager.broadcast(roomCode, attributeRevealedMsg(player, attr, room.config));
   }
 }
 
@@ -140,12 +147,7 @@ function handleRevealAll(roomCode, playerId) {
   if (!player) return;
   const revealed = player.revealAll();
   for (const attr of revealed) {
-    wsManager.broadcast(roomCode, {
-      type: 'attribute_revealed',
-      player_id: playerId,
-      attribute: attr,
-      value: publicAttribute(attr, player[attr], room.config),
-    });
+    wsManager.broadcast(roomCode, attributeRevealedMsg(player, attr, room.config));
   }
 }
 
@@ -283,12 +285,7 @@ function handleAdminRevealPlayerAttribute(roomCode, playerId, msg) {
   if (!target) return;
 
   if (target.revealAttribute(msg.attribute)) {
-    wsManager.broadcast(roomCode, {
-      type: 'attribute_revealed',
-      player_id: target.id,
-      attribute: msg.attribute,
-      value: publicAttribute(msg.attribute, target[msg.attribute], room.config),
-    });
+    wsManager.broadcast(roomCode, attributeRevealedMsg(target, msg.attribute, room.config));
   }
 }
 
@@ -303,12 +300,7 @@ function handleAdminRevealPlayerAttributes(roomCode, playerId, msg) {
   const uniqueAttributes = [...new Set(msg.attributes)].filter(attribute => ATTRIBUTE_KEYS.includes(attribute));
   for (const attribute of uniqueAttributes) {
     if (!target.revealAttribute(attribute)) continue;
-    wsManager.broadcast(roomCode, {
-      type: 'attribute_revealed',
-      player_id: target.id,
-      attribute,
-      value: publicAttribute(attribute, target[attribute], room.config),
-    });
+    wsManager.broadcast(roomCode, attributeRevealedMsg(target, attribute, room.config));
   }
 }
 
@@ -322,12 +314,7 @@ function handleAdminRevealPlayerAll(roomCode, playerId, msg) {
 
   const revealed = target.revealAll();
   for (const attr of revealed) {
-    wsManager.broadcast(roomCode, {
-      type: 'attribute_revealed',
-      player_id: target.id,
-      attribute: attr,
-      value: publicAttribute(attr, target[attr], room.config),
-    });
+    wsManager.broadcast(roomCode, attributeRevealedMsg(target, attr, room.config));
   }
 }
 
@@ -338,12 +325,7 @@ function handleAdminRevealAllPlayers(roomCode, playerId) {
   for (const target of room.players) {
     const revealed = target.revealAll();
     for (const attr of revealed) {
-      wsManager.broadcast(roomCode, {
-        type: 'attribute_revealed',
-        player_id: target.id,
-        attribute: attr,
-        value: publicAttribute(attr, target[attr], room.config),
-      });
+      wsManager.broadcast(roomCode, attributeRevealedMsg(target, attr, room.config));
     }
   }
 }

@@ -27,6 +27,56 @@ function sample(arr, k) {
   return result;
 }
 
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Склоняет одну часть фамилии (мужская → женская форма) по типовым правилам.
+// Несклоняемые окончания (-о, -е, -их, согласные вне списка) остаются как есть.
+function feminizeSurnamePart(s) {
+  if (/ский$/.test(s)) return s.replace(/ский$/, 'ская');
+  if (/цкий$/.test(s)) return s.replace(/цкий$/, 'цкая');
+  if (/(ой|ый|ий)$/.test(s)) return s.replace(/(ой|ый|ий)$/, 'ая');
+  if (/(ов|ев|ёв|ин|ын)$/.test(s)) return s + 'а';
+  return s;
+}
+
+// Фамилии хранятся в мужской форме; составные (через дефис) склоняем по частям.
+function feminizeSurname(surname) {
+  return surname.split('-').map(feminizeSurnamePart).join('-');
+}
+
+// Выбирает фамилию нужного рода. Общий словарь хранит { male, female }: явно
+// заданная female берётся как есть, иначе склоняется по правилам. Legacy-фолбэк —
+// уже гендерные строки в пуле пола.
+function pickSurname(names, pool, isFemale) {
+  if (names.last?.length) {
+    const entry = pickRandom(names.last);
+    if (!isFemale) return entry.male;
+    return entry.female ?? feminizeSurname(entry.male);
+  }
+  return pool.last?.length ? pickRandom(pool.last) : '';
+}
+
+// Генерирует ФИО (Фамилия Имя Отчество) по полу персонажа из config.NAMES.
+// Фамилии общие (config.NAMES.last); имя/отчество — из пула пола. Возвращает
+// null, если пак не задаёт пулы имён.
+function generateFullName(config, genderId) {
+  const names = config.NAMES;
+  if (!names) return null;
+  // Второй пол в GENDERS считается женским (как и при расчёте роста).
+  const isFemale = genderId === 'gender_2';
+  const pool = isFemale ? names.female : names.male;
+  if (!pool) return null;
+
+  const parts = [
+    pickSurname(names, pool, isFemale),
+    pool.first?.length ? pickRandom(pool.first) : '',
+    pool.middle?.length ? pickRandom(pool.middle) : '',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' ') : null;
+}
+
 function labelOf(configItems, id) {
   return configItems.find(item => item.id === id)?.label ?? id ?? '';
 }
@@ -101,6 +151,7 @@ class Player {
     this.is_active = true;
     this.is_bot = Boolean(options.isBot);
 
+    this.full_name = null; // сгенерированное ФИО; раскрывается вместе с полом
     this.gender = null;
     this.race = null;
     this.body = null;
@@ -134,6 +185,7 @@ class Player {
     const ageRange = weightedRandom(config.AGES);
     const age = randInt(ageRange.min, ageRange.max);
     this.gender = { genderId: gender.id, affixId: affix.id, age };
+    this.full_name = generateFullName(config, gender.id);
     this.race = { id: weightedRandom(config.RACES).id };
 
     const bodyType = weightedRandom(config.BODY_TYPES);
@@ -195,6 +247,7 @@ class Player {
     const affix = weightedRandom(config.GENDER_AFFIXES);
     const gender = weightedRandom(config.GENDERS);
     this.gender = { genderId: gender.id, affixId: affix.id, age: 0 };
+    this.full_name = generateFullName(config, gender.id);
 
     for (const attr of ATTRIBUTE_KEYS) {
       this.revealed_attributes[attr] = true;
@@ -230,6 +283,8 @@ class Player {
     return {
       id: this.id,
       name: this.name,
+      // ФИО видно только после раскрытия пола (или самому игроку).
+      full_name: (this.revealed_attributes.gender || viewerId === this.id) ? this.full_name : null,
       is_active: this.is_active,
       revealed_attributes: { ...this.revealed_attributes },
       attributes: attrs,

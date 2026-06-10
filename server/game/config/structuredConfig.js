@@ -117,9 +117,52 @@ function normalizeFoodSupply(value, index) {
   return entity(value, 'food_supply', index);
 }
 
+// ФИО-пулы: { last, male: { first, middle }, female: { ... } }. Фамилии (last)
+// общие для обоих полов и хранятся в мужской форме — женский вариант
+// склоняется в коде. last допустим и внутри male/female (legacy-формат).
+// Любое поле приводится к массиву строк; пустой пул → null (ФИО не генерируется).
+function namesToStrings(arr) {
+  return Array.isArray(arr) ? arr.filter(v => typeof v === 'string' && v.trim()).map(v => v.trim()) : [];
+}
+
+function normalizeNamePool(pool) {
+  if (!pool || typeof pool !== 'object' || Array.isArray(pool)) return null;
+  return {
+    first: namesToStrings(pool.first),
+    middle: namesToStrings(pool.middle),
+    last: namesToStrings(pool.last),
+  };
+}
+
+// Фамилия в общем словаре — либо строка (мужская форма, женская склоняется по
+// правилам в player.js), либо пара [мужская, женская] с явно заданными формами
+// для исключений. Приводим всё к { male, female|null }; null → склонять кодом.
+function normalizeSurnames(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const entry of arr) {
+    if (typeof entry === 'string' && entry.trim()) {
+      out.push({ male: entry.trim(), female: null });
+    } else if (Array.isArray(entry) && typeof entry[0] === 'string' && entry[0].trim()) {
+      const female = typeof entry[1] === 'string' && entry[1].trim() ? entry[1].trim() : null;
+      out.push({ male: entry[0].trim(), female });
+    }
+  }
+  return out;
+}
+
+function normalizeNames(names) {
+  if (!names || typeof names !== 'object' || Array.isArray(names)) return null;
+  const male = normalizeNamePool(names.male);
+  const female = normalizeNamePool(names.female);
+  if (!male && !female) return null;
+  return { last: normalizeSurnames(names.last), male, female };
+}
+
 function normalizeConfig(config) {
   const next = { ...config };
 
+  next.NAMES = normalizeNames(config.NAMES);
   next.GENDERS = weightedEntities(config.GENDERS ?? [], 'gender');
   next.RACES = weightedEntities(config.RACES ?? [], 'race');
   next.GENDER_AFFIXES = weightedEntities(config.GENDER_AFFIXES ?? [], 'affix', (label, index) => ({

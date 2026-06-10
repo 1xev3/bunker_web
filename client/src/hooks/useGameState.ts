@@ -3,7 +3,7 @@ import type { RoomState, ServerMessage, Player, AttributeKey, AttributeValue } f
 
 type Action =
   | { type: 'SET_STATE'; payload: RoomState }
-  | { type: 'ATTR_REVEALED'; player_id: string; attribute: AttributeKey; value: AttributeValue }
+  | { type: 'ATTR_REVEALED'; player_id: string; attribute: AttributeKey; value: AttributeValue; full_name?: string | null }
   | { type: 'PLAYER_DISCONNECTED'; player_id: string }
   | { type: 'PLAYER_RECONNECTED'; player_id: string }
   | { type: 'ADMIN_CHANGED'; new_admin_id: string }
@@ -29,6 +29,8 @@ function reducer(state: RoomState | null, action: Action): RoomState | null {
                 ...p,
                 revealed_attributes: { ...p.revealed_attributes, [action.attribute]: true },
                 attributes: { ...p.attributes, [action.attribute]: action.value },
+                // Раскрытие пола приносит ФИО для отображения у других игроков.
+                full_name: action.attribute === 'gender' ? (action.full_name ?? p.full_name) : p.full_name,
               }
             : p
         ),
@@ -65,7 +67,7 @@ export function useGameState() {
         dispatch({ type: 'SET_STATE', payload: msg.data });
         break;
       case 'attribute_revealed':
-        dispatch({ type: 'ATTR_REVEALED', player_id: msg.player_id, attribute: msg.attribute, value: msg.value });
+        dispatch({ type: 'ATTR_REVEALED', player_id: msg.player_id, attribute: msg.attribute, value: msg.value, full_name: msg.full_name });
         break;
       case 'player_disconnected':
         dispatch({ type: 'PLAYER_DISCONNECTED', player_id: msg.player_id });

@@ -115,7 +115,9 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                     </div>
                     <div>
                       <span className="font-semibold break-words leading-snug text-sm text-zinc-100">
-                        {player.name}
+                        {player.full_name
+                          ? <>{player.full_name} <span className="text-zinc-400 font-normal">({player.name})</span></>
+                          : player.name}
                       </span>
                       {isMe && <span className="ml-1 text-xs status-name-me">(Вы)</span>}
                     </div>
