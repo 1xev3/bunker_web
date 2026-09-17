@@ -23,6 +23,13 @@ function attributeRevealedMsg(player, attr, config) {
 const DEV_MIN_PLAYERS = Number.parseInt(process.env.DEV_MIN_PLAYERS ?? '4', 10);
 const DEV_BOT_NAMES = ['Котакбас', 'Ванючка', 'Бабаджон', 'Пельмень', 'Станис', 'Казел', 'upinexo'];
 
+function shufflePlayers(players) {
+  for (let i = players.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [players[i], players[j]] = [players[j], players[i]];
+  }
+}
+
 function handleJoin(ws, msg) {
   const { nickname, room_code } = msg;
   if (!nickname || typeof nickname !== 'string') return null;
@@ -185,6 +192,8 @@ async function handleStartGame(roomCode, playerId) {
     ? Math.min(room.players.length - 1, room.settings.manual_capacity)
     : Math.floor(room.players.length / 2);
   room.monthDuration = room.settings.month_duration_ms;
+
+  shufflePlayers(room.players);
 
   for (const player of room.players) {
     player.generateCharacter(room.config);
@@ -578,4 +587,5 @@ module.exports = {
   handleUseProfessionAbility,
   transferAdmin,
   reconcileVoting,
+  shufflePlayers,
 };

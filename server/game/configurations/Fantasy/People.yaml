@@ -272,20 +272,20 @@ NAMES:
 # RACES используется отдельно от GENDERS.
 RACES:
   - [Человек, 1]
-  - [Орк, 0.02]
-  - [Эльф, 0.02]
+  - { label: Орк, weight: 0.02, height_offset: 15 }
+  - { label: Эльф, weight: 0.02, height_offset: 5, age_multiplier: 5 }
   - [Инопланетянин, 0.02]
-  - [Крысолюд, 0.02]
+  - { label: Крысолюд, weight: 0.02, height_offset: -35 }
   - [Существо, 0.02]
   - [Армянин, 0.02]
-  - [Огр, 0.02]
-  - [Гном, 0.02]
-  - [Драконид, 0.02]
-  - [Тролль, 0.02]
-  - [Вампир, 0.02]
-  - [Лич, 0.02]
-  - [Минотавр, 0.02]
-  - [Центавр, 0.02]
+  - { label: Огр, weight: 0.02, height_offset: 45 }
+  - { label: Гном, weight: 0.02, height_offset: -50, age_multiplier: 2 }
+  - { label: Драконид, weight: 0.02, height_offset: 15, age_multiplier: 2 }
+  - { label: Тролль, weight: 0.02, height_offset: 30, age_multiplier: 2 }
+  - { label: Вампир, weight: 0.02, age_multiplier: 5 }
+  - { label: Лич, weight: 0.02, age_multiplier: 8 }
+  - { label: Минотавр, weight: 0.02, height_offset: 30 }
+  - { label: Центавр, weight: 0.02, height_offset: 25 }
   - [Еблан, 0.02]
   - [Дурак, 0.02]
   - [Уебок, 0.02]

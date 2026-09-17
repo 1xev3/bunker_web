@@ -4,7 +4,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 
-const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
+// eslint-disable-next-line react-refresh/only-export-components -- Shared by both player views.
+export const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
   gender: User,
   race: Globe,
   body: Dumbbell,
@@ -28,7 +29,7 @@ interface Props {
 
 const INLINE_ICON_STYLE: React.CSSProperties = { display: 'inline', verticalAlign: '-3px', marginRight: '4px', opacity: 0.75 };
 
-function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: AttributeValue; className: string }) {
+export function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: AttributeValue; className: string }) {
   if (attrKey === 'profession') {
     const Icon = getProfessionIcon(value.value);
     return (

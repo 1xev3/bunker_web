@@ -34,9 +34,9 @@ function weightedEntity(entry, prefix, index, extraFactory = () => ({})) {
   }
   // Object syntax: { label, weight, groups? }
   if (entry && typeof entry === 'object' && !Array.isArray(entry) && 'label' in entry) {
-    const groups = Array.isArray(entry.groups) ? entry.groups : [];
-    const weight = typeof entry.weight === 'number' ? entry.weight : 1;
-    return { value: entity(entry.label, prefix, index, { ...extraFactory(entry.label, index), groups }), weight };
+    const { label, weight = 1, ...properties } = entry;
+    const groups = Array.isArray(properties.groups) ? properties.groups : [];
+    return { value: entity(label, prefix, index, { ...properties, ...extraFactory(label, index), groups }), weight };
   }
   const [value, weight] = entry;
   return { value: entity(value, prefix, index, extraFactory(value, index)), weight };

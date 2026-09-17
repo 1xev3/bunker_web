@@ -12,6 +12,7 @@ const {
   handleVote,
   handleKick,
   handleUpdateRoomSettings,
+  shufflePlayers,
 } = require('../server/ws/gameHandlers');
 const { botFoodSelection } = require('../server/ws/bunkerLifeHandlers');
 
@@ -23,6 +24,18 @@ function cleanRoom(room) {
   rooms.delete(room.roomCode);
   wsManager.dropRoom(room.roomCode);
 }
+
+test('players are shuffled independently of the host role', () => {
+  const players = ['Host', 'A', 'B', 'C'];
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    shufflePlayers(players);
+  } finally {
+    Math.random = originalRandom;
+  }
+  assert.deepEqual(players, ['A', 'B', 'C', 'Host']);
+});
 
 test('bots select professions for food replenishment without a living human', () => {
   const bot = new Player('Bot');

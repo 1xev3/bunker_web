@@ -352,6 +352,15 @@ function validatePackContent(packName, files) {
     validateWeightedTable(files.People.RACES, 'People -> RACES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });
+    for (const [index, race] of (files.People.RACES ?? []).entries()) {
+      if (!isPlainObject(race)) continue;
+      if (race.height_offset !== undefined && !Number.isFinite(race.height_offset)) {
+        addError(errors, `People -> RACES[${index}].height_offset`, 'ожидается число');
+      }
+      if (race.age_multiplier !== undefined && (!Number.isFinite(race.age_multiplier) || race.age_multiplier <= 0)) {
+        addError(errors, `People -> RACES[${index}].age_multiplier`, 'ожидается положительное число');
+      }
+    }
     validateWeightedTable(files.People.GENDER_AFFIXES, 'People -> GENDER_AFFIXES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     });

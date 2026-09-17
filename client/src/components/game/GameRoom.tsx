@@ -1,7 +1,9 @@
-import { ArrowLeft, Trophy, Shuffle, EyeOff, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Trophy, Shuffle, EyeOff, Eye, LayoutGrid, Table2 } from 'lucide-react';
 import type { RoomState, ClientMessage, Player } from '../../types/game';
 import BunkerInfo from '../bunker/BunkerInfo';
 import StatusTable from './StatusTable';
+import CharacterDossiers from './CharacterDossiers';
 import AdminPanel from '../admin/AdminPanel';
 import Button from '../ui/Button';
 import BunkerLifeReadyButton from './BunkerLifeReadyButton';
@@ -29,6 +31,7 @@ export default function GameRoom({
   showBunkerLifeReady,
   onLeave,
 }: Props) {
+  const [playerView, setPlayerView] = useState<'dossiers' | 'table'>('dossiers');
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
@@ -113,14 +116,34 @@ export default function GameRoom({
           {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
           {showBunkerLifeReady && <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />}
           <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} send={send} />
-          <Button variant="ghost" onClick={onLeave} className="ml-auto px-3 py-1.5"><ArrowLeft size={14} /> Выйти</Button>
+          <div className="ml-auto flex rounded-md border border-zinc-800 bg-zinc-950/70 p-0.5" role="group" aria-label="Вид списка персонажей">
+            <button
+              type="button"
+              onClick={() => setPlayerView('dossiers')}
+              className={`rounded px-2 py-1 transition-colors ${playerView === 'dossiers' ? 'status-avatar-me' : 'text-zinc-600 hover:text-zinc-300'}`}
+              aria-label="Досье"
+              title="Досье"
+            >
+              <LayoutGrid size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlayerView('table')}
+              className={`rounded px-2 py-1 transition-colors ${playerView === 'table' ? 'status-avatar-me' : 'text-zinc-600 hover:text-zinc-300'}`}
+              aria-label="Таблица"
+              title="Таблица"
+            >
+              <Table2 size={13} />
+            </button>
+          </div>
+          <Button variant="ghost" onClick={onLeave} className="px-3 py-1.5"><ArrowLeft size={14} /> Выйти</Button>
         </div>
 
-        <StatusTable
-          players={roomState.players}
-          myPlayerId={myPlayerId}
-          send={send}
-        />
+        {playerView === 'dossiers' ? (
+          <CharacterDossiers players={roomState.players} myPlayerId={myPlayerId} send={send} />
+        ) : (
+          <StatusTable players={roomState.players} myPlayerId={myPlayerId} send={send} />
+        )}
 
       </div>
     </div>

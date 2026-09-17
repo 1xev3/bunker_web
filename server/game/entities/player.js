@@ -193,18 +193,21 @@ class Player {
 
     const gender = weightedRandom(config.GENDERS);
     const affix = weightedRandom(config.GENDER_AFFIXES);
+    const race = weightedRandom(config.RACES);
     const ageRange = weightedRandom(config.AGES);
-    const age = randInt(ageRange.min, ageRange.max);
+    const baseAge = randInt(ageRange.min, ageRange.max);
+    const age = Math.round(baseAge * (race.age_multiplier ?? 1));
     this.gender = { genderId: gender.id, affixId: affix.id, age };
     this.full_name = generateFullName(config, gender.id);
-    this.race = { id: weightedRandom(config.RACES).id };
+    this.race = { id: race.id };
 
     const bodyType = weightedRandom(config.BODY_TYPES);
     const heightSettings = config.packSettings.characters.height;
-    const curve = getHeightCurve(config, age);
+    const curve = getHeightCurve(config, baseAge);
     let height = Math.round(gaussRandom(curve.mean, curve.std));
     if (gender.id === 'gender_2') height -= heightSettings.female_height_offset;
     height = Math.max(heightSettings.min, Math.min(heightSettings.max, height));
+    height += race.height_offset ?? 0;
     this.body = { bodyTypeId: bodyType.id, height };
 
     this.trait = { id: config.TRAITS[Math.floor(Math.random() * config.TRAITS.length)].id };

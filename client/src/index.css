@@ -571,7 +571,13 @@ td, th {
 .status-link:hover { color: color-mix(in srgb, var(--accent) 95%, #fff); }
 .status-ctrl-row { background-color: color-mix(in srgb, var(--accent) 9%, transparent); }
 .status-ctrl-btn:hover { color: var(--accent); }
-
+.dossier-card-me {
+  border-color: color-mix(in srgb, var(--accent) 45%, #27272a);
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--accent) 75%, transparent),
+    0 12px 30px rgba(0, 0, 0, 0.24),
+    0 0 20px rgba(var(--accent-rgb), 0.08);
+}
 /* --- Terminal / stencil headings ------------------------------------------ */
 /* Monospace UPPERCASE label with a leading sector marker ("// LABEL"). */
 .term-label {
