@@ -3,6 +3,7 @@ const { Player, ATTRIBUTE_KEYS } = require('./player');
 const Bunker = require('./bunker');
 const { loadPack, getDefaultPackName } = require('../gameConfig');
 const { serializeRoom } = require('./roomSerializer');
+const { resolveAlternatives } = require('../config/yamlEvents');
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -165,7 +166,7 @@ class GameRoom {
     }
 
     for (let i = 0; i < target; i++) {
-      players[i].secret_goal = goals[i];
+      players[i].secret_goal = resolveAlternatives(goals[i]);
     }
   }
 

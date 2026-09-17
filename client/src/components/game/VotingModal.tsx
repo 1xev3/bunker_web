@@ -12,9 +12,12 @@ export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, vo
   const candidates = players.filter(p => voting.candidate_ids.includes(p.id) && p.id !== myPlayerId);
 
   if (idle) return <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-    <span className="hidden items-center gap-1.5 text-xs text-zinc-500 lg:flex"><Vote size={14} className="text-amber-500" /> {voting.start_approvals.length}/{connected}</span>
-    <Button className={`h-10 px-3 text-xs ${proposed ? 'border-amber-700 bg-amber-950/30 text-amber-200' : ''}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>{proposed ? 'Голосование поддержано' : 'Предложить голосование'}</Button>
-    {isAdmin && <Button variant="danger" className="h-10 px-3 text-xs" title="Начать без общего согласия" onClick={() => window.confirm('Начать без общего согласия?') && send({ type: 'force_start_voting' })}>Начать сразу</Button>}
+    <Button className={`relative h-10 px-3 pb-3 text-xs ${proposed ? 'border-amber-700 bg-amber-950/30 text-amber-200' : ''}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>
+      <Vote size={14} /> {proposed ? 'Голосование поддержано' : 'Предложить голосование'}
+      <span className="absolute inset-x-3 bottom-1 flex h-1 justify-center gap-1 overflow-hidden" aria-label={`Поддержали: ${voting.start_approvals.length} из ${connected}`}>
+        {voting.start_approvals.map(id => <span key={id} title={players.find(player => player.id === id)?.name} className="h-1 w-1 shrink-0 rounded-full bg-amber-300 shadow-[0_0_5px_2px_rgba(252,211,77,0.7)]" />)}
+      </span>
+    </Button>
   </div>;
 
   return <details className="relative min-w-0 flex-1" open>

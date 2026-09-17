@@ -51,56 +51,7 @@ export default function GameRoom({
         backgroundPosition: 'center',
       }}
       />
-      <header className="topbar px-3 py-1.5 flex items-center justify-between shrink-0 z-[60]">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-amber-500 text-sm">☢</span>
-          <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
-          <span className="text-zinc-700">·</span>
-          <span className="font-mono text-zinc-500 text-sm tracking-widest">{roomState.room_code}</span>
-          {roomState.round > 0 && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
-                Раунд {roomState.round}
-              </span>
-            </>
-          )}
-          {roomState.bunker_capacity !== null && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                roomState.players.filter(p => p.is_active).length <= roomState.bunker_capacity
-                  ? 'phase-banner-voting'
-                  : 'text-zinc-400 border-zinc-800 bg-zinc-900'
-              }`}>
-                {roomState.players.filter(p => p.is_active).length}/{roomState.bunker_capacity} в бункере
-              </span>
-            </>
-          )}
-          {isFinished && (
-            <span className="text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
-              Завершена
-            </span>
-          )}
-          {(roomState.spectator_count ?? 0) > 0 && (
-            <>
-              <span className="text-zinc-700">·</span>
-              <span className="text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Eye size={10} /> {roomState.spectator_count}
-              </span>
-            </>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          onClick={onLeave}
-          className="px-3 py-1.5"
-        >
-          <ArrowLeft size={14} /> Выйти
-        </Button>
-      </header>
-
-      <div className="relative z-10 min-h-0 flex-1 flex flex-col px-3 pb-3 pt-1 gap-2 w-full">
+      <div className="relative z-10 min-h-0 flex-1 flex flex-col p-3 gap-2 w-full">
         {isFinished && gameWinner !== undefined && (
           <div className={`card p-4 text-center animate-fade-in-up ${
             gameWinner ? 'phase-banner-winner' : ''
@@ -152,10 +103,17 @@ export default function GameRoom({
           </div>
         )}
 
-        <div className="card relative z-20 flex shrink-0 items-center gap-2 p-2">
+        <div className="card relative z-[60] flex shrink-0 flex-wrap items-center gap-2 p-2">
+          <span className="px-1 text-sm font-semibold text-zinc-300"><span className="mr-2 text-amber-500">☢</span>Бункер</span>
+          <span className="font-mono text-xs tracking-widest text-zinc-500">{roomState.room_code}</span>
+          {roomState.round > 0 && <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-500">Раунд {roomState.round}</span>}
+          {roomState.bunker_capacity !== null && <span className={`rounded-full border px-2 py-0.5 text-xs ${roomState.players.filter(p => p.is_active).length <= roomState.bunker_capacity ? 'phase-banner-voting' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>{roomState.players.filter(p => p.is_active).length}/{roomState.bunker_capacity} в бункере</span>}
+          {isFinished && <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-500">Завершена</span>}
+          {(roomState.spectator_count ?? 0) > 0 && <span className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400"><Eye size={10} /> {roomState.spectator_count}</span>}
           {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
           {showBunkerLifeReady && <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />}
           <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} send={send} />
+          <Button variant="ghost" onClick={onLeave} className="ml-auto px-3 py-1.5"><ArrowLeft size={14} /> Выйти</Button>
         </div>
 
         <StatusTable
