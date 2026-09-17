@@ -514,11 +514,12 @@ async function resolveChoiceEvent(roomCode, optionId) {
   const aiRequested = room.settings.ai_enabled && Boolean(option.outcomes_by_selection);
   if (aiRequested) {
     adjudication = await adjudicateEvent(getAiProvider(), {
-      situation: event.description,
-      option: option.description ?? option.label,
+      scenario: event.description,
+      chosen_plan: option.label,
+      hypothetical_option_text: option.description ?? null,
       selected_items: selectedItems,
       selected_professions: selectedProfessions,
-      resources: selectedResources,
+      selected_resources: selectedResources,
     });
   }
   const resolutionExplanation = adjudication.explanation || (aiRequested
@@ -536,10 +537,12 @@ async function resolveChoiceEvent(roomCode, optionId) {
 
   const packOutcome = buildOptionEffects(event, option, room, selectedPlayerId, selection);
   let consequence = { effects: null, explanation: '', error: null };
-  if (room.settings.ai_event_consequences && !option.outcomes_by_selection) {
+  if (room.settings.ai_event_consequences) {
     consequence = await determineConsequences(getAiProvider(), {
-      event: event.description,
-      decision: option.description ?? option.label,
+      scenario: event.description,
+      chosen_plan: option.label,
+      hypothetical_option_text: option.description ?? null,
+      adjudicated_outcome: adjudication.outcome,
       players: room.getActivePlayers().map(player => ({
         id: player.id,
         name: player.name,
@@ -551,7 +554,7 @@ async function resolveChoiceEvent(roomCode, optionId) {
     });
   }
   const effects = consequence.effects ?? packOutcome.effects;
-  const message = consequence.effects ? consequence.explanation : packOutcome.message;
+  const message = consequence.effects ? null : packOutcome.message;
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
   effectResult.itemChanges.push(...consumedItems);
@@ -562,7 +565,7 @@ async function resolveChoiceEvent(roomCode, optionId) {
 
   settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage, consequence.explanation || resolutionExplanation, event, adjudication.outcome, {
     selected: selectedResources,
-    accepted: adjudication.accepted_resources,
+    accepted: consequence.effects ? consequence.used_resources : adjudication.accepted_resources,
     rejected: adjudication.rejected_resources,
     error: adjudication.error,
   });

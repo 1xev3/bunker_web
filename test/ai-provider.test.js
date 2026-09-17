@@ -7,16 +7,26 @@ const { adjudicateEvent, adjudicateFood, determineConsequences } = require('../s
 const { isAiAvailable, providerOptions } = require('../server/ai');
 
 test('AI adjudication accepts a valid structured response', async () => {
-  const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Инструмент подошёл', accepted_resources: ['Лом'], rejected_resources: [] });
-  const result = await adjudicateEvent(provider, { situation: 'Обвал', resources: ['Лом'] });
+  const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Лом удержал плиту', used_resources: ['Лом'], rejected_resources: [] });
+  const result = await adjudicateEvent(provider, { scenario: 'Обвал', selected_resources: ['Лом'] });
   assert.equal(result.outcome, 'success');
-  assert.equal(result.explanation, 'Учтены: Лом.');
+  assert.equal(result.explanation, 'Лом удержал плиту');
   assert.equal(provider.requests.length, 1);
 });
 
 test('AI adjudication reports an invalid schema', async () => {
   assert.deepEqual(await adjudicateEvent(new FakeAiProvider({ outcome: 'maybe', explanation: 'x' }), {}), { outcome: null, explanation: '', accepted_resources: [], rejected_resources: [], error: 'Ответ ИИ не соответствует ожидаемой схеме' });
-  assert.equal((await adjudicateEvent(new FakeAiProvider({ outcome: 'success', explanation: '', accepted_resources: [], rejected_resources: [] }), {})).error, 'Ответ ИИ не соответствует ожидаемой схеме');
+  assert.equal((await adjudicateEvent(new FakeAiProvider({ outcome: 'success', explanation: '', used_resources: [], rejected_resources: [] }), {})).error, 'Ответ ИИ не соответствует ожидаемой схеме');
+});
+
+test('AI retries once and rejects resources players did not select', async () => {
+  let attempt = 0;
+  const provider = new FakeAiProvider(() => ++attempt === 1
+    ? { outcome: 'success', explanation: 'Сработал фильтр', used_resources: ['Рунный фильтр'], rejected_resources: [] }
+    : { outcome: 'success', explanation: 'Кузнец прокалил воду в котле', used_resources: ['Рунный кузнец — Средний'], rejected_resources: ['Мыло'] });
+  const result = await adjudicateEvent(provider, { selected_resources: ['Мыло', 'Рунный кузнец — Средний'] });
+  assert.deepEqual(result.accepted_resources, ['Рунный кузнец — Средний']);
+  assert.equal(provider.requests.length, 2);
 });
 
 test('AI determines replenished food', async () => {
@@ -29,6 +39,7 @@ test('AI determines replenished food', async () => {
 test('AI determines event consequences using known player ids only', async () => {
   const provider = new FakeAiProvider({
     explanation: 'Обвал ранил исследователя',
+    used_resources: [],
     food_change: -2,
     player_changes: [
       { player_id: 'known', health: -15, sanity: -5, status_label: 'Ушиб', status_stat: 'health', status_value: -2, status_months: 2 },
