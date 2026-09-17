@@ -78,3 +78,29 @@ test('unknown profession effects fail pack validation', () => {
   };
   assert.match(validateStructuredConfig(invalid).join('\n'), /unknown effect/);
 });
+
+test('worsening health keeps the disease and stops at its worst stage', () => {
+  const actor = generatedPlayer('Alchemist');
+  const target = generatedPlayer('Target');
+  const room = new GameRoom(actor.id);
+  room.players = [actor, target];
+  const [alchemistId] = Object.entries(config.PROFESSION_ABILITIES).find(([, definition]) =>
+    definition.effect?.type === 'set_attribute'
+    && definition.effect.attribute === 'health'
+    && definition.effect.value === 'worse'
+  );
+  actor.profession = { id: alchemistId, levelId: config.SKILL_LEVELS[0].value.id };
+  actor.profession_ability_available = true;
+  const diseaseId = config.HEALTH_STATES[1].value.id;
+  const stages = [...config.HEALTH_STAGES.map(entry => entry.value)]
+    .sort((a, b) => a.multiplier - b.multiplier);
+  target.health = { stateId: diseaseId, stageId: stages[1].id };
+
+  assert.equal(applyProfessionAbility(room, actor, target.id).ok, true);
+  assert.deepEqual(target.health, { stateId: diseaseId, stageId: stages[2].id });
+
+  actor.profession_ability_used = false;
+  target.health.stageId = stages.at(-1).id;
+  assert.equal(applyProfessionAbility(room, actor, target.id).ok, true);
+  assert.deepEqual(target.health, { stateId: diseaseId, stageId: stages.at(-1).id });
+});

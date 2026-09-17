@@ -83,8 +83,17 @@ function generateHealth(config, forceHealthy = false) {
 function generateWorseHealth(current, config) {
   const healthyId = config.HEALTH_STATES[0]?.value.id;
   const states = config.HEALTH_STATES.map(entry => entry.value).filter(state => state.id !== healthyId);
-  const state = pickDifferent(current?.stateId, states);
-  return { stateId: state.id, stageId: weightedRandom(config.HEALTH_STAGES).id };
+  const stages = config.HEALTH_STAGES.map(entry => entry.value)
+    .sort((a, b) => (a.multiplier ?? 0) - (b.multiplier ?? 0));
+  if (current?.stateId && current.stateId !== healthyId) {
+    const stageIndex = stages.findIndex(stage => stage.id === current.stageId);
+    return {
+      stateId: current.stateId,
+      stageId: stages[Math.min(stages.length - 1, stageIndex + 1)]?.id ?? current.stageId,
+    };
+  }
+  const state = randomItem(states);
+  return { stateId: state.id, stageId: stages[0]?.id ?? null };
 }
 
 function randomizeAttribute(attribute, target, config) {
