@@ -29,6 +29,8 @@ export default function GameRoom({
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
+  const activeConnected = roomState.players.filter(player => player.is_active && player.connection_status === 'connected');
+  const proposed = roomState.voting.start_approvals.includes(myPlayerId);
 
   return (
     <div
@@ -150,6 +152,25 @@ export default function GameRoom({
 
         {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
 
+        {!isFinished && myPlayer?.is_active && !roomState.is_voting && (
+          <div className="card p-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-zinc-200">Коллективное голосование</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {roomState.voting.start_approvals.length} / {activeConnected.length} подтверждений
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button className={proposed ? 'btn-primary px-4 py-2 rounded-xl text-sm' : 'px-4 py-2 rounded-xl text-sm border border-zinc-700 text-zinc-300'} onClick={() => send({ type: 'toggle_voting_proposal' })}>
+                {proposed ? 'Отозвать предложение' : 'Предложить голосование'}
+              </button>
+              {roomState.admin_id === myPlayerId && (
+                <button className="px-3 py-2 rounded-xl text-xs border border-red-900/50 text-red-300" onClick={() => window.confirm('Принудительно начать голосование?') && send({ type: 'force_start_voting' })}>Аварийный старт</button>
+              )}
+            </div>
+          </div>
+        )}
+
         <StatusTable
           players={roomState.players}
           myPlayerId={myPlayerId}
@@ -166,6 +187,7 @@ export default function GameRoom({
           isAdmin={roomState.admin_id === myPlayerId}
           hasVoted={hasVoted}
           votedPlayers={roomState.voted_players}
+          electorateIds={roomState.voting.electorate_ids}
           votes={roomState.votes}
           send={send}
         />

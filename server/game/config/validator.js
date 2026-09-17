@@ -111,6 +111,7 @@ function validateEventSettings(settings, scope, errors) {
 }
 
 function validateWeightedTable(value, scope, errors, valueValidator = () => {}, { allowMultiplier = false, allowSeverity = false } = {}) {
+  if (isPlainObject(value)) value = Object.values(value).flat();
   if (!Array.isArray(value) || value.length === 0) {
     addError(errors, scope, 'ожидается непустой массив пар [значение, вес]');
     return;
@@ -146,6 +147,18 @@ function validateWeightedTable(value, scope, errors, valueValidator = () => {}, 
     if (allowMultiplier && entry[2] !== undefined && (typeof entry[2] !== 'number' || !Number.isFinite(entry[2]) || entry[2] < 0)) {
       addError(errors, `${scope}[${index}][2]`, 'множитель должен быть неотрицательным числом');
     }
+  });
+}
+
+function validateTaggedStrings(value, scope, errors) {
+  const flat = isPlainObject(value) ? Object.values(value).flat() : value;
+  if (!Array.isArray(flat) || flat.length === 0) {
+    addError(errors, scope, 'ожидается непустой массив или объект групп');
+    return;
+  }
+  flat.forEach((entry, index) => {
+    const label = isPlainObject(entry) ? entry.label : entry;
+    if (typeof label !== 'string' || label.trim() === '') addError(errors, `${scope}[${index}]`, 'ожидается строка или объект с label');
   });
 }
 
@@ -299,6 +312,10 @@ function validateEffect(effect, scope, errors, targetType) {
 
 function validateProfessionDefinition(value, scope, errors) {
   if (!isPlainObject(value)) { addError(errors, scope, 'ожидается объект описания профессии'); return; }
+  const hasEffect = value.effect !== undefined;
+  const hasVariants = Array.isArray(value.variants) && value.variants.length > 0;
+  // A profession with groups only is valid and has no active ability.
+  if (!hasEffect && !hasVariants) return;
   if (typeof value.title !== 'string' || value.title.trim() === '') addError(errors, `${scope}.title`, 'ожидается непустая строка');
   if (typeof value.description !== 'string' || value.description.trim() === '') addError(errors, `${scope}.description`, 'ожидается непустая строка');
   if (typeof value.publicMessage !== 'string' || value.publicMessage.trim() === '') addError(errors, `${scope}.publicMessage`, 'ожидается непустая строка');
@@ -308,9 +325,6 @@ function validateProfessionDefinition(value, scope, errors) {
   if (value.allowSelf !== undefined && typeof value.allowSelf !== 'boolean') {
     addError(errors, `${scope}.allowSelf`, 'если поле указано, оно должно быть boolean');
   }
-  const hasEffect = value.effect !== undefined;
-  const hasVariants = Array.isArray(value.variants) && value.variants.length > 0;
-  if (!hasEffect && !hasVariants) addError(errors, scope, 'должно быть задано либо поле effect, либо непустой массив variants');
   if (hasEffect) validateEffect(value.effect, `${scope}.effect`, errors, value.targetType);
   if (value.variants !== undefined) {
     if (!Array.isArray(value.variants) || value.variants.length === 0) {
@@ -348,7 +362,7 @@ function validatePackContent(packName, files) {
     validateWeightedTable(files.People.SKILL_LEVELS, 'People -> SKILL_LEVELS', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     }, { allowMultiplier: true });
-    validateStringArray(files.People.TRAITS, 'People -> TRAITS', errors);
+    validateTaggedStrings(files.People.TRAITS, 'People -> TRAITS', errors);
     validateWeightedTable(files.People.HEALTH_STATES, 'People -> HEALTH_STATES', errors, (v, s, e) => {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     }, { allowSeverity: true });
@@ -356,8 +370,8 @@ function validatePackContent(packName, files) {
       if (typeof v !== 'string' || v.trim() === '') addError(e, s, 'ожидается непустая строка');
     }, { allowMultiplier: true });
     validateStringArray(files.People.HOBBIES, 'People -> HOBBIES', errors);
-    validateStringArray(files.People.PHOBIAS, 'People -> PHOBIAS', errors);
-    validateStringArray(files.People.ADDITIONAL_INFO, 'People -> ADDITIONAL_INFO', errors);
+    validateTaggedStrings(files.People.PHOBIAS, 'People -> PHOBIAS', errors);
+    validateTaggedStrings(files.People.ADDITIONAL_INFO, 'People -> ADDITIONAL_INFO', errors);
   }
 
   if (!isPlainObject(files.Inventory)) {

@@ -8,7 +8,7 @@ events:
       min_month: 1
       min_players: 2
     participants:
-      dreamer: {}
+      dreamer: { tag: mental_risk }
     vars:
       vision: "{горящий город|лица погибших|бесконечный тёмный коридор|поднимающуюся к горлу скверну}"
     title: Вещий кошмар

@@ -5,6 +5,7 @@ const { applyProfessionAbility } = require('../game/abilities/professionAbilitie
 const { getDefaultPackName } = require('../game/gameConfig');
 const GameRoom = require('../game/entities/gameRoom');
 const { confirmBotsForBunkerLife, tryStartBunkerLife } = require('./bunkerLifeHandlers');
+const { isAiAvailable } = require('../ai');
 
 // Сообщение о раскрытии атрибута. Когда раскрывается пол, прикладываем ФИО,
 // иначе у других игроков оно не появится (точечный патч не несёт full_name).
@@ -31,6 +32,9 @@ function handleJoin(ws, msg) {
   if (room_code) {
     room = rooms.get(room_code.toUpperCase());
     if (!room || room.status !== 'waiting') return null;
+    if (room.players.some(player => player.name.localeCompare(trimmed, undefined, { sensitivity: 'base' }) === 0)) {
+      throw new Error('Этот никнейм уже занят');
+    }
   } else {
     const player = new Player(trimmed);
     const packName = typeof msg.pack === 'string' && msg.pack.trim()
@@ -60,6 +64,8 @@ function handleRejoin(ws, msg) {
   if (!session) return null;
   const room = rooms.get(session.roomCode);
   if (!room) return null;
+  const player = room.getPlayer(session.playerId);
+  if (!player || player.participation_status === 'left') return null;
 
   const key = `${session.roomCode}:${session.playerId}`;
   if (pendingAdminTransfers.has(key)) {
@@ -71,6 +77,26 @@ function handleRejoin(ws, msg) {
   ws.send(JSON.stringify({ type: 'room_state', data: room.toDict(session.playerId) }));
   wsManager.broadcast(session.roomCode, { type: 'player_reconnected', player_id: session.playerId });
   return { roomCode: session.roomCode, playerId: session.playerId };
+}
+
+function handleLeave(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room) return false;
+
+  sessions.deleteForPlayer(playerId, roomCode);
+  wsManager.disconnect(roomCode, playerId);
+  if (room.status === 'waiting') room.deletePlayer(playerId);
+  else room.setParticipationStatus(playerId, 'left');
+
+  if (room.adminId === playerId) transferAdmin(roomCode);
+  if (room.players.length === 0 || wsManager.getConnected(roomCode).size === 0) {
+    rooms.delete(roomCode);
+    wsManager.dropRoom(roomCode);
+  } else {
+    reconcileVoting(roomCode);
+    wsManager.broadcastState(roomCode, room);
+  }
+  return true;
 }
 
 // Join a room as a read-only spectator. Spectators have a synthetic id that
@@ -114,12 +140,15 @@ function fillRoomWithDevBots(room) {
 function handleStartGame(roomCode, playerId) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
-  fillRoomWithDevBots(room);
+  if (room.settings.fill_with_bots) fillRoomWithDevBots(room);
   if (room.players.length < 4) return;
 
   room.status = 'running';
   room.bunker.generate(null, room.config);
-  room.bunkerCapacity = Math.floor(room.players.length / 2);
+  room.bunkerCapacity = room.settings.capacity_mode === 'manual'
+    ? Math.min(room.players.length - 1, room.settings.manual_capacity)
+    : Math.floor(room.players.length / 2);
+  room.monthDuration = room.settings.month_duration_ms;
 
   for (const player of room.players) {
     player.generateCharacter(room.config);
@@ -151,33 +180,110 @@ function handleRevealAll(roomCode, playerId) {
   }
 }
 
-function addBotSelfVotes(room) {
-  for (const player of room.getActivePlayers()) {
-    if (player.is_bot) room.addVote(player.id, player.id);
-  }
+function connectedElectorate(room) {
+  const connected = wsManager.getConnected(room.roomCode);
+  return room.getActivePlayers().filter(player => player.is_bot || connected.has(player.id));
 }
 
-function handleStartVoting(roomCode, playerId) {
+function handleUpdateRoomSettings(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
-  if (!room || room.adminId !== playerId || room.status !== 'running' || room.isVoting) return;
-  if (room.getActivePlayers().length < 2) return;
-  room.resetVotes();
-  room.isVoting = true;
-  addBotSelfVotes(room);
-  if (room.votedPlayers.size >= room.getActivePlayers().length) {
-    finalizeVoting(roomCode);
+  if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
+  const next = msg.settings;
+  if (!next || typeof next !== 'object') return;
+  const valid = typeof next.fill_with_bots === 'boolean'
+    && typeof next.ai_enabled === 'boolean'
+    && Number.isInteger(next.month_duration_ms) && next.month_duration_ms >= 10_000 && next.month_duration_ms <= 900_000
+    && typeof next.event_frequency === 'number' && next.event_frequency >= 0 && next.event_frequency <= 1
+    && ['auto', 'manual'].includes(next.capacity_mode)
+    && Number.isInteger(next.manual_capacity) && next.manual_capacity >= 1 && next.manual_capacity <= 12;
+  if (!valid) {
+    wsManager.send(roomCode, playerId, { type: 'error', message: 'Недопустимые настройки комнаты' });
     return;
   }
+  if (next.ai_enabled && !isAiAvailable()) {
+    wsManager.send(roomCode, playerId, { type: 'error', message: 'AI-режим недоступен на сервере' });
+    return;
+  }
+  room.settings = { ...next };
+  room.monthDuration = next.month_duration_ms;
   wsManager.broadcastState(roomCode, room);
 }
 
-function handleCancelVoting(roomCode, playerId) {
-  const room = rooms.get(roomCode);
-  if (!room || room.adminId !== playerId || !room.isVoting) return;
-  room.isVoting = false;
+function beginBallot(roomCode, room, candidateIds = null, roundKind = 'first') {
+  const electorate = connectedElectorate(room);
+  if (electorate.length < 2) return false;
   room.resetVotes();
+  room.voting.phase = 'ballot';
+  room.voting.startApprovals.clear();
+  room.voting.cancelApprovals.clear();
+  room.voting.electorateIds = electorate.map(player => player.id);
+  room.voting.candidateIds = candidateIds ?? room.getActivePlayers().map(player => player.id);
+  room.voting.roundKind = roundKind;
+  for (const player of electorate) {
+    if (!player.is_bot) continue;
+    const targetId = room.voting.candidateIds.includes(player.id)
+      ? player.id
+      : room.voting.candidateIds[0];
+    if (targetId) room.addVote(player.id, targetId);
+  }
+  wsManager.broadcastState(roomCode, room);
+  return true;
+}
+
+function approvalsComplete(room, approvals) {
+  const electorate = connectedElectorate(room);
+  return electorate.length >= 2 && electorate.every(player => player.is_bot || approvals.has(player.id));
+}
+
+function handleToggleVotingProposal(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  const player = room?.getPlayer(playerId);
+  if (!room || room.status !== 'running' || room.voting.phase === 'ballot' || room.voting.phase === 'cancelling') return;
+  if (!player || player.participation_status !== 'active') return;
+  room.voting.phase = 'proposing';
+  for (const bot of room.getActivePlayers().filter(candidate => candidate.is_bot)) {
+    room.voting.startApprovals.add(bot.id);
+  }
+  if (room.voting.startApprovals.has(playerId)) room.voting.startApprovals.delete(playerId);
+  else room.voting.startApprovals.add(playerId);
+  if (approvalsComplete(room, room.voting.startApprovals)) beginBallot(roomCode, room);
+  else {
+    if (room.voting.startApprovals.size === 0) room.voting.phase = 'idle';
+    wsManager.broadcastState(roomCode, room);
+  }
+}
+
+function handleForceStartVoting(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || room.status !== 'running') return;
+  beginBallot(roomCode, room);
+}
+
+function handleToggleVotingCancellation(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  const player = room?.getPlayer(playerId);
+  if (!room || !['ballot', 'cancelling'].includes(room.voting.phase)) return;
+  if (!player || player.participation_status !== 'active') return;
+  for (const bot of room.getActivePlayers().filter(candidate => candidate.is_bot)) {
+    room.voting.cancelApprovals.add(bot.id);
+  }
+  if (room.voting.cancelApprovals.has(playerId)) room.voting.cancelApprovals.delete(playerId);
+  else room.voting.cancelApprovals.add(playerId);
+  room.voting.phase = room.voting.cancelApprovals.size ? 'cancelling' : 'ballot';
+  if (approvalsComplete(room, room.voting.cancelApprovals)) room.resetVoting();
   wsManager.broadcastState(roomCode, room);
 }
+
+function handleForceCancelVoting(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room || room.adminId !== playerId || !['ballot', 'cancelling'].includes(room.voting.phase)) return;
+  room.resetVoting();
+  wsManager.broadcastState(roomCode, room);
+}
+
+// Legacy admin commands remain as aliases while clients migrate.
+const handleStartVoting = handleForceStartVoting;
+const handleCancelVoting = handleForceCancelVoting;
 
 function finalizeVoting(roomCode) {
   const room = rooms.get(roomCode);
@@ -188,16 +294,21 @@ function finalizeVoting(roomCode) {
   const candidates = Object.keys(counts).filter(id => counts[id] === maxVotes);
   const isTie = candidates.length > 1;
 
+  if (isTie && room.voting.roundKind === 'first') {
+    wsManager.broadcast(roomCode, { type: 'voting_result', eliminated: null, votes: counts, is_tie: true, runoff: true });
+    beginBallot(roomCode, room, candidates, 'runoff');
+    return;
+  }
+
   let eliminated = null;
   if (!isTie) {
     const id = candidates[0];
-    room.removePlayer(id);
+    room.setParticipationStatus(id, 'eliminated');
     eliminated = room.getPlayer(id).toDict();
     room.round++;
   }
 
-  room.isVoting = false;
-  room.resetVotes();
+  room.resetVoting();
 
   wsManager.broadcast(roomCode, { type: 'voting_result', eliminated, votes: counts, is_tie: isTie });
 
@@ -229,22 +340,43 @@ function finalizeVoting(roomCode) {
 
 function handleVote(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
-  if (!room || !room.isVoting) return;
+  if (!room || !['ballot', 'cancelling'].includes(room.voting.phase)) return;
   const voter = room.getPlayer(playerId);
-  if (!voter || !voter.is_active) return;
+  if (!voter || voter.participation_status !== 'active' || !room.voting.electorateIds.includes(playerId)) return;
   const target = room.getPlayer(msg.target_id);
-  if (!target || !target.is_active) return;
+  if (!target || target.participation_status !== 'active' || !room.voting.candidateIds.includes(target.id)) return;
   if (msg.target_id === playerId && !voter.is_bot) return;
 
   if (room.addVote(playerId, msg.target_id)) {
     wsManager.send(roomCode, playerId, { type: 'vote_confirmed' });
-    const active = room.getActivePlayers();
-    if (room.votedPlayers.size >= active.length) {
+    if (room.voting.electorateIds.every(id => room.votedPlayers.has(id))) {
       finalizeVoting(roomCode);
     } else {
       wsManager.broadcastState(roomCode, room);
     }
   }
+}
+
+function reconcileVoting(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+  const electorateIds = connectedElectorate(room).map(player => player.id);
+  room.voting.startApprovals = new Set([...room.voting.startApprovals].filter(id => electorateIds.includes(id)));
+  room.voting.cancelApprovals = new Set([...room.voting.cancelApprovals].filter(id => electorateIds.includes(id)));
+  if (room.voting.phase === 'proposing' && approvalsComplete(room, room.voting.startApprovals)) {
+    beginBallot(roomCode, room);
+    return;
+  }
+  if (['ballot', 'cancelling'].includes(room.voting.phase)) {
+    room.voting.electorateIds = room.voting.electorateIds.filter(id => electorateIds.includes(id));
+    if (room.voting.phase === 'cancelling' && approvalsComplete(room, room.voting.cancelApprovals)) {
+      room.resetVoting();
+    } else if (room.voting.electorateIds.length > 0 && room.voting.electorateIds.every(id => room.votedPlayers.has(id))) {
+      finalizeVoting(roomCode);
+      return;
+    }
+  }
+  wsManager.broadcastState(roomCode, room);
 }
 
 function handleEndGame(roomCode, playerId) {
@@ -260,7 +392,9 @@ function handleEndGame(roomCode, playerId) {
 function handleKick(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId) return;
-  room.removePlayer(msg.player_id);
+  if (msg.player_id === room.adminId) return;
+  room.setParticipationStatus(msg.player_id, 'kicked');
+  sessions.deleteForPlayer(msg.player_id, roomCode);
   wsManager.broadcastState(roomCode, room);
   const active = room.getActivePlayers();
   if (room.status === 'running' && active.length <= 1) {
@@ -332,9 +466,9 @@ function handleAdminRevealAllPlayers(roomCode, playerId) {
 
 function handleUseProfessionAbility(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
-  if (!room || room.status !== 'running' || room.isVoting) return;
+  if (!room || room.status !== 'running' || ['ballot', 'cancelling'].includes(room.voting.phase)) return;
   const actor = room.getPlayer(playerId);
-  if (!actor || !actor.is_active) return;
+  if (!actor || actor.participation_status !== 'active') return;
 
   const result = applyProfessionAbility(room, actor, msg.target_id, msg.second_target_id, msg.variant);
   if (!result.ok) {
@@ -368,12 +502,18 @@ function transferAdmin(roomCode) {
 module.exports = {
   handleJoin,
   handleRejoin,
+  handleLeave,
   handleSpectate,
   handleStartGame,
+  handleUpdateRoomSettings,
   handleRevealAttr,
   handleRevealAll,
   handleStartVoting,
   handleCancelVoting,
+  handleToggleVotingProposal,
+  handleToggleVotingCancellation,
+  handleForceStartVoting,
+  handleForceCancelVoting,
   handleVote,
   handleEndGame,
   handleKick,
@@ -383,4 +523,5 @@ module.exports = {
   handleAdminRevealAllPlayers,
   handleUseProfessionAbility,
   transferAdmin,
+  reconcileVoting,
 };

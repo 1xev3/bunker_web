@@ -15,9 +15,20 @@ function serializeRoom(room, viewerId = null) {
     pack: room.packName,
     pack_meta: room.config.packMeta ?? { name: room.packName, author: '', color: '#f59e0b' },
     pack_settings: room.config.packSettings,
+    settings: { ...room.settings },
     status: room.status,
     spectator_count: wsManager.spectatorCount(room.roomCode),
-    is_voting: room.isVoting,
+    is_voting: room.voting.phase === 'ballot' || room.voting.phase === 'cancelling',
+    voting: {
+      phase: room.voting.phase,
+      start_approvals: [...room.voting.startApprovals],
+      cancel_approvals: [...room.voting.cancelApprovals],
+      electorate_ids: [...room.voting.electorateIds],
+      candidate_ids: [...room.voting.candidateIds],
+      voted_player_ids: [...room.votedPlayers],
+      my_vote: viewerId ? (room.votes[viewerId] ?? null) : null,
+      round_kind: room.voting.roundKind,
+    },
     round: room.round,
     bunker_capacity: room.bunkerCapacity,
     current_month: room.currentMonth,
@@ -39,9 +50,13 @@ function serializeRoom(room, viewerId = null) {
     outcome_confirmations: room.outcomeConfirmations ? [...room.outcomeConfirmations] : null,
     pending_outcome: room.pendingOutcomeReport ?? null,
     scheduled_events: room.scheduledEvents,
-    players: room.players.map(p => p.toDict(viewerId)),
+    players: room.players.map(p => ({
+      ...p.toDict(viewerId),
+      connection_status: p.is_bot || wsManager.isConnected(room.roomCode, p.id) ? 'connected' : 'disconnected',
+    })),
     bunker: room.status !== 'waiting' ? room.bunker.toDict() : null,
-    votes: room.isVoting ? { ...room.votes } : {},
+    // Kept for compatibility, but only the viewer's own secret ballot is exposed.
+    votes: viewerId && room.votes[viewerId] ? { [viewerId]: room.votes[viewerId] } : {},
     voted_players: [...room.votedPlayers],
   };
 }

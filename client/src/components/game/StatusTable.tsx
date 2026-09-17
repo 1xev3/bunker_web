@@ -66,8 +66,6 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
 }
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
-  const activePlayers = players.filter(player => player.is_active);
-
   return (
     <div className="card overflow-x-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
       <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
@@ -99,13 +97,14 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
         </thead>
 
         <tbody>
-          {activePlayers.map((player, i) => {
+          {players.map((player, i) => {
             const isMe = player.id === myPlayerId;
+            const inactive = !player.is_active;
 
             return [
               <tr
                 key={player.id}
-                className="border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40"
+                className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40 ${inactive ? 'grayscale opacity-55 bg-zinc-950/50' : ''}`}
               >
                 <td className="px-3 py-3 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
                 <td className="px-3 py-3 align-top">

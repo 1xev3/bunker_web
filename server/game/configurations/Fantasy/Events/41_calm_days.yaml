@@ -1,0 +1,87 @@
+# Спокойные эпизоды разбавляют череду катастроф. Это flavor-события: они
+# используют обычное подтверждение и не вводят отдельного типа/flow.
+events:
+  - id: shared_supper
+    type: flavor
+    weight: 3
+    title: Общий ужин
+    text: Кто-то нашёл старую скатерть, и сегодня все едят за одним столом. На несколько часов бункер стал похож на дом.
+    effects: [{ on: all, sanity: 5 }]
+
+  - id: clean_water_day
+    type: flavor
+    weight: 3
+    title: Чистая вода
+    text: Фильтры работают без единого сбоя. Вода прозрачна, и даже привычного привкуса железа сегодня нет.
+    effects: [{ on: all, health: 3 }]
+
+  - id: old_song
+    type: flavor
+    weight: 3
+    participants: { singer: { tag_not: mental_risk } }
+    title: Старая песня
+    text: "{singer} тихо затянул старую песню. Постепенно к мелодии присоединился весь бункер."
+    effects: [{ on: all, sanity: 4 }]
+
+  - id: calm_mushroom_harvest
+    type: flavor
+    weight: 2.5
+    title: Урожай грибов
+    text: Грибница в дальней секции дала неожиданный урожай. Запах свежей похлёбки разогнал уныние.
+    effects: [{ food: 120 }]
+
+  - id: repaired_lamp
+    type: flavor
+    weight: 3
+    title: Тёплый свет
+    text: Мигающий светильник наконец починили. В жилой секции впервые за долгое время нет тёмных углов.
+    effects: [{ on: all, sanity: 3 }]
+
+  - id: quiet_watch
+    type: flavor
+    weight: 3
+    title: Тихая вахта
+    text: Ночная смена прошла спокойно. За стенами ничего не скреблось, приборы молчали, и все выспались.
+    effects: [{ on: all, health: 2, sanity: 3 }]
+
+  - id: found_board_game
+    type: flavor
+    weight: 3
+    title: Коробка с игрой
+    text: В забытом ящике нашлась настольная игра с почти полным набором фигурок. Правила придумали заново.
+    effects: [{ on: all, sanity: 5 }]
+
+  - id: seedlings_sprout
+    type: flavor
+    weight: 2.5
+    title: Первые ростки
+    text: В ящике с землёй показались зелёные ростки. Они ещё ничего не кормят, но сам цвет кажется чудом.
+    effects: [{ on: all, sanity: 4 }]
+
+  - id: letters_evening
+    type: flavor
+    weight: 3
+    title: Вечер писем
+    text: Каждый написал письмо тому, кого уже не встретит. Читать вслух не стали, но после стало легче.
+    effects: [{ on: all, sanity: 3 }]
+
+  - id: dry_bedding
+    type: flavor
+    weight: 3
+    title: Сухие постели
+    text: Вентиляция прогрела спальные места, сырость ушла. Такая мелочь неожиданно вернула всем силы.
+    effects: [{ on: all, health: 3 }]
+
+  - id: map_on_wall
+    type: flavor
+    weight: 3
+    title: Карта на стене
+    text: На стене появилась карта убежища с подписями и смешными рисунками. Теперь здесь легче ориентироваться.
+    effects: [{ on: all, sanity: 2 }]
+
+  - id: birthday_without_calendar
+    type: flavor
+    weight: 3
+    title: День рождения наугад
+    text: Календарь давно сбился, поэтому день рождения назначили случайно. Подарков нет, зато праздник настоящий.
+    effects: [{ on: all, sanity: 5 }]

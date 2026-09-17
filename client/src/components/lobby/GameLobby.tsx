@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../../types/game';
 
@@ -24,11 +24,19 @@ function avatarStyle(id: string): React.CSSProperties {
 
 export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Props) {
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const [aiAvailable, setAiAvailable] = useState(false);
+  useEffect(() => {
+    fetch('/api/capabilities').then(response => response.json()).then(data => setAiAvailable(data.ai_events === true)).catch(() => setAiAvailable(false));
+  }, []);
   const isAdmin = roomState.admin_id === myPlayerId;
   const playerCount = roomState.players.length;
   // Server fills the room up to the minimum with bots on start, so the admin
   // can always start regardless of how many humans have joined.
   const canStart = isAdmin;
+  const updateSetting = <K extends keyof RoomState['settings'],>(key: K, value: RoomState['settings'][K]) => {
+    if (!isAdmin) return;
+    send({ type: 'update_room_settings', settings: { ...roomState.settings, [key]: value } });
+  };
 
   const copy = (kind: 'code' | 'link') => {
     const text = kind === 'code' ? roomState.room_code : window.location.href;
@@ -139,6 +147,14 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 <p className="text-zinc-600 text-xs text-center mt-4 leading-relaxed">
                   Поделитесь кодом или ссылкой с друзьями, чтобы&nbsp;они присоединились к&nbsp;игре.
                 </p>
+              </div>
+
+              <div className="card p-4 space-y-3">
+                <div className="flex items-center justify-between"><span className="text-sm text-zinc-300">Заполнить ботами</span><input type="checkbox" checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={event => updateSetting('fill_with_bots', event.target.checked)} /></div>
+                {aiAvailable && <div className="flex items-center justify-between"><span className="text-sm text-zinc-300">AI-оценка событий</span><input type="checkbox" checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={event => updateSetting('ai_enabled', event.target.checked)} /></div>}
+                <label className="block text-sm text-zinc-300">Длительность месяца: <span className="text-zinc-500">{Math.round(roomState.settings.month_duration_ms / 1000)} с</span><input className="w-full mt-1" type="range" min="10000" max="300000" step="10000" value={roomState.settings.month_duration_ms} disabled={!isAdmin} onChange={event => updateSetting('month_duration_ms', Number(event.target.value))} /></label>
+                <label className="block text-sm text-zinc-300">Частота событий: <span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span><input className="w-full mt-1" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} /></label>
+                <div className="flex items-center justify-between gap-3"><span className="text-sm text-zinc-300">Вместимость</span><select className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-sm" value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}><option value="auto">Авто</option><option value="manual">Вручную</option></select>{roomState.settings.capacity_mode === 'manual' && <input className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}</div>
               </div>
 
               {/* Start / wait */}

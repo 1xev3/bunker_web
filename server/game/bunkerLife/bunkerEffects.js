@@ -188,12 +188,12 @@ function filterTone(list, pred) {
   return Array.isArray(list) ? list.filter(o => pred(outcomeTone(o))) : [];
 }
 
-function pickSelectionScaledOutcome(buckets, { count = 0, diverse = false }) {
+function pickSelectionScaledOutcome(buckets, { count = 0, diverse = false, chanceModifier = 0 }) {
   if (count <= 0) {
     const none = buckets.none ?? buckets.some ?? buckets.all;
     return Array.isArray(none) && none.length ? pickOutcome(none) : { effects: [] };
   }
-  const success = selectionSuccessChance(count, diverse);
+  const success = selectionSuccessChance(count, diverse, chanceModifier);
   const goodSource = (diverse ? buckets.all : buckets.some) ?? buckets.all ?? buckets.some;
   const badSource = buckets.none ?? buckets.some ?? buckets.all;
   const won = Math.random() * 100 < success;

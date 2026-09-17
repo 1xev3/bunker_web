@@ -330,6 +330,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
     intentionalCloseRef.current = true;
     clearTimeout(reconnectRef.current);
     clearHeartbeat();
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isSpectator) {
+      wsRef.current.send(JSON.stringify({ type: 'leave_room' } satisfies ClientMessage));
+    }
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnectionLost(false);
@@ -348,7 +351,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       window.history.pushState({}, '', url);
     }
     window.location.reload();
-  }, [clearHeartbeat, setPlayerId]);
+  }, [clearHeartbeat, isSpectator, setPlayerId]);
 
   // Make the browser Back button leave the room. Entering a room pushes a
   // `?room=ABCD` history entry (see the `joined` handler), so pressing Back pops

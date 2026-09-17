@@ -24,6 +24,18 @@ class SessionManager {
     return s;
   }
 
+  delete(token) {
+    return this._sessions.delete(token);
+  }
+
+  deleteForPlayer(playerId, roomCode) {
+    for (const [token, session] of this._sessions) {
+      if (session.playerId === playerId && session.roomCode === roomCode) {
+        this._sessions.delete(token);
+      }
+    }
+  }
+
   cleanup() {
     const now = Date.now();
     for (const [token, s] of this._sessions) {

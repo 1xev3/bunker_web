@@ -113,6 +113,19 @@ function flattenItemSection(section) {
   return [];
 }
 
+// People sections may use the same compact category map as item sections.
+// The category name becomes a tag on every normalized value.
+function flattenTaggedSection(section) {
+  return flattenItemSection(section).map(({ entry, groups }) => applyGroups(entry, groups));
+}
+
+function flattenWeightedTaggedSection(section) {
+  return flattenItemSection(section).map(({ entry, groups }) => {
+    if (Array.isArray(entry)) return { label: entry[0], weight: entry[1], groups };
+    return applyGroups(entry, groups);
+  });
+}
+
 // Re-attaches `groups` onto an entry, promoting string/array forms to object
 // form so the group survives variant expansion and normalization.
 function applyGroups(entry, groups) {
@@ -216,7 +229,7 @@ function normalizeConfig(config) {
     attraction: DEFAULT_ATTRACTIONS[index] ?? 'opposite',
   }));
   next.AGES = (config.AGES ?? []).map((entry, index) => normalizeRange(entry, 'age', index));
-  next.BODY_TYPES = weightedEntities(config.BODY_TYPES ?? [], 'body');
+  next.BODY_TYPES = weightedEntities(flattenWeightedTaggedSection(config.BODY_TYPES ?? []), 'body');
   next.SKILL_LEVELS = (config.SKILL_LEVELS ?? []).map((entry, index) => {
     const normalized = weightedEntity(entry, 'skill_level', index);
     // Optional event success multiplier: array `[label, weight, multiplier]`
@@ -227,7 +240,7 @@ function normalizeConfig(config) {
     normalized.value.multiplier = typeof raw === 'number' && Number.isFinite(raw) ? raw : 1;
     return normalized;
   });
-  next.TRAITS = plainEntities(config.TRAITS ?? [], 'trait');
+  next.TRAITS = plainEntities(flattenTaggedSection(config.TRAITS ?? []), 'trait');
   next.HEALTH_STATES = (config.HEALTH_STATES ?? []).map((entry, index) => {
     const normalized = weightedEntity(entry, 'health_state', index);
     // Optional survival severity: how many points of starting bunker health this
@@ -250,8 +263,8 @@ function normalizeConfig(config) {
     return normalized;
   });
   next.HOBBIES = plainEntities(config.HOBBIES ?? [], 'hobby');
-  next.PHOBIAS = plainEntities(config.PHOBIAS ?? [], 'phobia');
-  next.ADDITIONAL_INFO = plainEntities(config.ADDITIONAL_INFO ?? [], 'additional');
+  next.PHOBIAS = plainEntities(flattenTaggedSection(config.PHOBIAS ?? []), 'phobia');
+  next.ADDITIONAL_INFO = plainEntities(flattenTaggedSection(config.ADDITIONAL_INFO ?? []), 'additional');
   next.INVENTORY = plainEntities(
     flattenItemSection(config.INVENTORY ?? []).flatMap(({ entry, groups }) => {
       const label = typeof entry === 'string' ? entry : (entry?.label ?? String(entry));
@@ -340,11 +353,21 @@ function validateStructuredConfig(config) {
   validateUniqueIds(config.BUNKER_ITEMS, 'BUNKER_ITEMS', errors);
 
   const professionIds = new Set(Object.keys(config.PROFESSION_ABILITIES));
+  const effectTypes = new Set([
+    'add_to_backpack', 'set_attribute', 'randomize_attribute', 'swap_attribute',
+    'steal_attribute', 'strip_attribute', 'inspect_attribute', 'reveal_attribute',
+    'adjust_food',
+  ]);
+  const targetTypes = new Set(['none', 'self', 'other', 'pair']);
   for (const [id, def] of Object.entries(config.PROFESSION_ABILITIES)) {
     if (!def.id || def.id !== id) errors.push(`PROFESSION_ABILITIES.${id}: definition id must match key`);
     if (!professionIds.has(id)) errors.push(`PROFESSION_ABILITIES.${id}: missing profession id`);
-    const effects = [def.effect, ...(def.variants ?? []).map(variant => variant.effect)].filter(Boolean);
+    const hasAbility = Boolean(def.effect || def.variants?.length);
+    if (hasAbility && !targetTypes.has(def.targetType)) errors.push(`PROFESSION_ABILITIES.${id}.targetType: unknown target type`);
+    if (def.variants?.length) errors.push(`PROFESSION_ABILITIES.${id}.variants: variants are not supported`);
+    const effects = [def.effect].filter(Boolean);
     for (const effect of effects) {
+      if (!effectTypes.has(effect.type)) errors.push(`PROFESSION_ABILITIES.${id}.effect.type: unknown effect "${effect.type}"`);
       if (effect.type === 'add_to_backpack' && !effect.itemId) {
         errors.push(`PROFESSION_ABILITIES.${id}: add_to_backpack requires itemId`);
       }

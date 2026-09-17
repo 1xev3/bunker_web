@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test": "node --test",
     "dev": "concurrently -n server,client -c cyan,magenta \"node --watch server/index.js\" \"npm --prefix client run dev\"",
     "build": "npm --prefix client run build",
     "start": "node server/index.js"
@@ -11,6 +12,7 @@
     "express": "^4.21.2",
     "fengari": "^0.1.5",
     "js-yaml": "^4.2.0",
+    "openai": "^7.17.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

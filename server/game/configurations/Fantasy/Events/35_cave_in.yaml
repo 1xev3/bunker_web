@@ -7,7 +7,7 @@ events:
       min_players: 3
       min_month: 2
     participants:
-      trapped: {}
+      trapped: { tag: physical_risk }
     title: Обвал
     text: >-
       Грохот без предупреждения — секция рухнула. {trapped} был там.

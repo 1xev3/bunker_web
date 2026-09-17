@@ -1,6 +1,8 @@
 const { randomUUID } = require('crypto');
 const { getProfessionAbilityInfo } = require('../abilities/professionAbilities');
 
+const PROFESSION_ABILITY_CHANCE = 0.75;
+
 const ATTRIBUTE_KEYS = ['gender', 'race', 'body', 'trait', 'profession', 'health', 'hobby', 'phobia', 'inventory', 'backpack', 'additional'];
 
 function weightedRandom(table) {
@@ -148,7 +150,7 @@ class Player {
   constructor(name, options = {}) {
     this.id = randomUUID();
     this.name = name;
-    this.is_active = true;
+    this.participation_status = 'active';
     this.is_bot = Boolean(options.isBot);
 
     this.full_name = null; // сгенерированное ФИО; раскрывается вместе с полом
@@ -167,6 +169,7 @@ class Player {
     this.secret_goal = null; // private role-play goal, visible only to this player
     this.config = null;
     this.profession_ability_used = false;
+    this.profession_ability_available = false;
     this.profession_ability_variant = null;
     this.vital_status = {
       health: 100,
@@ -175,6 +178,14 @@ class Player {
     };
 
     this.revealed_attributes = Object.fromEntries(ATTRIBUTE_KEYS.map(k => [k, false]));
+  }
+
+  get is_active() {
+    return this.participation_status === 'active';
+  }
+
+  set is_active(value) {
+    this.participation_status = value ? 'active' : 'eliminated';
   }
 
   generateCharacter(config) {
@@ -202,12 +213,9 @@ class Player {
     const professionId = professions[Math.floor(Math.random() * professions.length)];
     const level = weightedRandom(config.SKILL_LEVELS);
     this.profession = { id: professionId, levelId: level.id };
-
-    const abilityDef = config.PROFESSION_ABILITIES[professionId];
-    if (abilityDef?.variants?.length) {
-      const variants = abilityDef.variants;
-      this.profession_ability_variant = variants[Math.floor(Math.random() * variants.length)].key;
-    }
+    const professionDefinition = config.PROFESSION_ABILITIES[professionId];
+    this.profession_ability_available = Boolean(professionDefinition?.effect)
+      && Math.random() < PROFESSION_ABILITY_CHANCE;
 
     const healthState = weightedRandom(config.HEALTH_STATES);
     const healthyId = config.HEALTH_STATES[0]?.value.id;
@@ -285,7 +293,9 @@ class Player {
       name: this.name,
       // ФИО видно только после раскрытия пола (или самому игроку).
       full_name: (this.revealed_attributes.gender || viewerId === this.id) ? this.full_name : null,
-      is_active: this.is_active,
+      participation_status: this.participation_status,
+      // Temporary compatibility field for older clients.
+      is_active: this.participation_status === 'active',
       revealed_attributes: { ...this.revealed_attributes },
       attributes: attrs,
       description: viewerId === this.id ? this.description : '',

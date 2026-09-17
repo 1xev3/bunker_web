@@ -1,7 +1,11 @@
 const { rooms, wsManager } = require('../state');
 const { loadPack, listPacks, getDefaultPackName, getPackStats, getPackImagePath } = require('../game/gameConfig');
+const { isAiAvailable } = require('../ai');
 
 function setupApiRoutes(app) {
+  app.get('/api/capabilities', (_req, res) => {
+    res.json({ ai_events: isAiAvailable() });
+  });
   app.get('/api/config', (req, res) => {
     try {
       res.json(loadPack(req.query.pack || getDefaultPackName()));

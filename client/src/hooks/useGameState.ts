@@ -36,8 +36,9 @@ function reducer(state: RoomState | null, action: Action): RoomState | null {
         ),
       };
     case 'PLAYER_DISCONNECTED':
+      return { ...state, players: state.players.map(player => player.id === action.player_id ? { ...player, connection_status: 'disconnected' } : player) };
     case 'PLAYER_RECONNECTED':
-      return state;
+      return { ...state, players: state.players.map(player => player.id === action.player_id ? { ...player, connection_status: 'connected' } : player) };
     case 'ADMIN_CHANGED':
       return { ...state, admin_id: action.new_admin_id };
     case 'VOTING_RESULT':
@@ -46,7 +47,7 @@ function reducer(state: RoomState | null, action: Action): RoomState | null {
         is_voting: false,
         players: action.eliminated
           ? state.players.map(p =>
-              p.id === action.eliminated!.id ? { ...p, is_active: false } : p
+              p.id === action.eliminated!.id ? { ...p, is_active: false, participation_status: 'eliminated' as const } : p
             )
           : state.players,
       };

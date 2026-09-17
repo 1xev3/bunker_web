@@ -58,6 +58,8 @@ export interface Player {
   /** Сгенерированное ФИО; присутствует только после раскрытия пола (иначе null). */
   full_name: string | null;
   is_active: boolean;
+  participation_status: 'active' | 'eliminated' | 'kicked' | 'left';
+  connection_status: 'connected' | 'disconnected';
   revealed_attributes: Record<AttributeKey, boolean>;
   attributes: PlayerAttributes;
   description: string;
@@ -261,9 +263,20 @@ export interface RoomState {
   pack: string;
   pack_meta: PackMeta;
   pack_settings: PackSettings;
+  settings: RoomSettings;
   status: GameStatus;
   spectator_count?: number;
   is_voting: boolean;
+  voting: {
+    phase: 'idle' | 'proposing' | 'ballot' | 'cancelling';
+    start_approvals: string[];
+    cancel_approvals: string[];
+    electorate_ids: string[];
+    candidate_ids: string[];
+    voted_player_ids: string[];
+    my_vote: string | null;
+    round_kind: 'first' | 'runoff';
+  };
   round: number;
   bunker_capacity: number | null;
   current_month: number;
@@ -285,6 +298,15 @@ export interface RoomState {
   bunker: BunkerInfo | null;
   votes: Record<string, string>;
   voted_players: string[];
+}
+
+export interface RoomSettings {
+  fill_with_bots: boolean;
+  ai_enabled: boolean;
+  month_duration_ms: number;
+  event_frequency: number;
+  capacity_mode: 'auto' | 'manual';
+  manual_capacity: number;
 }
 
 export interface RoomListing {
@@ -317,6 +339,7 @@ export type ServerMessage =
   | { type: 'spectating'; spectator_id: string; room_code: string }
   | { type: 'error'; message: string }
   | { type: 'pong' }
+  | { type: 'left_room' }
   | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue; full_name?: string | null }
   | { type: 'vote_confirmed' }
   | { type: 'voting_result'; eliminated: Player | null; is_tie: boolean; votes: Record<string, number> }
@@ -386,6 +409,13 @@ export type ClientMessage =
   | { type: 'rejoin'; token: string }
   | { type: 'spectate'; room_code: string }
   | { type: 'ping' }
+  | { type: 'leave_room' }
+  | { type: 'toggle_voting_proposal' }
+  | { type: 'toggle_voting_cancellation' }
+  | { type: 'cast_elimination_vote'; target_id: string }
+  | { type: 'force_start_voting' }
+  | { type: 'force_cancel_voting' }
+  | { type: 'update_room_settings'; settings: RoomSettings }
   | { type: 'start_game' }
   | { type: 'reveal_attribute'; attribute: AttributeKey }
   | { type: 'reveal_all' }

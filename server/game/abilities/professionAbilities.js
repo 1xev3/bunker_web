@@ -135,7 +135,10 @@ function getTwoTargets(room, actor, targetId, secondTargetId, allowSelf = false)
   return t1 && t2 ? [t1, t2] : null;
 }
 
-function chooseInspectableAttribute(target) {
+function chooseInspectableAttribute(target, requestedAttribute) {
+  if (requestedAttribute && Object.hasOwn(target.revealed_attributes, requestedAttribute)) {
+    return requestedAttribute;
+  }
   const hidden = Object.entries(target.revealed_attributes)
     .filter(([, revealed]) => !revealed)
     .map(([attr]) => attr);
@@ -146,22 +149,25 @@ function executeEffect(effect, { room, actor, target, target2, config }) {
   switch (effect.type) {
     case 'add_to_backpack':
       actor.backpack = addItemToBackpack(actor.backpack, effect, config);
-      return {};
+      return { changedAttributes: [{ playerId: actor.id, attribute: 'backpack' }] };
 
     case 'set_attribute':
       if (effect.value === 'healthy') target[effect.attribute] = generateHealth(config, true);
       else if (effect.value === 'worse') target[effect.attribute] = generateWorseHealth(target[effect.attribute], config);
-      return {};
+      return { changedAttributes: [{ playerId: target.id, attribute: effect.attribute }] };
 
     case 'randomize_attribute':
       target[effect.attribute] = randomizeAttribute(effect.attribute, target, config);
-      return {};
+      return { changedAttributes: [{ playerId: target.id, attribute: effect.attribute }] };
 
     case 'swap_attribute': {
       const tmp = target[effect.attribute];
       target[effect.attribute] = target2[effect.attribute];
       target2[effect.attribute] = tmp;
-      return {};
+      return { changedAttributes: [
+        { playerId: target.id, attribute: effect.attribute },
+        { playerId: target2.id, attribute: effect.attribute },
+      ] };
     }
 
     case 'steal_attribute':
@@ -169,23 +175,27 @@ function executeEffect(effect, { room, actor, target, target2, config }) {
       target[effect.attribute] = effect.stolenValue
         ? { id: 'stolen', label: effect.stolenValue }
         : null;
-      return {};
+      return { changedAttributes: [
+        { playerId: actor.id, attribute: effect.attribute },
+        { playerId: target.id, attribute: effect.attribute },
+      ] };
 
     case 'strip_attribute':
       target[effect.attribute] = effect.value
         ? { id: 'stripped', label: effect.value }
         : null;
-      return {};
+      return { changedAttributes: [{ playerId: target.id, attribute: effect.attribute }] };
 
     case 'inspect_attribute': {
-      const attr = chooseInspectableAttribute(target);
+      const attr = chooseInspectableAttribute(target, effect.attribute);
       return { privateMessage: `${target.name}: ${ATTRIBUTE_LABELS[attr] ?? attr} - ${format(attr, target[attr], config)}.` };
     }
 
     case 'reveal_attribute': {
-      const attr = chooseInspectableAttribute(target);
+      const attr = chooseInspectableAttribute(target, effect.attribute);
       target.revealed_attributes[attr] = true;
       return {
+        reveals: [{ playerId: target.id, attribute: attr }],
         revealedLabel: ATTRIBUTE_LABELS[attr] ?? attr,
         revealedValue: format(attr, target[attr], config),
       };
@@ -193,10 +203,10 @@ function executeEffect(effect, { room, actor, target, target2, config }) {
 
     case 'adjust_food':
       adjustFoodSupply(room, effect.delta);
-      return {};
+      return { changedAttributes: [{ entity: 'bunker', attribute: 'food' }] };
 
     default:
-      return {};
+      throw new Error(`Unknown profession effect: ${effect.type}`);
   }
 }
 
@@ -231,12 +241,14 @@ function emptyAbility(used = false) {
 function getProfessionAbilityInfo(player, viewerId) {
   const canSeeProfession = viewerId === player.id || player.revealed_attributes.profession;
   if (!canSeeProfession) return null;
+  if (!player.profession_ability_available) return null;
 
   const config = player.config;
   if (!config) return emptyAbility(player.profession_ability_used);
 
   const def = getDefinition(player.profession, config);
   if (!def) return emptyAbility(player.profession_ability_used);
+  if (!def.effect && !def.variants?.length) return null;
 
   const lockedVariantKey = player.profession_ability_variant;
   const lockedVariantDef = def.variants?.find(v => v.key === lockedVariantKey);
@@ -255,22 +267,20 @@ function getProfessionAbilityInfo(player, viewerId) {
 
 function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) {
   const config = room.config;
+  if (!actor.profession_ability_available) return { ok: false, error: 'У этого персонажа нет активной способности профессии.' };
   const def = getDefinition(actor.profession, config);
   if (!def) return { ok: false, error: 'У этой профессии нет активной способности.' };
   if (actor.profession_ability_used) return { ok: false, error: 'Способность этой профессии уже использована.' };
 
-  const hasVariants = Boolean(def.variants?.length);
-  const lockedVariant = actor.profession_ability_variant;
-  if (hasVariants && (!lockedVariant || !def.variants.some(v => v.key === lockedVariant))) {
-    return { ok: false, error: 'Вариант способности не определён.' };
-  }
-
-  const effect = hasVariants ? def.variants.find(v => v.key === lockedVariant).effect : def.effect;
+  const effect = def.effect;
+  if (!effect) return { ok: false, error: 'Способность профессии настроена неверно.' };
   const allowSelf = def.allowSelf !== false;
   let target = null;
   let target2 = null;
 
-  if (def.targetType === 'other') {
+  if (def.targetType === 'self') {
+    target = actor;
+  } else if (def.targetType === 'other') {
     target = getTargetPlayer(room, actor, targetId, allowSelf);
     if (!target) return { ok: false, error: 'Нужно выбрать другого активного игрока.' };
   } else if (def.targetType === 'pair') {
@@ -280,13 +290,12 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
   }
 
   const effectResult = executeEffect(effect, { room, actor, target, target2, config });
-  const variantDef = def.variants?.find(v => v.key === lockedVariant);
   const publicMessage = formatMessage(def.publicMessage, {
     actor: actor.name,
     target: target?.name,
     target1: target?.name,
     target2: target2?.name,
-    attributeLabel: ATTRIBUTE_LABELS[variantDef?.key] ?? variantDef?.label,
+    attributeLabel: ATTRIBUTE_LABELS[effect.attribute] ?? effect.attribute,
     revealedLabel: effectResult.revealedLabel,
     revealedValue: effectResult.revealedValue,
   });
@@ -294,7 +303,13 @@ function applyProfessionAbility(room, actor, targetId, secondTargetId, variant) 
   actor.profession_ability_used = true;
   room.touch();
 
-  return { ok: true, publicMessage, privateMessage: effectResult.privateMessage };
+  return {
+    ok: true,
+    changedAttributes: effectResult.changedAttributes ?? [],
+    reveals: effectResult.reveals ?? [],
+    publicMessage,
+    privateMessage: effectResult.privateMessage ?? null,
+  };
 }
 
 module.exports = { getProfessionAbilityInfo, applyProfessionAbility };

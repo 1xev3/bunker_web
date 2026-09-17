@@ -2,12 +2,18 @@ const { rooms, wsManager, pendingAdminTransfers } = require('../state');
 const {
   handleJoin,
   handleRejoin,
+  handleLeave,
   handleSpectate,
   handleStartGame,
+  handleUpdateRoomSettings,
   handleRevealAttr,
   handleRevealAll,
   handleStartVoting,
   handleCancelVoting,
+  handleToggleVotingProposal,
+  handleToggleVotingCancellation,
+  handleForceStartVoting,
+  handleForceCancelVoting,
   handleVote,
   handleEndGame,
   handleKick,
@@ -17,6 +23,7 @@ const {
   handleAdminRevealAllPlayers,
   handleUseProfessionAbility,
   transferAdmin,
+  reconcileVoting,
 } = require('./gameHandlers');
 const { handleConfirmBunkerLife, handleForceStartBunkerLife, handleUpdateEventSelection, handleResolveEvent, handleConfirmOutcome, handleCastChoiceVote, handleConfirmChoiceSelection, handleCancelChoiceSelection, handlePlayerMaybeUnblock } = require('./bunkerLifeHandlers');
 
@@ -97,8 +104,22 @@ function setupWebSocket(wss) {
           ws.send(JSON.stringify({ type: 'pong' }));
           break;
         case 'start_game':            handleStartGame(roomCode, playerId); break;
+        case 'update_room_settings':  handleUpdateRoomSettings(roomCode, playerId, msg); break;
         case 'reveal_attribute':      handleRevealAttr(roomCode, playerId, msg); break;
         case 'reveal_all':            handleRevealAll(roomCode, playerId); break;
+        case 'leave_room': {
+          const leavingId = playerId;
+          playerId = null;
+          handleLeave(roomCode, leavingId);
+          ws.send(JSON.stringify({ type: 'left_room' }));
+          ws.close(1000, 'left room');
+          break;
+        }
+        case 'toggle_voting_proposal': handleToggleVotingProposal(roomCode, playerId); break;
+        case 'toggle_voting_cancellation': handleToggleVotingCancellation(roomCode, playerId); break;
+        case 'cast_elimination_vote': handleVote(roomCode, playerId, msg); break;
+        case 'force_start_voting':    handleForceStartVoting(roomCode, playerId); break;
+        case 'force_cancel_voting':   handleForceCancelVoting(roomCode, playerId); break;
         case 'start_voting':          handleStartVoting(roomCode, playerId); break;
         case 'cancel_voting':         handleCancelVoting(roomCode, playerId); break;
         case 'submit_vote':           handleVote(roomCode, playerId, msg); break;
@@ -138,7 +159,7 @@ function setupWebSocket(wss) {
         wsManager.disconnectSpectator(roomCode, spectatorId);
         const room = rooms.get(roomCode);
         // Don't keep an abandoned room alive just for a departed spectator.
-        if (room && wsManager.getConnected(roomCode).size === 0 && wsManager.spectatorCount(roomCode) === 0) {
+        if (room && room.players.length === 0 && wsManager.spectatorCount(roomCode) === 0) {
           rooms.delete(roomCode);
           wsManager.dropRoom(roomCode);
         } else if (room) {
@@ -152,7 +173,9 @@ function setupWebSocket(wss) {
       const room = rooms.get(roomCode);
       if (!room) return;
 
-      if (wsManager.getConnected(roomCode).size === 0) {
+      // A transport disconnect is not a leave: keep the in-memory room and
+      // session so every player can rejoin after a network interruption.
+      if (false && wsManager.getConnected(roomCode).size === 0) {
         wsLog(`room ${roomCode} empty — deleting`);
         rooms.delete(roomCode);
         wsManager.dropRoom(roomCode);
@@ -161,6 +184,7 @@ function setupWebSocket(wss) {
 
       wsManager.broadcast(roomCode, { type: 'player_disconnected', player_id: playerId });
       handlePlayerMaybeUnblock(roomCode, playerId);
+      reconcileVoting(roomCode);
 
       if (playerId === room.adminId) {
         const key = `${roomCode}:${playerId}`;

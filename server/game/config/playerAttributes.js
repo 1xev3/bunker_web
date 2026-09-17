@@ -56,4 +56,17 @@ function getAttrLabel(player, attribute) {
   }
 }
 
-module.exports = { getPlayerAttributeLabel: getAttrLabel };
+function getPlayerTags(player) {
+  const config = player?.config;
+  if (!config) return new Set();
+  const values = [
+    config.TRAITS?.find(e => e.id === player.trait?.id),
+    config.PHOBIAS?.find(e => e.id === player.phobia?.id),
+    config.ADDITIONAL_INFO?.find(e => e.id === player.additional?.id),
+    config.BODY_TYPES?.find(e => e.value.id === player.body?.bodyTypeId)?.value,
+    config.HEALTH_STATES?.find(e => e.value.id === player.health?.stateId)?.value,
+  ];
+  return new Set(values.flatMap(value => value?.groups ?? []));
+}
+
+module.exports = { getPlayerAttributeLabel: getAttrLabel, getPlayerTags };

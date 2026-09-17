@@ -7,8 +7,8 @@ events:
     when:
       min_players: 3
     participants:
-      hoarder: {}
-      accuser: {}
+      hoarder: { tag: social_risk }
+      accuser: { tag_not: social_risk }
     title: Спор из-за пайков
     text: >-
       {accuser} в открытую обвиняет {hoarder} в том, что тот тайком берёт лишнее

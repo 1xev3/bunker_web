@@ -20,9 +20,16 @@ class GameRoom {
     this.status = 'waiting'; // waiting | running | bunker_life | finished
     this.players = [];
     this.bunker = new Bunker();
-    this.votes = {};        // { voterId: targetId }
+    this.votes = {};        // { voterId: targetId }, never serialized in full during a ballot
     this.votedPlayers = new Set();
-    this.isVoting = false;
+    this.voting = {
+      phase: 'idle', // idle | proposing | ballot | cancelling
+      startApprovals: new Set(),
+      cancelApprovals: new Set(),
+      electorateIds: [],
+      candidateIds: [],
+      roundKind: 'first', // first | runoff
+    };
     this.round = 0;
     this.bunkerCapacity = null;
     this.currentMonth = 0;
@@ -35,6 +42,14 @@ class GameRoom {
     this.choicePendingSelection = null; // option id awaiting the council's picker choice, or null
     this.monthStartTime = null;
     this.monthDuration = this.config.packSettings.bunker_life.month_duration_ms;
+    this.settings = {
+      fill_with_bots: true,
+      month_duration_ms: this.monthDuration,
+      event_frequency: this.config.packSettings.events.bunker_event_chance,
+      capacity_mode: 'auto',
+      manual_capacity: 2,
+      ai_enabled: false,
+    };
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.scheduledEvents = []; // [{ event_id, trigger_month, context }]
     this.resolveConfirmations = new Set(); // players who confirmed current event resolve
@@ -61,17 +76,35 @@ class GameRoom {
   }
 
   getActivePlayers() {
-    return this.players.filter(p => p.is_active);
+    return this.players.filter(p => p.participation_status === 'active');
   }
 
-  removePlayer(playerId) {
+  get isVoting() {
+    return this.voting.phase === 'ballot' || this.voting.phase === 'cancelling';
+  }
+
+  setParticipationStatus(playerId, status) {
     const p = this.getPlayer(playerId);
-    if (p) { p.is_active = false; return true; }
+    if (p) {
+      p.participation_status = status;
+      if (status !== 'active') p.revealAll();
+      return true;
+    }
     return false;
   }
 
+  removePlayer(playerId) {
+    return this.setParticipationStatus(playerId, 'eliminated');
+  }
+
+  deletePlayer(playerId) {
+    const index = this.players.findIndex(player => player.id === playerId);
+    if (index < 0) return false;
+    this.players.splice(index, 1);
+    return true;
+  }
+
   addVote(voterId, targetId) {
-    if (this.votedPlayers.has(voterId)) return false;
     this.votes[voterId] = targetId;
     this.votedPlayers.add(voterId);
     return true;
@@ -88,6 +121,16 @@ class GameRoom {
   resetVotes() {
     this.votes = {};
     this.votedPlayers = new Set();
+  }
+
+  resetVoting() {
+    this.resetVotes();
+    this.voting.phase = 'idle';
+    this.voting.startApprovals.clear();
+    this.voting.cancelApprovals.clear();
+    this.voting.electorateIds = [];
+    this.voting.candidateIds = [];
+    this.voting.roundKind = 'first';
   }
 
   // Hands out secret role-play goals to a random subset of players, per the

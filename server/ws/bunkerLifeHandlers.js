@@ -6,6 +6,8 @@
 
 const { rooms, wsManager } = require('../state');
 const { getSelectKinds } = require('../game/config/yamlEvents');
+const { getAiProvider } = require('../ai');
+const { adjudicateEvent } = require('../ai/eventAdjudicator');
 const {
   parseDurationMonths,
   pickRandomEvent,
@@ -275,7 +277,7 @@ function continueAfterMonthTick(roomCode) {
     }
   }
 
-  const picked = Math.random() < room.config.packSettings.events.bunker_event_chance
+  const picked = Math.random() < room.settings.event_frequency
     ? pickRandomEvent(room.config, room)
     : null;
 
@@ -398,9 +400,11 @@ function handleForceStartBunkerLife(roomCode, playerId) {
   tryStartBunkerLife(roomCode, room);
 }
 
-function resolveChoiceEvent(roomCode, optionId) {
+async function resolveChoiceEvent(roomCode, optionId) {
   const room = getRoomInStatus(roomCode);
-  if (!room || !room.activeEvent) return;
+  if (!room || !room.activeEvent || room.aiResolutionPending) return;
+  room.aiResolutionPending = true;
+  try {
   const event = room.activeEvent;
   const options = Array.isArray(event.__source?.options) ? event.__source.options : [];
   if (options.length === 0) return;
@@ -425,7 +429,26 @@ function resolveChoiceEvent(roomCode, optionId) {
     (resourceKinds.includes('item') ? itemCount : 0) +
     (resourceKinds.includes('profession') ? professionSelectionStrength(room, room.activeEventSelection.selected_professions) : 0);
   const diverse = resourceKinds.every(k => (k === 'item' ? itemCount > 0 : profCount > 0));
-  const selection = { count: strength, diverse };
+  let adjudication = { chance_modifier: 0, explanation: '', result_seed: '' };
+  if (room.settings.ai_enabled && option.outcomes_by_selection) {
+    const selectedItems = room.activeEventSelection.selected_items.map(entry => entry.item_id);
+    const selectedProfessions = room.activeEventSelection.selected_professions.map(id => {
+      const player = room.getPlayer(id);
+      return player ? {
+        profession: room.config.PROFESSION_ABILITIES[player.profession?.id]?.label ?? player.profession?.id,
+        level: room.config.SKILL_LEVELS.find(entry => entry.value.id === player.profession?.levelId)?.value.label,
+      } : null;
+    }).filter(Boolean);
+    adjudication = await adjudicateEvent(getAiProvider(), {
+      situation: event.description,
+      option: option.description ?? option.label,
+      base_chance: Math.min(100, Math.round(strength * 40)),
+      selected_items: selectedItems,
+      selected_professions: selectedProfessions,
+      modifier_range: [-20, 20],
+    });
+  }
+  const selection = { count: strength, diverse, chanceModifier: adjudication.chance_modifier };
 
   if (option.consume_items) {
     for (const entry of room.activeEventSelection.selected_items) consumeSelectedItem(room, entry);
@@ -434,12 +457,16 @@ function resolveChoiceEvent(roomCode, optionId) {
   const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId, selection);
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
-  const finalMessage = injectItemPlaceholders(message, effectResult.itemChanges);
+  const narrative = adjudication.result_seed || adjudication.explanation;
+  const finalMessage = [injectItemPlaceholders(message, effectResult.itemChanges), narrative].filter(Boolean).join(' ');
 
   room.activeEvent = null;
   resetEventSelection(room);
 
   settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage);
+  } finally {
+    room.aiResolutionPending = false;
+  }
 }
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
