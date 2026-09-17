@@ -34,7 +34,6 @@ events:
         description: Повесить замок и выдавать паёк только при всех.
         effects:
           - { on: all, sanity: -3 }
-          - { flag: { storage_locked: true } }
       - id: ignore
         label: Закрыть глаза
         description: Не сеять раздор — пусть совесть сама накажет.

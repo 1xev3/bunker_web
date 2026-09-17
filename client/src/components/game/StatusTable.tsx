@@ -67,8 +67,8 @@ function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
   return (
-    <div className="card overflow-x-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
-      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
+    <div className="card min-h-0 flex-1 overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+      <table className="h-full w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
           <col style={{ width: '105px' }} />
@@ -80,12 +80,12 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
 
         <thead>
           <tr className="bg-zinc-900/80 border-b border-zinc-800">
-            <th className="px-3 py-3 text-left text-zinc-600 font-medium text-sm">#</th>
-            <th className="px-3 py-3 text-left text-zinc-400 font-semibold text-sm uppercase tracking-widest">Игрок</th>
+            <th className="px-3 py-2 text-left text-zinc-600 font-medium text-sm">#</th>
+            <th className="px-3 py-2 text-left text-zinc-400 font-semibold text-sm uppercase tracking-widest">Игрок</th>
             {ATTRIBUTE_KEYS.map(k => {
               const Icon = ATTRIBUTE_ICONS[k];
               return (
-                <th key={k} className="px-3 py-3 text-left text-zinc-500 font-medium text-sm">
+                <th key={k} className="px-3 py-2 text-left text-zinc-500 font-medium text-sm">
                   <span className="flex items-center gap-1">
                     <Icon size={12} className="shrink-0" />
                     {ATTRIBUTE_LABELS[k]}
@@ -106,20 +106,15 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                 key={player.id}
                 className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40 ${inactive ? 'grayscale opacity-55 bg-zinc-950/50' : ''}`}
               >
-                <td className="px-3 py-3 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
-                <td className="px-3 py-3 align-top">
-                  <div className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 bg-zinc-800 text-zinc-400">
-                      {player.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
+                <td className="px-3 py-2 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
+                <td className="px-3 py-2 align-top">
+                  <div>
                       <span className="font-semibold break-words leading-snug text-sm text-zinc-100">
                         {player.full_name
                           ? <>{player.full_name} <span className="text-zinc-400 font-normal">({player.name})</span></>
                           : player.name}
                       </span>
                       {isMe && <span className="ml-1 text-xs status-name-me">(Вы)</span>}
-                    </div>
                   </div>
                 </td>
                 {ATTRIBUTE_KEYS.map(key => {
@@ -128,7 +123,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
 
                   if (isMe && val) {
                     return (
-                      <td key={key} className="px-3 py-3 align-top">
+                      <td key={key} className="px-3 py-2 align-top">
                         {revealed ? (
                           <AttrValue attrKey={key} value={val} className="text-emerald-400 text-sm leading-relaxed break-words" />
                         ) : (
@@ -145,7 +140,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   }
 
                   return (
-                    <td key={key} className="px-3 py-3 align-top">
+                    <td key={key} className="px-3 py-2 align-top">
                       {val
                         ? <AttrValue attrKey={key} value={val} className="text-zinc-300 text-sm leading-relaxed break-words" />
                         : <span className="text-zinc-700">—</span>

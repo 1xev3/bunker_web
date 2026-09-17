@@ -3,6 +3,7 @@ import type { AttributeKey, Player } from '../../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 import AdminModalFrame from './AdminModalFrame';
 import PlayerOptionList from './PlayerOptionList';
+import Button from '../ui/Button';
 
 export default function RevealPlayerAttributeModal({
   players,
@@ -34,55 +35,49 @@ export default function RevealPlayerAttributeModal({
         <PlayerOptionList players={players} selectedId={selectedId} onSelect={setSelectedId} />
 
         <div className="flex gap-2">
-          <button
-            className="flex-1 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all"
+          <Button
+            className="flex-1"
             onClick={() => setSelectedAttributes([...ATTRIBUTE_KEYS])}
           >
             Выбрать все
-          </button>
-          <button
-            className="flex-1 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all"
+          </Button>
+          <Button
+            className="flex-1"
             onClick={() => setSelectedAttributes([])}
           >
             Снять все
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           {ATTRIBUTE_KEYS.map(attribute => (
-            <button
+            <Button
               key={attribute}
-              className={`rounded-xl border px-3 py-2.5 text-sm transition-all ${
-                selectedAttributes.includes(attribute)
-                  ? 'border-amber-500/70 bg-amber-950/30 text-amber-100'
-                  : 'border-zinc-700/70 bg-zinc-800/40 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800/70'
-              }`}
+              variant={selectedAttributes.includes(attribute) ? 'primary' : 'secondary'}
+              className="py-2.5"
               onClick={() => toggleAttribute(attribute)}
             >
               {ATTRIBUTE_LABELS[attribute]}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       <div className="mt-5 flex gap-2">
-        <button
-          className="flex-1 rounded-xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all"
+        <Button
+          className="flex-1 py-3"
           onClick={onClose}
         >
           Отмена
-        </button>
-        <button
-          className={`flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
-            selectedId && selectedAttributes.length > 0
-              ? 'btn-primary text-white'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
-          }`}
+        </Button>
+        <Button
+          variant="primary"
+          className="flex-1 py-3 font-semibold"
           disabled={!selectedId || selectedAttributes.length === 0}
           onClick={() => onConfirm(selectedId, selectedAttributes)}
         >
           Открыть выбранное
-        </button>
+        </Button>
       </div>
     </AdminModalFrame>
   );

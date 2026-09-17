@@ -1,46 +1,35 @@
-import { Vote, Check, PauseCircle } from 'lucide-react';
-import type { Player, ClientMessage, RoomState } from '../../types/game';
+import { Check, ChevronDown, Vote } from 'lucide-react';
+import type { ClientMessage, Player, RoomState } from '../../types/game';
+import Button from '../ui/Button';
 
-interface Props {
-  players: Player[];
-  myPlayerId: string;
-  isAdmin: boolean;
-  hasVoted: boolean;
-  votedPlayers: string[];
-  electorateIds: string[];
-  votes: RoomState['votes'];
-  send: (msg: ClientMessage) => void;
-}
+interface Props { players: Player[]; myPlayerId: string; isAdmin: boolean; hasVoted: boolean; voting: RoomState['voting']; send: (msg: ClientMessage) => void; }
 
-export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, votedPlayers, electorateIds, votes, send }: Props) {
-  const active = players.filter(player => player.is_active);
-  const myVoteTarget = votes[myPlayerId];
+export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, voting, send }: Props) {
+  const idle = voting.phase === 'idle' || voting.phase === 'proposing';
+  const proposed = voting.start_approvals.includes(myPlayerId);
+  const cancelling = voting.cancel_approvals.includes(myPlayerId);
+  const connected = players.filter(p => p.is_active && p.connection_status === 'connected').length;
+  const candidates = players.filter(p => voting.candidate_ids.includes(p.id) && p.id !== myPlayerId);
 
-  return (
-    <aside className="fixed bottom-4 right-4 z-40 w-[calc(100%-2rem)] max-w-sm max-h-[75vh] overflow-auto">
-      <div className="bg-zinc-900/95 backdrop-blur border border-zinc-700/80 rounded-2xl p-5 shadow-2xl animate-fade-in-up">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2"><Vote size={18} className="text-amber-500" /><h2 className="font-bold text-zinc-100">Голосование</h2></div>
-          <span className="text-xs text-zinc-400 bg-zinc-800 border border-zinc-700 px-2.5 py-1 rounded-full font-mono">{votedPlayers.length} / {electorateIds.length}</span>
-        </div>
-        {hasVoted && <p className="mb-3 text-xs text-emerald-400 flex items-center gap-1.5"><Check size={13} /> Голос учтён. Его можно изменить.</p>}
-        <div className="space-y-1.5">
-          {active.filter(player => player.id !== myPlayerId).map(player => {
-            const selected = myVoteTarget === player.id;
-            return (
-              <button key={player.id} className={`w-full border rounded-xl py-2.5 px-4 text-left text-sm flex items-center gap-2.5 transition-all ${selected ? 'border-amber-600 bg-amber-950/30 text-amber-200' : 'bg-zinc-800/30 border-zinc-700/60 hover:border-red-700/60 text-zinc-200'}`} onClick={() => send({ type: 'cast_elimination_vote', target_id: player.id })}>
-                <span className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold">{player.name.charAt(0).toUpperCase()}</span>
-                <span className="font-medium">{player.name}</span>
-                {selected && <Check size={14} className="ml-auto" />}
-              </button>
-            );
-          })}
-        </div>
-        <button className="mt-4 w-full px-4 py-2.5 rounded-xl text-sm border border-zinc-700 text-zinc-300 hover:bg-zinc-800 flex items-center justify-center gap-2" onClick={() => send({ type: 'toggle_voting_cancellation' })}>
-          <PauseCircle size={14} /> Предложить / отозвать отмену
-        </button>
-        {isAdmin && <button className="mt-2 w-full px-4 py-2 rounded-xl text-xs border border-red-900/50 text-red-300" onClick={() => window.confirm('Принудительно отменить голосование?') && send({ type: 'force_cancel_voting' })}>Аварийная отмена</button>}
+  if (idle) return <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+    <span className="hidden items-center gap-1.5 text-xs text-zinc-500 lg:flex"><Vote size={14} className="text-amber-500" /> {voting.start_approvals.length}/{connected}</span>
+    <Button className={`h-10 px-3 text-xs ${proposed ? 'border-amber-700 bg-amber-950/30 text-amber-200' : ''}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>{proposed ? 'Голосование поддержано' : 'Предложить голосование'}</Button>
+    {isAdmin && <Button variant="danger" className="h-10 px-3 text-xs" title="Начать без общего согласия" onClick={() => window.confirm('Начать без общего согласия?') && send({ type: 'force_start_voting' })}>Начать сразу</Button>}
+  </div>;
+
+  return <details className="relative min-w-0 flex-1" open>
+    <summary className="flex h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-amber-800/60 bg-amber-950/20 px-3 text-xs text-amber-200">
+      <span className="flex items-center gap-2"><Vote size={14} /> {voting.round_kind === 'runoff' ? 'Второй тур' : 'Голосование'}{hasVoted && <Check size={13} className="text-emerald-400" />}</span>
+      <span className="flex items-center gap-2 font-mono text-zinc-400">{voting.voted_player_ids.length}/{voting.electorate_ids.length}<ChevronDown size={12} /></span>
+    </summary>
+    <div className="card absolute right-0 top-[calc(100%+8px)] z-50 w-[min(680px,calc(100vw-24px))] p-3 shadow-2xl">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {candidates.map(player => <Button key={player.id} variant={voting.my_vote === player.id ? 'primary' : 'secondary'} className="justify-start px-3 py-2 text-left" onClick={() => send({ type: 'cast_elimination_vote', target_id: player.id })}>{player.name}{voting.my_vote === player.id && <Check size={13} className="ml-auto" />}</Button>)}
       </div>
-    </aside>
-  );
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button className={`px-3 py-2 text-xs ${cancelling ? 'border-amber-700 text-amber-200' : ''}`} onClick={() => send({ type: 'toggle_voting_cancellation' })}>{cancelling ? 'Отмена поддержана' : 'Предложить отмену'} · {voting.cancel_approvals.length}/{voting.electorate_ids.length}</Button>
+        {isAdmin && <Button variant="danger" className="px-3 py-2 text-xs" onClick={() => window.confirm('Отменить без общего согласия?') && send({ type: 'force_cancel_voting' })}>Отменить сразу</Button>}
+      </div>
+    </div>
+  </details>;
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Brain, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Sparkles, Send, Package, ShieldAlert } from 'lucide-react';
+import { Brain, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Sparkles, Send, Package, ShieldAlert, Clock } from 'lucide-react';
 import type { ClientMessage, EventOutcome, Player } from '../../types/game';
 import { renderEventText } from '../event/eventUtils';
 
@@ -67,6 +67,8 @@ export default function EventOutcomeModal({ outcome, activePlayers, myPlayerId, 
   });
   if (outcome.room_changed)
     rows.push(<OutcomeRow key="room" icon={<DoorOpen size={14} className="text-zinc-400" />} label="Бункер изменился" />);
+  (outcome.scheduled_events ?? []).forEach((scheduled, i) =>
+    rows.push(<OutcomeRow key={`scheduled-${i}-${scheduled.title}`} icon={<Clock size={14} className="text-violet-400" />} label={`Отложено: ${scheduled.title}`} value={`через ${scheduled.in_months} мес.`} />));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
@@ -79,7 +81,19 @@ export default function EventOutcomeModal({ outcome, activePlayers, myPlayerId, 
           <div className="border-b border-zinc-800 p-5">
             <div className="flex items-start gap-3">
               <Brain size={20} className="mt-0.5 shrink-0 text-sky-400" />
-              <p className="text-sm leading-relaxed text-zinc-300">{outcome.ai_explanation}</p>
+              <div>
+                <p className={`mb-1 text-xs font-bold uppercase tracking-wide ${outcome.ai_outcome === 'success' ? 'text-emerald-400' : outcome.ai_outcome === 'failure' ? 'text-red-400' : 'text-sky-400'}`}>
+                  {outcome.ai_outcome === 'success' ? 'Решение ИИ: успех' : outcome.ai_outcome === 'failure' ? 'Решение ИИ: неудача' : outcome.ai_score != null ? `Оценка ИИ: ${outcome.ai_score}%` : 'Объяснение расчёта'}
+                </p>
+                <p className="text-sm leading-relaxed text-zinc-300">{outcome.ai_explanation}</p>
+                {(outcome.selected_resources?.length ?? 0) > 0 && (
+                  <div className="mt-3 space-y-1 text-xs">
+                    <p className="text-zinc-400">Выбрано: {outcome.selected_resources!.join(', ')}</p>
+                    {(outcome.accepted_resources?.length ?? 0) > 0 && <p className="text-emerald-400">Зачтено: {outcome.accepted_resources!.join(', ')}</p>}
+                    {(outcome.rejected_resources?.length ?? 0) > 0 && <p className="text-red-400">Не помогло: {outcome.rejected_resources!.join(', ')}</p>}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

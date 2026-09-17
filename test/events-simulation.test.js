@@ -9,6 +9,12 @@ const {
   buildSchedulePrimitives, pickOutcome,
 } = require('../server/game/config/yamlEvents');
 const { validatePack } = require('../server/game/config/loader');
+const { isEmptyOutcome } = require('../server/ws/bunkerLifeHandlers');
+
+test('AI explanation makes an otherwise empty event outcome visible', () => {
+  assert.equal(isEmptyOutcome({}, null, 'Выбранная профессия не подходит'), false);
+  assert.equal(isEmptyOutcome({}, null, null), true);
+});
 
 function seeded(seed) {
   return () => ((seed = (1664525 * seed + 1013904223) >>> 0) / 2 ** 32);
@@ -31,7 +37,7 @@ test('Fantasy event references and schemas validate as a pack', () => {
   for (const event of config.EVENTS) assert.deepEqual(validateEvent(event, event.id), []);
 });
 
-test('positive and neutral events have visible weight in a seeded distribution', () => {
+test('calm events stay visible without dominating the seeded distribution', () => {
   const eligible = config.EVENTS.filter(event => !event.scheduled_only && event.weight > 0);
   const total = eligible.reduce((sum, event) => sum + event.weight, 0);
   const calmIds = new Set(config.EVENTS.filter(event => event.__file.endsWith('41_calm_days.yaml')).map(event => event.id));
@@ -42,7 +48,8 @@ test('positive and neutral events have visible weight in a seeded distribution',
     const selected = eligible.find(event => (cursor -= event.weight) <= 0) ?? eligible.at(-1);
     if (calmIds.has(selected.id)) calm++;
   }
-  assert.ok(calm / 5000 >= 0.15, `calm event share was ${calm / 5000}`);
+  const share = calm / 5000;
+  assert.ok(share >= 0.15 && share <= 0.3, `calm event share was ${share}`);
 });
 
 test('seeded full event preparation resolves participants, outcomes, effects and schedules', () => {

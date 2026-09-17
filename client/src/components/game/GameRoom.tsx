@@ -2,8 +2,9 @@ import { ArrowLeft, Trophy, Shuffle, EyeOff, Eye } from 'lucide-react';
 import type { RoomState, ClientMessage, Player } from '../../types/game';
 import BunkerInfo from '../bunker/BunkerInfo';
 import StatusTable from './StatusTable';
-import VotingModal from './VotingModal';
 import AdminPanel from '../admin/AdminPanel';
+import Button from '../ui/Button';
+import BunkerLifeReadyButton from './BunkerLifeReadyButton';
 
 interface Props {
   roomState: RoomState;
@@ -13,6 +14,7 @@ interface Props {
   gameWinner: Player | null | undefined;
   hasVoted: boolean;
   flashMessage: { kind: 'info' | 'error'; text: string } | null;
+  showBunkerLifeReady: boolean;
   onLeave: () => void;
 }
 
@@ -24,17 +26,16 @@ export default function GameRoom({
   gameWinner,
   hasVoted,
   flashMessage,
+  showBunkerLifeReady,
   onLeave,
 }: Props) {
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
-  const activeConnected = roomState.players.filter(player => player.is_active && player.connection_status === 'connected');
-  const proposed = roomState.voting.start_approvals.includes(myPlayerId);
 
   return (
     <div
-      className="min-h-screen bg-zinc-950 flex flex-col relative isolate overflow-hidden"
+      className="h-screen bg-zinc-950 flex flex-col relative isolate overflow-hidden"
     >
       <div
         className="absolute inset-0 scale-105 blur-sm pointer-events-none"
@@ -50,7 +51,7 @@ export default function GameRoom({
         backgroundPosition: 'center',
       }}
       />
-      <header className="topbar px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-10">
+      <header className="topbar px-3 py-1.5 flex items-center justify-between shrink-0 z-[60]">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
@@ -90,15 +91,16 @@ export default function GameRoom({
             </>
           )}
         </div>
-        <button
+        <Button
+          variant="ghost"
           onClick={onLeave}
-          className="text-zinc-500 hover:text-zinc-100 text-sm transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+          className="px-3 py-1.5"
         >
           <ArrowLeft size={14} /> Выйти
-        </button>
+        </Button>
       </header>
 
-      <div className="relative z-10 flex-1 flex flex-col p-4 gap-3 w-full">
+      <div className="relative z-10 min-h-0 flex-1 flex flex-col px-3 pb-3 pt-1 gap-2 w-full">
         {isFinished && gameWinner !== undefined && (
           <div className={`card p-4 text-center animate-fade-in-up ${
             gameWinner ? 'phase-banner-winner' : ''
@@ -150,26 +152,11 @@ export default function GameRoom({
           </div>
         )}
 
-        {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
-
-        {!isFinished && myPlayer?.is_active && !roomState.is_voting && (
-          <div className="card p-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-zinc-200">Коллективное голосование</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {roomState.voting.start_approvals.length} / {activeConnected.length} подтверждений
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button className={proposed ? 'btn-primary px-4 py-2 rounded-xl text-sm' : 'px-4 py-2 rounded-xl text-sm border border-zinc-700 text-zinc-300'} onClick={() => send({ type: 'toggle_voting_proposal' })}>
-                {proposed ? 'Отозвать предложение' : 'Предложить голосование'}
-              </button>
-              {roomState.admin_id === myPlayerId && (
-                <button className="px-3 py-2 rounded-xl text-xs border border-red-900/50 text-red-300" onClick={() => window.confirm('Принудительно начать голосование?') && send({ type: 'force_start_voting' })}>Аварийный старт</button>
-              )}
-            </div>
-          </div>
-        )}
+        <div className="card relative z-20 flex shrink-0 items-center gap-2 p-2">
+          {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
+          {showBunkerLifeReady && <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />}
+          <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} send={send} />
+        </div>
 
         <StatusTable
           players={roomState.players}
@@ -177,21 +164,7 @@ export default function GameRoom({
           send={send}
         />
 
-        <AdminPanel roomState={roomState} myPlayerId={myPlayerId} send={send} />
       </div>
-
-      {roomState.is_voting && myPlayer?.is_active && (
-        <VotingModal
-          players={roomState.players}
-          myPlayerId={myPlayerId}
-          isAdmin={roomState.admin_id === myPlayerId}
-          hasVoted={hasVoted}
-          votedPlayers={roomState.voted_players}
-          electorateIds={roomState.voting.electorate_ids}
-          votes={roomState.votes}
-          send={send}
-        />
-      )}
     </div>
   );
 }

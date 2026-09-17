@@ -20,7 +20,7 @@ class OpenAIProvider extends AiProvider {
         instructions,
         input,
         store: false,
-        max_output_tokens: maxOutputTokens,
+        max_output_tokens: Math.max(maxOutputTokens, 2048),
         text: { format: { type: 'json_schema', name: schemaName, strict: true, schema } },
       }, { signal: controller.signal });
       if (response.status && response.status !== 'completed') throw new Error(`OpenAI response status: ${response.status}`);

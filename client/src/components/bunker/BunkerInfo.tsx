@@ -14,18 +14,14 @@ export default function BunkerInfo({ bunker }: Props) {
   const themeImage = bunker.theme.image;
 
   return (
-    <div className="card overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+    <div className="card relative h-10 shrink-0 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/40 transition-colors text-left group"
+        className="flex h-full items-center justify-between px-3 hover:bg-zinc-800/40 transition-colors text-left group"
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-amber-500/80 text-base shrink-0">☢</span>
           <span className="text-zinc-200 text-sm font-semibold truncate">{renderEventText(bunker.theme.label)}</span>
-          <span className="text-zinc-700 text-xs shrink-0">·</span>
-          <span className="text-zinc-500 text-xs shrink-0 hidden sm:block">{renderEventText(bunker.size.label)}</span>
-          <span className="text-zinc-700 text-xs shrink-0 hidden sm:block">·</span>
-          <span className="text-zinc-500 text-xs shrink-0 hidden sm:block">{bunker.duration.label}</span>
         </div>
         <ChevronDown
           size={14}
@@ -34,7 +30,7 @@ export default function BunkerInfo({ bunker }: Props) {
       </button>
 
       {open && (
-        <div className="border-t border-zinc-800 px-4 py-4 animate-fade-in-up">
+        <div className="card absolute left-0 top-[calc(100%+8px)] z-50 max-h-[70vh] w-[min(900px,calc(100vw-24px))] overflow-auto px-4 py-4 animate-fade-in-up shadow-2xl">
           {(() => {
             const hasMap = (bunker.layout?.rooms?.length ?? 0) > 0;
             return (

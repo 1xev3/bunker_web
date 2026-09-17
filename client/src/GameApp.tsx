@@ -7,7 +7,6 @@ import GameLobby from './components/lobby/GameLobby';
 import GameRoom from './components/game/GameRoom';
 import BunkerIntroScreen from './components/bunker/BunkerIntroScreen';
 import BunkerLifeScreen from './components/bunkerLife/BunkerLifeScreen';
-import ReadyModal from './components/ui/ReadyModal';
 import SecretGoalModal from './components/ui/SecretGoalModal';
 import BunkerEndScreen from './components/bunker/BunkerEndScreen';
 
@@ -57,8 +56,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
-  const [showReadyModal, setShowReadyModal] = useState(false);
-  const [readyCapacity, setReadyCapacity] = useState<number>(2);
+  const [showReadyButton, setShowReadyButton] = useState(false);
   const [eventOutcome, setEventOutcome] = useState<EventOutcome | null>(null);
   const [monthlyNotice, setMonthlyNotice] = useState<MonthlyNotice | null>(null);
   const monthlyNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,12 +193,12 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       if (msg.type === 'profession_ability_used') showFlashMessage('info', msg.message);
 
       if (msg.type === 'ready_for_bunker_life') {
-        setReadyCapacity(msg.capacity);
-        setShowReadyModal(true);
+        setShowReadyButton(true);
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, event_title: msg.event_title, event_description: msg.event_description, message: msg.message, ai_explanation: msg.ai_explanation, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
+        if (msg.ai_error) console.error('[ИИ] Ошибка расчёта события:', msg.ai_error);
+        setEventOutcome({ outcome: msg.outcome, event_title: msg.event_title, event_description: msg.event_description, message: msg.message, ai_explanation: msg.ai_explanation, ai_outcome: msg.ai_outcome, ai_score: msg.ai_score, ai_error: msg.ai_error, selected_resources: msg.selected_resources, accepted_resources: msg.accepted_resources, rejected_resources: msg.rejected_resources, scheduled_events: msg.scheduled_events, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
       }
 
       if (msg.type === 'monthly_report') {
@@ -210,7 +208,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
-        setShowReadyModal(false);
+        setShowReadyButton(false);
         setShowBunkerIntro(false);
       }
 
@@ -483,17 +481,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         gameWinner={gameWinner}
         hasVoted={hasVoted}
         flashMessage={flashMessage}
+        showBunkerLifeReady={showReadyButton && !isSpectator}
         onLeave={handleLeave}
       />
-      {showReadyModal && !isSpectator && (
-        <ReadyModal
-          capacity={readyCapacity}
-          activePlayers={roomState.players.filter((p) => p.is_active)}
-          confirmedIds={roomState.confirmed_bunker_life}
-          myPlayerId={myPlayerId}
-          send={send}
-        />
-      )}
       {showSecretGoal && mySecretGoal && (
         <SecretGoalModal goal={mySecretGoal} onClose={() => setShowSecretGoal(false)} />
       )}

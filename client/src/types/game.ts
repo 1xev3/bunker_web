@@ -350,7 +350,7 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; event_title?: string | null; event_description?: string | null; outcome: string; message?: string | null; ai_explanation?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: PlayerRef[]; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
+  | { type: 'event_resolved'; event_id: string; event_title?: string | null; event_description?: string | null; outcome: string; message?: string | null; ai_explanation?: string | null; ai_outcome?: 'success' | 'failure' | null; ai_score?: number | null; ai_error?: string | null; selected_resources?: string[]; accepted_resources?: string[]; rejected_resources?: string[]; scheduled_events?: ScheduledEventSummary[]; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: PlayerRef[]; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
   | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: PlayerRef[] };
 
 /** Minimal player reference used in event/report payloads ({ id, name }). */
@@ -389,6 +389,13 @@ export interface EventOutcome {
   event_description?: string | null;
   message?: string | null;
   ai_explanation?: string | null;
+  ai_outcome?: 'success' | 'failure' | null;
+  ai_score?: number | null;
+  ai_error?: string | null;
+  selected_resources?: string[];
+  accepted_resources?: string[];
+  rejected_resources?: string[];
+  scheduled_events?: ScheduledEventSummary[];
   health_changes?: VitalChange[];
   sanity_changes?: VitalChange[];
   status_changes?: StatusChange[];
@@ -398,6 +405,11 @@ export interface EventOutcome {
   room_changed?: boolean;
   players_added?: PlayerRef[];
   item_changes?: ItemChange[];
+}
+
+export interface ScheduledEventSummary {
+  title: string;
+  in_months: number;
 }
 
 /** A passive monthly tick summary, shown as a transient snackbar. */

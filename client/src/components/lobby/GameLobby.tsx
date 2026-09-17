@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../../types/game';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import Select from '../ui/Select';
+import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface Props {
   roomState: RoomState;
@@ -85,12 +89,13 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
           <span className="text-amber-500 text-sm">☢</span>
           <span className="text-zinc-300 font-semibold text-sm">Бункер</span>
         </div>
-        <button
+        <Button
+          variant="ghost"
           onClick={onLeave}
-          className="text-zinc-500 hover:text-zinc-100 text-sm transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+          className="px-3 py-1.5"
         >
           <ArrowLeft size={14} /> Выйти
-        </button>
+        </Button>
       </header>
 
       <div className="relative z-10 flex-1 flex items-center justify-center p-4">
@@ -149,11 +154,31 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 </p>
               </div>
 
-              <div className="card p-4 space-y-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-zinc-300">Заполнить ботами</span><input type="checkbox" checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={event => updateSetting('fill_with_bots', event.target.checked)} /></div>
-                {aiAvailable && <div className="flex items-center justify-between"><span className="text-sm text-zinc-300">AI-оценка событий</span><input type="checkbox" checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={event => updateSetting('ai_enabled', event.target.checked)} /></div>}
-                <label className="block text-sm text-zinc-300">Частота событий: <span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span><input className="w-full mt-1" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} /></label>
-                <div className="flex items-center justify-between gap-3"><span className="text-sm text-zinc-300">Вместимость</span><select className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-sm" value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}><option value="auto">Авто</option><option value="manual">Вручную</option></select>{roomState.settings.capacity_mode === 'manual' && <input className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}</div>
+              <div className="card space-y-4 p-4">
+                <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                  Заполнить ботами
+                  <ToggleSwitch checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={checked => updateSetting('fill_with_bots', checked)} />
+                </label>
+                {aiAvailable && (
+                  <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                    AI-оценка событий
+                    <ToggleSwitch checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={checked => updateSetting('ai_enabled', checked)} />
+                  </label>
+                )}
+                <label className="block text-sm text-zinc-300">
+                  <span className="flex justify-between"><span>Частота событий</span><span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span></span>
+                  <Input className="mt-2 w-full p-0" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                  Вместимость
+                  <span className="flex gap-2">
+                    <Select value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}>
+                      <option value="auto">Авто</option>
+                      <option value="manual">Вручную</option>
+                    </Select>
+                    {roomState.settings.capacity_mode === 'manual' && <Input className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
+                  </span>
+                </label>
               </div>
 
               {/* Start / wait */}

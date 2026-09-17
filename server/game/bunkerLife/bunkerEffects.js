@@ -333,6 +333,7 @@ function emptyEffectOutput() {
     healthChanges: [], sanityChanges: [], statusChanges: [],
     foodChange: undefined, playerKilled: null, playersKilled: [],
     playersAdded: [], itemChanges: [], roomChanged: false, scheduledEvent: null,
+    scheduledEvents: [],
   };
 }
 
@@ -516,7 +517,10 @@ function applyEffectsArray(room, effects, context) {
     accumulated.playersAdded.push(...(r.playersAdded ?? []));
     accumulated.itemChanges.push(...(r.itemChanges ?? []));
     if (r.roomChanged) accumulated.roomChanged = true;
-    if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) room.scheduledEvents.push(r.scheduledEvent);
+    if (r.scheduledEvent && !hasScheduledEvent(room, r.scheduledEvent)) {
+      room.scheduledEvents.push(r.scheduledEvent);
+      accumulated.scheduledEvents.push(r.scheduledEvent);
+    }
   }
 
   return accumulated;
@@ -527,24 +531,28 @@ function consumeSelectedItem(room, entry) {
 
   if (entry.source === 'bunker') {
     const itemIdx = room.bunker.items.findIndex(item => item.id === entry.item_id);
-    if (itemIdx !== -1) room.bunker.items.splice(itemIdx, 1);
+    const removed = itemIdx !== -1 ? room.bunker.items.splice(itemIdx, 1)[0] : null;
     for (const bunkerRoom of room.bunker.rooms) {
       if (!Array.isArray(bunkerRoom.items)) continue;
       const roomItemIdx = bunkerRoom.items.findIndex(item => item.id === entry.item_id);
-      if (roomItemIdx !== -1) { bunkerRoom.items.splice(roomItemIdx, 1); return; }
+      if (roomItemIdx !== -1) bunkerRoom.items.splice(roomItemIdx, 1);
     }
-    return;
+    return removed ? { item: removed.label ?? removed.id, action: 'bunker_removed' } : null;
   }
 
   const owner = room.getPlayer(entry.player_id);
   if (!owner) return;
   if (entry.source === 'inventory' && owner.inventory?.id === entry.item_id) {
+    const removed = owner.inventory;
     owner.inventory = null;
+    return { id: owner.id, name: owner.name, item: removed.label ?? removed.id, action: 'removed' };
   } else if (entry.source === 'backpack' && Array.isArray(owner.backpack)) {
     const idx = owner.backpack.findIndex(item => item.id === entry.item_id);
     if (idx !== -1) {
+      const removed = owner.backpack[idx];
       owner.backpack[idx].quantity -= 1;
       if (owner.backpack[idx].quantity <= 0) owner.backpack.splice(idx, 1);
+      return { id: owner.id, name: owner.name, item: removed.label ?? removed.id, action: 'removed' };
     }
   }
 }

@@ -13,6 +13,7 @@ const {
   handleKick,
   handleUpdateRoomSettings,
 } = require('../server/ws/gameHandlers');
+const { botFoodSelection } = require('../server/ws/bunkerLifeHandlers');
 
 function socket() {
   return { readyState: 1, messages: [], send(raw) { this.messages.push(JSON.parse(raw)); }, close() {} };
@@ -22,6 +23,18 @@ function cleanRoom(room) {
   rooms.delete(room.roomCode);
   wsManager.dropRoom(room.roomCode);
 }
+
+test('bots select professions for food replenishment without a living human', () => {
+  const bot = new Player('Bot');
+  bot.is_bot = true;
+  bot.profession = { id: 'scout', levelId: 'novice' };
+  const deadHuman = new Player('Dead');
+  deadHuman.is_active = false;
+  const room = new GameRoom(bot.id);
+  room.players = [bot, deadHuman];
+
+  assert.deepEqual(botFoodSelection(room), { selected_professions: [bot.id], selected_items: [] });
+});
 
 test('join rejects duplicate nicknames case-insensitively and rejoin keeps identity', () => {
   const firstWs = socket();

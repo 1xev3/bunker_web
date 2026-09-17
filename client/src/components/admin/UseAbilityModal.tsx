@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Player, ProfessionAbilityInfo } from '../../types/game';
 import AdminModalFrame from './AdminModalFrame';
 import PlayerOptionList from './PlayerOptionList';
+import Button from '../ui/Button';
 
 export default function UseAbilityModal({
   ability,
@@ -81,18 +82,15 @@ export default function UseAbilityModal({
       </div>
 
       <div className="mt-5 flex gap-2">
-        <button
-          className="flex-1 rounded-xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-700/60 transition-all"
+        <Button
+          className="flex-1 py-3"
           onClick={onClose}
         >
           Отмена
-        </button>
-        <button
-          className={`flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
-            canConfirm
-              ? 'btn-primary text-white'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
-          }`}
+        </Button>
+        <Button
+          variant="primary"
+          className="flex-1 py-3 font-semibold"
           disabled={!canConfirm}
           onClick={() => onConfirm({
             target_id: needsTarget || needsPair ? targetId : undefined,
@@ -100,7 +98,7 @@ export default function UseAbilityModal({
           })}
         >
           Активировать
-        </button>
+        </Button>
       </div>
     </AdminModalFrame>
   );

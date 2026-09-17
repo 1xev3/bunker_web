@@ -7,20 +7,20 @@ const { adjudicateEvent, adjudicateFood } = require('../server/ai/eventAdjudicat
 const { isAiAvailable, providerOptions } = require('../server/ai');
 
 test('AI adjudication accepts a valid structured response', async () => {
-  const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Инструмент подошёл' });
-  const result = await adjudicateEvent(provider, { situation: 'Обвал' });
+  const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Инструмент подошёл', accepted_resources: ['Лом'], rejected_resources: [] });
+  const result = await adjudicateEvent(provider, { situation: 'Обвал', resources: ['Лом'] });
   assert.equal(result.outcome, 'success');
   assert.equal(provider.requests.length, 1);
 });
 
-test('AI adjudication falls back on an invalid schema', async () => {
-  assert.deepEqual(await adjudicateEvent(new FakeAiProvider({ outcome: 'maybe', explanation: 'x' }), {}), { outcome: null, explanation: '' });
+test('AI adjudication reports an invalid schema', async () => {
+  assert.deepEqual(await adjudicateEvent(new FakeAiProvider({ outcome: 'maybe', explanation: 'x' }), {}), { outcome: null, explanation: '', accepted_resources: [], rejected_resources: [], error: 'Ответ ИИ не соответствует ожидаемой схеме' });
 });
 
 test('AI determines replenished food', async () => {
   assert.deepEqual(
     await adjudicateFood(new FakeAiProvider({ effectiveness: 75, explanation: 'Охотник добыл провизию' }), {}),
-    { effectiveness: 75, explanation: 'Охотник добыл провизию' },
+    { effectiveness: 75, explanation: 'Охотник добыл провизию', error: null },
   );
 });
 
@@ -34,6 +34,7 @@ test('OpenAI provider sends stateless structured request and parses output_text'
   assert.deepEqual(await provider.generateStructured({ input: 'x', schema: { type: 'object' } }), { value: 7 });
   assert.equal(captured.store, false);
   assert.equal(captured.text.format.type, 'json_schema');
+  assert.equal(captured.max_output_tokens, 2048);
 });
 
 test('timeout and malformed JSON use the gameplay fallback', async () => {
@@ -41,9 +42,9 @@ test('timeout and malformed JSON use the gameplay fallback', async () => {
     signal.addEventListener('abort', () => reject(new Error('aborted')));
   }) } };
   const timeoutProvider = new OpenAIProvider({ model: 'test-model', client: timeoutClient, timeoutMs: 5 });
-  assert.deepEqual(await adjudicateEvent(timeoutProvider, {}), { outcome: null, explanation: '' });
+  assert.deepEqual(await adjudicateEvent(timeoutProvider, {}), { outcome: null, explanation: '', accepted_resources: [], rejected_resources: [], error: 'aborted' });
   const malformed = new OpenAIProvider({ model: 'test-model', client: { responses: { create: async () => ({ status: 'completed', output_text: 'nope' }) } } });
-  assert.deepEqual(await adjudicateEvent(malformed, {}), { outcome: null, explanation: '' });
+  assert.match((await adjudicateEvent(malformed, {})).error, /JSON/);
 });
 
 test('AI capability requires both environment variables', () => {

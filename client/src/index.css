@@ -424,12 +424,6 @@ td, th {
   background-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
-/* Ready modal */
-.ready-modal-border { border-color: color-mix(in srgb, var(--accent) 65%, transparent); }
-.ready-modal-title { color: color-mix(in srgb, var(--accent) 95%, #fff); }
-.ready-modal-count { color: color-mix(in srgb, var(--accent) 95%, #fff); }
-.ready-modal-icon { color: var(--accent); }
-
 /* Bunker map — SVG floor plan */
 .bm-room {
   fill: rgb(39 39 42 / 0.55);
