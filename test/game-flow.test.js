@@ -77,11 +77,25 @@ test('kick retains a revealed spectator and invalidates gameplay participation',
   room.adminId = admin.id;
   room.addPlayer(admin);
   room.addPlayer(target);
+  room.status = 'running';
   rooms.set(room.roomCode, room);
   handleKick(room.roomCode, admin.id, { player_id: target.id });
   assert.equal(target.participation_status, 'kicked');
   assert.equal(room.players.length, 2);
   assert.ok(Object.values(target.revealed_attributes).every(Boolean));
+  cleanRoom(room);
+});
+
+test('kick removes a player from the lobby', () => {
+  const room = new GameRoom('placeholder');
+  const admin = new Player('Admin');
+  const target = new Player('Target');
+  room.adminId = admin.id;
+  room.addPlayer(admin);
+  room.addPlayer(target);
+  rooms.set(room.roomCode, room);
+  handleKick(room.roomCode, admin.id, { player_id: target.id });
+  assert.equal(room.getPlayer(target.id), null);
   cleanRoom(room);
 });
 

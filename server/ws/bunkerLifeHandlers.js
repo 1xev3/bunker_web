@@ -7,7 +7,7 @@
 const { rooms, wsManager } = require('../state');
 const { getSelectKinds } = require('../game/config/yamlEvents');
 const { getAiProvider } = require('../ai');
-const { adjudicateEvent, adjudicateFood } = require('../ai/eventAdjudicator');
+const { adjudicateEvent, adjudicateFood, determineConsequences } = require('../ai/eventAdjudicator');
 const {
   parseDurationMonths,
   pickRandomEvent,
@@ -511,7 +511,8 @@ async function resolveChoiceEvent(roomCode, optionId) {
   const selectedProfessions = selectedProfessionLabels(room, room.activeEventSelection.selected_professions)
     .map(({ profession, level }) => [profession, level].filter(Boolean).join(' — '));
   const selectedResources = [...selectedItems, ...selectedProfessions];
-  if (room.settings.ai_enabled && option.outcomes_by_selection) {
+  const aiRequested = room.settings.ai_enabled && Boolean(option.outcomes_by_selection);
+  if (aiRequested) {
     adjudication = await adjudicateEvent(getAiProvider(), {
       situation: event.description,
       option: option.description ?? option.label,
@@ -520,9 +521,9 @@ async function resolveChoiceEvent(roomCode, optionId) {
       resources: selectedResources,
     });
   }
-  const resolutionExplanation = adjudication.explanation || (room.settings.ai_enabled
+  const resolutionExplanation = adjudication.explanation || (aiRequested
     ? 'ИИ не ответил — исход определён по игровому шансу.'
-    : 'ИИ отключён — исход определён по игровому шансу.');
+    : null);
   const selection = { count: strength, diverse, aiOutcome: adjudication.outcome };
 
   const consumedItems = [];
@@ -533,7 +534,24 @@ async function resolveChoiceEvent(roomCode, optionId) {
     }
   }
 
-  const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId, selection);
+  const packOutcome = buildOptionEffects(event, option, room, selectedPlayerId, selection);
+  let consequence = { effects: null, explanation: '', error: null };
+  if (room.settings.ai_event_consequences && !option.outcomes_by_selection) {
+    consequence = await determineConsequences(getAiProvider(), {
+      event: event.description,
+      decision: option.description ?? option.label,
+      players: room.getActivePlayers().map(player => ({
+        id: player.id,
+        name: player.name,
+        health: player.vital_status?.health ?? 100,
+        sanity: player.vital_status?.sanity ?? 100,
+      })),
+      food: room.food,
+      selected_resources: selectedResources,
+    });
+  }
+  const effects = consequence.effects ?? packOutcome.effects;
+  const message = consequence.effects ? consequence.explanation : packOutcome.message;
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
   effectResult.itemChanges.push(...consumedItems);
@@ -542,7 +560,7 @@ async function resolveChoiceEvent(roomCode, optionId) {
   room.activeEvent = null;
   resetEventSelection(room);
 
-  settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage, resolutionExplanation, event, adjudication.outcome, {
+  settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage, consequence.explanation || resolutionExplanation, event, adjudication.outcome, {
     selected: selectedResources,
     accepted: adjudication.accepted_resources,
     rejected: adjudication.rejected_resources,

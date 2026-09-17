@@ -304,6 +304,7 @@ export interface RoomState {
 export interface RoomSettings {
   fill_with_bots: boolean;
   ai_enabled: boolean;
+  ai_event_consequences: boolean;
   month_duration_ms: number;
   event_frequency: number;
   capacity_mode: 'auto' | 'manual';
@@ -341,6 +342,7 @@ export type ServerMessage =
   | { type: 'error'; message: string }
   | { type: 'pong' }
   | { type: 'left_room' }
+  | { type: 'kicked' }
   | { type: 'attribute_revealed'; player_id: string; attribute: AttributeKey; value: AttributeValue; full_name?: string | null }
   | { type: 'vote_confirmed' }
   | { type: 'voting_result'; eliminated: Player | null; is_tie: boolean; votes: Record<string, number> }

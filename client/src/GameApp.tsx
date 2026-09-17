@@ -212,6 +212,17 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         setShowBunkerIntro(false);
       }
 
+      if (msg.type === 'kicked') {
+        localStorage.removeItem('bunker_token');
+        localStorage.removeItem('bunker_room');
+        localStorage.removeItem('bunker_player_id');
+        setPlayerId(null);
+        resetState();
+        showFlashMessage('error', 'Ведущий исключил вас из комнаты.');
+        ws.close(4000, 'kicked');
+        return;
+      }
+
       handleMessage(msg);
     };
 

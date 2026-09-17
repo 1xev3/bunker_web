@@ -192,6 +192,7 @@ function handleUpdateRoomSettings(roomCode, playerId, msg) {
   if (!next || typeof next !== 'object') return;
   const valid = typeof next.fill_with_bots === 'boolean'
     && typeof next.ai_enabled === 'boolean'
+    && typeof next.ai_event_consequences === 'boolean'
     // Pack configurations may intentionally use short month durations (for
     // example 750 ms in the Fantasy pack). Settings updates send the complete
     // settings object, so validate the current value without rejecting every
@@ -206,6 +207,10 @@ function handleUpdateRoomSettings(roomCode, playerId, msg) {
   }
   if (next.ai_enabled && !isAiAvailable()) {
     wsManager.send(roomCode, playerId, { type: 'error', message: 'AI-режим недоступен на сервере' });
+    return;
+  }
+  if (next.ai_event_consequences && !next.ai_enabled) {
+    wsManager.send(roomCode, playerId, { type: 'error', message: 'Определение последствий требует включённого AI-режима' });
     return;
   }
   room.settings = { ...next };
@@ -397,6 +402,13 @@ function handleKick(roomCode, playerId, msg) {
   const room = rooms.get(roomCode);
   if (!room || room.adminId !== playerId) return;
   if (msg.player_id === room.adminId) return;
+  if (room.status === 'waiting') {
+    wsManager.send(roomCode, msg.player_id, { type: 'kicked' });
+    sessions.deleteForPlayer(msg.player_id, roomCode);
+    room.deletePlayer(msg.player_id);
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
   room.setParticipationStatus(msg.player_id, 'kicked');
   sessions.deleteForPlayer(msg.player_id, roomCode);
   wsManager.broadcastState(roomCode, room);

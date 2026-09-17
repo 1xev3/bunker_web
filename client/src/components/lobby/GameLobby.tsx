@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck, Settings, RotateCcw, UserX } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../../types/game';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const MAX_PLAYERS = 12;
+const SETTINGS_STORAGE_KEY = 'bunker_host_settings';
 
 // Deterministic accent hue per player so avatars feel distinct.
 function avatarStyle(id: string): React.CSSProperties {
@@ -28,18 +29,48 @@ function avatarStyle(id: string): React.CSSProperties {
 
 export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Props) {
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
-  const [aiAvailable, setAiAvailable] = useState(false);
+  const [activeTab, setActiveTab] = useState<'lobby' | 'settings'>('lobby');
+  const [aiAvailable, setAiAvailable] = useState<boolean | null>(null);
+  const defaultsRef = useRef(roomState.settings);
+  const restoredRef = useRef(false);
   useEffect(() => {
     fetch('/api/capabilities').then(response => response.json()).then(data => setAiAvailable(data.ai_events === true)).catch(() => setAiAvailable(false));
   }, []);
   const isAdmin = roomState.admin_id === myPlayerId;
-  const playerCount = roomState.players.length;
+  const players = roomState.players.filter(player => player.is_active);
+  const playerCount = players.length;
   // Server fills the room up to the minimum with bots on start, so the admin
   // can always start regardless of how many humans have joined.
   const canStart = isAdmin;
-  const updateSetting = <K extends keyof RoomState['settings'],>(key: K, value: RoomState['settings'][K]) => {
+  const applySettings = (settings: RoomState['settings'], persist = true) => {
     if (!isAdmin) return;
-    send({ type: 'update_room_settings', settings: { ...roomState.settings, [key]: value } });
+    if (persist) localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    send({ type: 'update_room_settings', settings });
+  };
+  const updateSetting = <K extends keyof RoomState['settings'],>(key: K, value: RoomState['settings'][K]) => {
+    applySettings({ ...roomState.settings, [key]: value });
+  };
+
+  useEffect(() => {
+    if (!isAdmin || aiAvailable === null || restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? 'null');
+      if (saved && typeof saved === 'object') {
+        const settings = { ...roomState.settings, ...saved };
+        if (!aiAvailable) Object.assign(settings, { ai_enabled: false, ai_event_consequences: false });
+        applySettings(settings, false);
+      }
+    } catch {
+      localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    }
+  // Restore once for the room author; subsequent room state updates come from the server.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, aiAvailable]);
+
+  const resetSettings = () => {
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    applySettings({ ...defaultsRef.current, ...(!aiAvailable && { ai_enabled: false, ai_event_consequences: false }) }, false);
   };
 
   const copy = (kind: 'code' | 'link') => {
@@ -100,7 +131,15 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
       <div className="relative z-10 flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-4xl animate-fade-in-up">
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="mb-4 flex rounded-xl border border-zinc-800 bg-zinc-900/70 p-1">
+            {(['lobby', 'settings'] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 rounded-lg px-4 py-2 text-sm transition-colors ${activeTab === tab ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-200'}`}>
+                {tab === 'lobby' ? <><Users size={14} className="mr-2 inline" />Лобби</> : <><Settings size={14} className="mr-2 inline" />Настройки</>}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'lobby' ? <div className="grid md:grid-cols-5 gap-4">
             {/* Left: invite + meta */}
             <div className="md:col-span-2 space-y-4">
               <div className="card glow-card p-6">
@@ -154,33 +193,6 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 </p>
               </div>
 
-              <div className="card space-y-4 p-4">
-                <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                  Заполнить ботами
-                  <ToggleSwitch checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={checked => updateSetting('fill_with_bots', checked)} />
-                </label>
-                {aiAvailable && (
-                  <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                    AI-оценка событий
-                    <ToggleSwitch checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={checked => updateSetting('ai_enabled', checked)} />
-                  </label>
-                )}
-                <label className="block text-sm text-zinc-300">
-                  <span className="flex justify-between"><span>Частота событий</span><span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span></span>
-                  <Input className="mt-2 w-full p-0" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} />
-                </label>
-                <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                  Вместимость
-                  <span className="flex gap-2">
-                    <Select value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}>
-                      <option value="auto">Авто</option>
-                      <option value="manual">Вручную</option>
-                    </Select>
-                    {roomState.settings.capacity_mode === 'manual' && <Input className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
-                  </span>
-                </label>
-              </div>
-
               {/* Start / wait */}
               {isAdmin ? (
                 <button
@@ -218,7 +230,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
               </p>
 
               <div className="grid sm:grid-cols-2 gap-2 content-start flex-1">
-                {roomState.players.map((p, i) => {
+                {players.map((p, i) => {
                   const isMe = p.id === myPlayerId;
                   const isRoomAdmin = p.id === roomState.admin_id;
                   return (
@@ -258,7 +270,11 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                           )}
                         </div>
                       </div>
-                      <span className="text-zinc-700 text-xs shrink-0 font-mono">#{i + 1}</span>
+                      {isAdmin && !isMe ? (
+                        <button title={`Исключить ${p.name}`} aria-label={`Исключить ${p.name}`} onClick={() => send({ type: 'kick_player', player_id: p.id })} className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-red-950/50 hover:text-red-400">
+                          <UserX size={15} />
+                        </button>
+                      ) : <span className="text-zinc-700 text-xs shrink-0 font-mono">#{i + 1}</span>}
                     </div>
                   );
                 })}
@@ -274,7 +290,43 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 )}
               </div>
             </div>
-          </div>
+          </div> : (
+            <div className="card mx-auto max-w-2xl space-y-5 p-6">
+              <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                Заполнить ботами
+                <ToggleSwitch checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={checked => updateSetting('fill_with_bots', checked)} />
+              </label>
+              {aiAvailable && (
+                <>
+                  <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                    AI-оценка событий
+                    <ToggleSwitch checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={checked => applySettings({ ...roomState.settings, ai_enabled: checked, ...(!checked && { ai_event_consequences: false }) })} />
+                  </label>
+                  {roomState.settings.ai_enabled && (
+                    <label className="ml-4 flex items-center justify-between gap-3 text-sm text-zinc-400">
+                      Определение последствий событий с помощью ИИ
+                      <ToggleSwitch checked={roomState.settings.ai_event_consequences} disabled={!isAdmin} onChange={checked => updateSetting('ai_event_consequences', checked)} />
+                    </label>
+                  )}
+                </>
+              )}
+              <label className="block text-sm text-zinc-300">
+                <span className="flex justify-between"><span>Частота событий</span><span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span></span>
+                <Input className="mt-2 w-full p-0" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} />
+              </label>
+              <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
+                Вместимость
+                <span className="flex gap-2">
+                  <Select value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}>
+                    <option value="auto">Авто</option>
+                    <option value="manual">Вручную</option>
+                  </Select>
+                  {roomState.settings.capacity_mode === 'manual' && <Input className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
+                </span>
+              </label>
+              {isAdmin && <Button variant="ghost" onClick={resetSettings} className="w-full"><RotateCcw size={14} /> Вернуть настройки по умолчанию</Button>}
+            </div>
+          )}
         </div>
       </div>
     </div>
