@@ -162,7 +162,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         localStorage.setItem('bunker_player_id', msg.player_id);
         const url = new URL(window.location.href);
         url.searchParams.set('room', msg.room_code);
-        window.history.pushState({}, '', url);
+        if (window.history.state?.bunkerRoom !== msg.room_code) {
+          window.history.pushState({ ...window.history.state, bunkerRoom: msg.room_code }, '', url);
+        }
         return;
       }
 
@@ -174,7 +176,9 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         localStorage.setItem('bunker_spectate_room', msg.room_code);
         const url = new URL(window.location.href);
         url.searchParams.set('room', msg.room_code);
-        window.history.pushState({}, '', url);
+        if (window.history.state?.bunkerRoom !== msg.room_code) {
+          window.history.pushState({ ...window.history.state, bunkerRoom: msg.room_code }, '', url);
+        }
         return;
       }
 

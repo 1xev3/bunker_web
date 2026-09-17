@@ -265,6 +265,7 @@ export interface RoomState {
   pack_settings: PackSettings;
   settings: RoomSettings;
   status: GameStatus;
+  game_start_pending: boolean;
   spectator_count?: number;
   is_voting: boolean;
   voting: {
@@ -305,6 +306,8 @@ export interface RoomSettings {
   fill_with_bots: boolean;
   ai_enabled: boolean;
   ai_event_consequences: boolean;
+  ai_bunker_generation: boolean;
+  bunker_theme: string;
   month_duration_ms: number;
   event_frequency: number;
   capacity_mode: 'auto' | 'manual';

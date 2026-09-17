@@ -5,6 +5,43 @@ const { FakeAiProvider } = require('../server/ai/aiProvider');
 const { OpenAIProvider } = require('../server/ai/openAIProvider');
 const { adjudicateEvent, adjudicateFood, determineConsequences } = require('../server/ai/eventAdjudicator');
 const { isAiAvailable, providerOptions } = require('../server/ai');
+const { generateBunkerTheme } = require('../server/ai/bunkerThemeGenerator');
+const Bunker = require('../server/game/entities/bunker');
+const { loadPack, getDefaultPackName } = require('../server/game/gameConfig');
+
+test('AI generates a bunker theme from the host topic', async () => {
+  const provider = new FakeAiProvider({
+    title: 'Восстание машин',
+    disaster_description: 'Автономные машины захватили города.',
+    bunker_description: 'Старый командный центр скрыт под землёй.',
+  });
+  const context = { topic: 'мир после восстания роботов', bunker: { size: 'Большой', rooms: 5 } };
+  assert.deepEqual(await generateBunkerTheme(provider, context), {
+    id: 'ai_generated',
+    label: 'Восстание машин',
+    description: 'Автономные машины захватили города.',
+    bunkerDescription: 'Старый командный центр скрыт под землёй.',
+  });
+  assert.deepEqual(JSON.parse(provider.requests[0].input), context);
+  assert.match(provider.requests[0].instructions, /3–5 atmospheric sentences \(400–700 characters\)/);
+  assert.match(provider.requests[0].instructions, /language of the input topic/);
+
+  const bunker = new Bunker();
+  bunker.generate(await generateBunkerTheme(provider, context), loadPack(getDefaultPackName()));
+  assert.equal(bunker.theme.label, 'Восстание машин');
+  assert.equal(bunker.disaster_info, 'Автономные машины захватили города.');
+  assert.equal(bunker.bunker_info, 'Старый командный центр скрыт под землёй.');
+});
+
+test('AI retries an unfinished bunker description', async () => {
+  let attempt = 0;
+  const provider = new FakeAiProvider(() => ++attempt === 1
+    ? { title: 'Лёд', disaster_description: 'Мир замёрз.', bunker_description: 'Убежище находится в ска' }
+    : { title: 'Лёд', disaster_description: 'Мир замёрз.', bunker_description: 'Убежище находится в скале.' });
+  const result = await generateBunkerTheme(provider, { topic: 'вечная зима' });
+  assert.equal(result.bunkerDescription, 'Убежище находится в скале.');
+  assert.equal(provider.requests.length, 2);
+});
 
 test('AI adjudication accepts a valid structured response', async () => {
   const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Лом удержал плиту', used_resources: ['Лом'], rejected_resources: [] });
@@ -30,10 +67,12 @@ test('AI retries once and rejects resources players did not select', async () =>
 });
 
 test('AI determines replenished food', async () => {
+  const provider = new FakeAiProvider({ effectiveness: 75, explanation: 'Охотник добыл провизию' });
   assert.deepEqual(
-    await adjudicateFood(new FakeAiProvider({ effectiveness: 75, explanation: 'Охотник добыл провизию' }), {}),
+    await adjudicateFood(provider, {}),
     { effectiveness: 75, explanation: 'Охотник добыл провизию', error: null },
   );
+  assert.match(provider.requests[0].instructions, /Готовая съедобная еда сама по себе полезна/);
 });
 
 test('AI determines event consequences using known player ids only', async () => {

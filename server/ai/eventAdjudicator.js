@@ -134,7 +134,7 @@ async function adjudicateFood(provider, context) {
       schemaName: 'bunker_food_replenishment',
       schema: FOOD_SCHEMA,
       maxOutputTokens: 220,
-      instructions: 'Оцени полезность выбранных предметов и профессий для добычи еды от 0 до 100. Не вычисляй еду в игровых единицах: это сделает игра. В explanation кратко объясни оценку.',
+      instructions: 'Оцени полезность выбранных предметов и профессий для восполнения запасов еды от 0 до 100. Готовая съедобная еда сама по себе полезна и не обязана помогать в добыче. Не вычисляй еду в игровых единицах: это сделает игра. В explanation кратко объясни оценку.',
       input: JSON.stringify(context),
     });
     if (!result || !Number.isInteger(result.effectiveness) || result.effectiveness < 0 || result.effectiveness > 100 || typeof result.explanation !== 'string' || !result.explanation.trim()) return { ...fallback, error: 'Ответ ИИ не соответствует ожидаемой схеме' };

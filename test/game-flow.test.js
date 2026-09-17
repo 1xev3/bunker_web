@@ -106,6 +106,9 @@ test('only the lobby admin can update validated room settings', () => {
   room.addPlayer(admin);
   room.addPlayer(guest);
   rooms.set(room.roomCode, room);
+  room.starting = true;
+  assert.equal(room.toDict(admin.id).game_start_pending, true);
+  room.starting = false;
   // Preserve the pack's month duration to verify that unrelated setting
   // changes work even when the pack uses a value below the old 10-second floor.
   const settings = { ...room.settings, fill_with_bots: false, ai_enabled: false, event_frequency: 0.35, capacity_mode: 'manual', manual_capacity: 3 };
@@ -113,8 +116,21 @@ test('only the lobby admin can update validated room settings', () => {
   assert.notEqual(room.settings.event_frequency, 0.35);
   handleUpdateRoomSettings(room.roomCode, admin.id, { settings });
   assert.deepEqual(room.settings, settings);
-  handleUpdateRoomSettings(room.roomCode, admin.id, { settings: { ...settings, event_frequency: 2 } });
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousModel = process.env.OPENAI_MODEL;
+  process.env.OPENAI_API_KEY = 'test-key';
+  process.env.OPENAI_MODEL = 'test-model';
+  handleUpdateRoomSettings(room.roomCode, admin.id, { settings: { ...settings, ai_bunker_generation: true } });
   assert.deepEqual(room.settings, settings);
+  const enabledWithoutTopic = { ...settings, ai_enabled: true, ai_bunker_generation: true, bunker_theme: '' };
+  handleUpdateRoomSettings(room.roomCode, admin.id, { settings: enabledWithoutTopic });
+  assert.deepEqual(room.settings, enabledWithoutTopic);
+  if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+  else process.env.OPENAI_API_KEY = previousKey;
+  if (previousModel === undefined) delete process.env.OPENAI_MODEL;
+  else process.env.OPENAI_MODEL = previousModel;
+  handleUpdateRoomSettings(room.roomCode, admin.id, { settings: { ...settings, event_frequency: 2 } });
+  assert.deepEqual(room.settings, enabledWithoutTopic);
   cleanRoom(room);
 });
 

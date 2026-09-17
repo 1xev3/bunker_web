@@ -139,7 +139,7 @@ class Bunker {
 
   generate(theme = null, config) {
     const themeDef = theme
-      ? config.BUNKER_THEMES.find(t => t.id === theme || t.label === theme)
+      ? (typeof theme === 'object' ? theme : config.BUNKER_THEMES.find(t => t.id === theme || t.label === theme))
       : config.BUNKER_THEMES[Math.floor(Math.random() * config.BUNKER_THEMES.length)];
     const sizeDef = config.BUNKER_SIZES[Math.floor(Math.random() * config.BUNKER_SIZES.length)];
 
@@ -152,7 +152,7 @@ class Bunker {
     this.food = config.FOOD_SUPPLIES[Math.floor(Math.random() * config.FOOD_SUPPLIES.length)];
 
     this.disaster_info = resolvedTheme.description ?? '';
-    this.bunker_info   = resolvedSize.description  ?? '';
+    this.bunker_info   = resolvedTheme.bunkerDescription ?? resolvedSize.description ?? '';
 
     const sizeIndex = config.BUNKER_SIZES.findIndex(s => s.id === this.size.id);
     const roomCount = sizeIndex >= 0 ? config.ROOM_COUNTS[sizeIndex] : 5;

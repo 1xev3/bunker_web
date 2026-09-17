@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck, Settings, RotateCcw, UserX } from 'lucide-react';
+import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, ShieldCheck, Settings, RotateCcw, UserX, Loader2, Bot, Sparkles, Zap, Warehouse } from 'lucide-react';
 import type { RoomState, ClientMessage } from '../../types/game';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -41,7 +41,8 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
   const playerCount = players.length;
   // Server fills the room up to the minimum with bots on start, so the admin
   // can always start regardless of how many humans have joined.
-  const canStart = isAdmin;
+  const canStart = isAdmin && (!roomState.settings.ai_bunker_generation || Boolean(roomState.settings.bunker_theme.trim()));
+  const isStarting = roomState.game_start_pending;
   const applySettings = (settings: RoomState['settings'], persist = true) => {
     if (!isAdmin) return;
     if (persist) localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
@@ -58,7 +59,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
       const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? 'null');
       if (saved && typeof saved === 'object') {
         const settings = { ...roomState.settings, ...saved };
-        if (!aiAvailable) Object.assign(settings, { ai_enabled: false, ai_event_consequences: false });
+        if (!aiAvailable) Object.assign(settings, { ai_enabled: false, ai_event_consequences: false, ai_bunker_generation: false, bunker_theme: '' });
         applySettings(settings, false);
       }
     } catch {
@@ -70,7 +71,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
   const resetSettings = () => {
     localStorage.removeItem(SETTINGS_STORAGE_KEY);
-    applySettings({ ...defaultsRef.current, ...(!aiAvailable && { ai_enabled: false, ai_event_consequences: false }) }, false);
+    applySettings({ ...defaultsRef.current, ...(!aiAvailable && { ai_enabled: false, ai_event_consequences: false, ai_bunker_generation: false, bunker_theme: '' }) }, false);
   };
 
   const copy = (kind: 'code' | 'link') => {
@@ -129,11 +130,23 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
         </Button>
       </header>
 
-      <div className="relative z-10 flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl animate-fade-in-up">
-          <div className="mb-4 flex rounded-xl border border-zinc-800 bg-zinc-900/70 p-1">
+      <div className="relative z-10 flex-1 flex justify-center p-4 pb-10 pt-8 md:pt-14">
+        <div className="w-full max-w-5xl animate-fade-in-up">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="term-label mb-2">Комната {roomState.room_code}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Подготовка к выживанию</h1>
+              <p className="mt-1 text-sm text-zinc-500">Пригласите игроков, настройте сценарий и начинайте.</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="ready-dot h-2 w-2 rounded-full" />
+              {playerCount} {playerCount === 1 ? 'игрок' : playerCount < 5 ? 'игрока' : 'игроков'} в комнате
+            </div>
+          </div>
+
+          <div className="mb-4 grid grid-cols-2 rounded-xl border border-zinc-800 bg-zinc-950/75 p-1 shadow-lg shadow-black/20">
             {(['lobby', 'settings'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 rounded-lg px-4 py-2 text-sm transition-colors ${activeTab === tab ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-200'}`}>
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === tab ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'}`}>
                 {tab === 'lobby' ? <><Users size={14} className="mr-2 inline" />Лобби</> : <><Settings size={14} className="mr-2 inline" />Настройки</>}
               </button>
             ))}
@@ -197,15 +210,17 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
               {isAdmin ? (
                 <button
                   className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                    canStart ? 'btn-primary text-white' : 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
+                    canStart && !isStarting ? 'btn-primary text-white' : 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
                   }`}
-                  disabled={!canStart}
-                  onClick={() => send({ type: 'start_game' })}
+                  disabled={!canStart || isStarting}
+                  onClick={event => { event.currentTarget.disabled = true; send({ type: 'start_game' }); }}
                 >
-                  {canStart ? (
+                  {isStarting ? (
+                    <><Loader2 size={15} className="animate-spin" /> {roomState.settings.ai_bunker_generation ? 'ИИ создаёт тему бункера…' : 'Игра запускается…'}</>
+                  ) : canStart ? (
                     <><Rocket size={15} /> Начать игру</>
                   ) : (
-                    <><Clock size={15} /> Нужно минимум 4 игрока</>
+                    <><Clock size={15} /> Укажите тему бункера</>
                   )}
                 </button>
               ) : (
@@ -291,40 +306,50 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
               </div>
             </div>
           </div> : (
-            <div className="card mx-auto max-w-2xl space-y-5 p-6">
-              <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                Заполнить ботами
-                <ToggleSwitch checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={checked => updateSetting('fill_with_bots', checked)} />
-              </label>
-              {aiAvailable && (
-                <>
-                  <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                    AI-оценка событий
-                    <ToggleSwitch checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={checked => applySettings({ ...roomState.settings, ai_enabled: checked, ...(!checked && { ai_event_consequences: false }) })} />
-                  </label>
-                  {roomState.settings.ai_enabled && (
-                    <label className="ml-4 flex items-center justify-between gap-3 text-sm text-zinc-400">
-                      Определение последствий событий с помощью ИИ
-                      <ToggleSwitch checked={roomState.settings.ai_event_consequences} disabled={!isAdmin} onChange={checked => updateSetting('ai_event_consequences', checked)} />
-                    </label>
-                  )}
-                </>
-              )}
-              <label className="block text-sm text-zinc-300">
-                <span className="flex justify-between"><span>Частота событий</span><span className="text-zinc-500">{Math.round(roomState.settings.event_frequency * 100)}%</span></span>
-                <Input className="mt-2 w-full p-0" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} />
-              </label>
-              <label className="flex items-center justify-between gap-3 text-sm text-zinc-300">
-                Вместимость
-                <span className="flex gap-2">
-                  <Select value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}>
-                    <option value="auto">Авто</option>
-                    <option value="manual">Вручную</option>
-                  </Select>
-                  {roomState.settings.capacity_mode === 'manual' && <Input className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
-                </span>
-              </label>
-              {isAdmin && <Button variant="ghost" onClick={resetSettings} className="w-full"><RotateCcw size={14} /> Вернуть настройки по умолчанию</Button>}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="card p-5 md:p-6">
+                <div className="mb-5 flex items-start gap-3">
+                  <span className="ability-card-icon"><Users size={17} /></span>
+                  <div><h2 className="font-semibold text-zinc-100">Состав игры</h2><p className="mt-1 text-xs text-zinc-500">Кто играет и сколько мест в бункере.</p></div>
+                </div>
+                <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-zinc-800/80 py-4 text-sm text-zinc-200">
+                  <span><span className="flex items-center gap-2 font-medium"><Bot size={15} className="text-zinc-500" />Заполнить ботами</span><span className="mt-1 block text-xs leading-relaxed text-zinc-500">Свободные места займут компьютерные игроки.</span></span>
+                  <ToggleSwitch ariaLabel="Заполнить ботами" checked={roomState.settings.fill_with_bots} disabled={!isAdmin} onChange={checked => updateSetting('fill_with_bots', checked)} />
+                </label>
+                <label className="flex items-center justify-between gap-4 py-4 text-sm text-zinc-200">
+                  <span><span className="flex items-center gap-2 font-medium"><Warehouse size={15} className="text-zinc-500" />Вместимость</span><span className="mt-1 block text-xs text-zinc-500">Число выживших, которое примет бункер.</span></span>
+                  <span className="flex gap-2">
+                    <Select aria-label="Режим вместимости" value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}><option value="auto">Авто</option><option value="manual">Вручную</option></Select>
+                    {roomState.settings.capacity_mode === 'manual' && <Input aria-label="Количество мест" className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
+                  </span>
+                </label>
+              </section>
+
+              <section className="card p-5 md:p-6">
+                <div className="mb-5 flex items-start gap-3">
+                  <span className="ability-card-icon"><Zap size={17} /></span>
+                  <div><h2 className="font-semibold text-zinc-100">Динамика событий</h2><p className="mt-1 text-xs text-zinc-500">Как часто история будет вмешиваться в игру.</p></div>
+                </div>
+                <label className="block py-4 text-sm text-zinc-200">
+                  <span className="flex items-center justify-between"><span className="font-medium">Частота событий</span><strong className="text-accent font-mono text-sm">{Math.round(roomState.settings.event_frequency * 100)}%</strong></span>
+                  <Input aria-label="Частота событий" className="mt-4 w-full p-0" type="range" min="0" max="1" step="0.05" value={roomState.settings.event_frequency} disabled={!isAdmin} onChange={event => updateSetting('event_frequency', Number(event.target.value))} />
+                  <span className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-zinc-600"><span>Спокойно</span><span>Хаос</span></span>
+                </label>
+              </section>
+
+              {aiAvailable && <section className="card p-5 md:col-span-2 md:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3"><span className="ability-card-icon"><Sparkles size={17} /></span><div><h2 className="font-semibold text-zinc-100">ИИ-сценарист</h2><p className="mt-1 text-xs text-zinc-500">Создаёт тему и связывает события в одну историю.</p></div></div>
+                  <ToggleSwitch ariaLabel="ИИ-сценарист" checked={roomState.settings.ai_enabled} disabled={!isAdmin} onChange={checked => applySettings({ ...roomState.settings, ai_enabled: checked, ...(!checked && { ai_event_consequences: false, ai_bunker_generation: false }) })} />
+                </div>
+                {roomState.settings.ai_enabled && <div className="mt-5 grid gap-3 border-t border-zinc-800 pt-5 md:grid-cols-2">
+                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-300"><span>Последствия событий</span><ToggleSwitch ariaLabel="Последствия событий от ИИ" checked={roomState.settings.ai_event_consequences} disabled={!isAdmin} onChange={checked => updateSetting('ai_event_consequences', checked)} /></label>
+                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-300"><span>Создать тему бункера</span><ToggleSwitch ariaLabel="Создать тему бункера с ИИ" checked={roomState.settings.ai_bunker_generation} disabled={!isAdmin} onChange={checked => updateSetting('ai_bunker_generation', checked)} /></label>
+                  {roomState.settings.ai_bunker_generation && <label className="block text-sm text-zinc-400 md:col-span-2">Тема бункера<Input className="mt-2 w-full" maxLength={200} placeholder="Например: мир после восстания роботов" value={roomState.settings.bunker_theme} disabled={!isAdmin} onChange={event => updateSetting('bunker_theme', event.target.value)} /></label>}
+                </div>}
+              </section>}
+
+              {isAdmin && <div className="flex justify-end lg:col-span-2"><Button variant="ghost" onClick={resetSettings}><RotateCcw size={14} /> Сбросить настройки</Button></div>}
             </div>
           )}
         </div>

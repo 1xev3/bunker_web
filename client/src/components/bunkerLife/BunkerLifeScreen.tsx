@@ -70,7 +70,7 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
         }}
       />
 
-      <header className="topbar sticky top-0 z-10 flex shrink-0 items-center justify-between px-4 py-3">
+      <header className="topbar sticky top-0 z-[60] flex shrink-0 items-center justify-between px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-amber-500">☢</span>
           <span className="text-sm font-semibold text-zinc-300">Бункер</span>

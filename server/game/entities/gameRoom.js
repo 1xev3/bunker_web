@@ -50,6 +50,8 @@ class GameRoom {
       manual_capacity: 2,
       ai_enabled: false,
       ai_event_consequences: false,
+      ai_bunker_generation: false,
+      bunker_theme: '',
     };
     this.confirmedBunkerLife = new Set(); // player IDs who confirmed start of bunker_life
     this.scheduledEvents = []; // [{ event_id, trigger_month, context }]

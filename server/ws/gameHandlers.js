@@ -5,7 +5,8 @@ const { applyProfessionAbility } = require('../game/abilities/professionAbilitie
 const { getDefaultPackName } = require('../game/gameConfig');
 const GameRoom = require('../game/entities/gameRoom');
 const { confirmBotsForBunkerLife, tryStartBunkerLife } = require('./bunkerLifeHandlers');
-const { isAiAvailable } = require('../ai');
+const { isAiAvailable, getAiProvider } = require('../ai');
+const { generateBunkerTheme } = require('../ai/bunkerThemeGenerator');
 
 // Сообщение о раскрытии атрибута. Когда раскрывается пол, прикладываем ФИО,
 // иначе у других игроков оно не появится (точечный патч не несёт full_name).
@@ -137,14 +138,49 @@ function fillRoomWithDevBots(room) {
   }
 }
 
-function handleStartGame(roomCode, playerId) {
+async function handleStartGame(roomCode, playerId) {
   const room = rooms.get(roomCode);
-  if (!room || room.adminId !== playerId || room.status !== 'waiting') return;
+  if (!room || room.adminId !== playerId || room.status !== 'waiting' || room.starting) return;
+  room.starting = true;
+  wsManager.broadcastState(roomCode, room);
+  let theme = null;
+  try {
+    if (room.settings.ai_bunker_generation) {
+      room.bunker.generate(null, room.config);
+      theme = await generateBunkerTheme(getAiProvider(), {
+        topic: room.settings.bunker_theme,
+        bunker: {
+          size: room.bunker.size.label,
+          rooms: room.bunker.rooms.filter(candidate => !candidate.isEntrance).length,
+          duration: room.bunker.duration.label,
+          food: room.bunker.food.label,
+          items: room.bunker.items.map(item => item.label),
+        },
+      });
+    }
+  } catch (error) {
+    console.error('[AI] Ошибка генерации темы бункера:', error);
+    wsManager.send(roomCode, playerId, { type: 'error', message: `Не удалось создать тему бункера: ${error instanceof Error ? error.message : String(error)}` });
+    room.starting = false;
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
   if (room.settings.fill_with_bots) fillRoomWithDevBots(room);
-  if (room.players.length < 4) return;
+  if (room.players.length < 4) {
+    room.starting = false;
+    wsManager.broadcastState(roomCode, room);
+    return;
+  }
 
   room.status = 'running';
-  room.bunker.generate(null, room.config);
+  room.starting = false;
+  if (theme) {
+    room.bunker.theme = theme;
+    room.bunker.disaster_info = theme.description;
+    room.bunker.bunker_info = theme.bunkerDescription;
+  } else {
+    room.bunker.generate(null, room.config);
+  }
   room.bunkerCapacity = room.settings.capacity_mode === 'manual'
     ? Math.min(room.players.length - 1, room.settings.manual_capacity)
     : Math.floor(room.players.length / 2);
@@ -193,6 +229,8 @@ function handleUpdateRoomSettings(roomCode, playerId, msg) {
   const valid = typeof next.fill_with_bots === 'boolean'
     && typeof next.ai_enabled === 'boolean'
     && typeof next.ai_event_consequences === 'boolean'
+    && typeof next.ai_bunker_generation === 'boolean'
+    && typeof next.bunker_theme === 'string' && next.bunker_theme.length <= 200
     // Pack configurations may intentionally use short month durations (for
     // example 750 ms in the Fantasy pack). Settings updates send the complete
     // settings object, so validate the current value without rejecting every
@@ -205,12 +243,12 @@ function handleUpdateRoomSettings(roomCode, playerId, msg) {
     wsManager.send(roomCode, playerId, { type: 'error', message: 'Недопустимые настройки комнаты' });
     return;
   }
-  if (next.ai_enabled && !isAiAvailable()) {
+  if ((next.ai_enabled || next.ai_bunker_generation) && !isAiAvailable()) {
     wsManager.send(roomCode, playerId, { type: 'error', message: 'AI-режим недоступен на сервере' });
     return;
   }
-  if (next.ai_event_consequences && !next.ai_enabled) {
-    wsManager.send(roomCode, playerId, { type: 'error', message: 'Определение последствий требует включённого AI-режима' });
+  if ((next.ai_event_consequences || next.ai_bunker_generation) && !next.ai_enabled) {
+    wsManager.send(roomCode, playerId, { type: 'error', message: 'Функции ИИ требуют включённого ИИ-режима' });
     return;
   }
   room.settings = { ...next };

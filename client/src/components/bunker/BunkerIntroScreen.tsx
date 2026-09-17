@@ -243,7 +243,7 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
                       <p className="flex items-center gap-1.5 text-zinc-500 text-xs mb-3 shrink-0">
                         <Map size={13} /> Карта бункера
                       </p>
-                      <div className="flex-1 min-h-0 relative">
+                      <div className="flex-1 min-h-56 relative">
                         <BunkerMap layout={bunker.layout} svgClassName="absolute inset-0 w-full h-full" />
                       </div>
                     </div>

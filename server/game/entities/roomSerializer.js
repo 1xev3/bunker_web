@@ -17,6 +17,7 @@ function serializeRoom(room, viewerId = null) {
     pack_settings: room.config.packSettings,
     settings: { ...room.settings },
     status: room.status,
+    game_start_pending: Boolean(room.starting),
     spectator_count: wsManager.spectatorCount(room.roomCode),
     is_voting: room.voting.phase === 'ballot' || room.voting.phase === 'cancelling',
     voting: {
