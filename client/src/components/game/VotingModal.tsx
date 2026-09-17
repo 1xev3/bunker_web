@@ -11,12 +11,9 @@ export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, vo
   const connected = players.filter(p => p.is_active && p.connection_status === 'connected').length;
   const candidates = players.filter(p => voting.candidate_ids.includes(p.id) && p.id !== myPlayerId);
 
-  if (idle) return <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-    <Button variant={proposed ? 'secondary' : 'primary'} className={`relative h-10 px-4 pb-3 text-xs font-semibold ${proposed ? 'border-[var(--accent)] text-[var(--accent)]' : ''}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>
-      <Vote size={14} /> {proposed ? 'Голосование поддержано' : 'Предложить голосование'}
-      <span className="absolute inset-x-3 bottom-1 flex h-1 justify-center gap-1 overflow-hidden" aria-label={`Поддержали: ${voting.start_approvals.length} из ${connected}`}>
-        {voting.start_approvals.map(id => <span key={id} title={players.find(player => player.id === id)?.name} className="h-1 w-1 shrink-0 rounded-full bg-amber-300 shadow-[0_0_5px_2px_rgba(252,211,77,0.7)]" />)}
-      </span>
+  if (idle) return <div className="shrink-0">
+    <Button variant={proposed ? 'secondary' : 'primary'} className={`h-10 px-4 text-xs font-semibold ${proposed ? 'border-[var(--accent)] text-[var(--accent)]' : ''}`} aria-label={`Поддержали: ${voting.start_approvals.length} из ${connected}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>
+      <Vote size={14} /> Предложить голосование [{voting.start_approvals.length}/{connected}]
     </Button>
   </div>;
 

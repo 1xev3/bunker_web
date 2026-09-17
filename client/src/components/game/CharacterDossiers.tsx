@@ -1,4 +1,4 @@
-import { LockKeyhole, UserRound } from 'lucide-react';
+import { LockKeyhole, Skull, UserRound } from 'lucide-react';
 import type { AttributeKey, ClientMessage, Player } from '../../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 import { ATTRIBUTE_ICONS, AttrValue } from './StatusTable';
@@ -21,7 +21,7 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
             <article
               key={player.id}
               className={`card relative overflow-hidden border-zinc-800/80 p-3 shadow-[0_12px_30px_rgba(0,0,0,0.2)] ${
-                inactive ? 'grayscale opacity-55' : ''
+                inactive ? 'grayscale' : ''
               } ${isMe ? 'dossier-card-me' : ''}`}
             >
               <div className="absolute right-3 top-2 font-mono text-4xl font-black text-zinc-800/60">
@@ -30,13 +30,13 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
 
               <header className="relative mb-3 flex items-start gap-3 border-b border-zinc-800/80 pb-2 pr-10">
                 <div className={`grid size-10 shrink-0 place-items-center rounded-lg border border-zinc-700 bg-zinc-900 ${isMe ? 'status-name-me' : 'text-zinc-500'}`}>
-                  <UserRound size={20} />
+                  {inactive ? <Skull size={20} /> : <UserRound size={20} />}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  <p className={`text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 ${inactive ? 'line-through' : ''}`}>
                     {player.name} {isMe && <span className="status-name-me">· Вы</span>}
                   </p>
-                  <h2 className="mt-1 break-words text-base font-semibold leading-tight text-zinc-100">
+                  <h2 className={`mt-1 break-words text-base font-semibold leading-tight ${inactive ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>
                     {player.full_name ?? <span className="inline-flex items-center gap-1 rounded bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600"><LockKeyhole size={10} /> Засекречено</span>}
                   </h2>
                 </div>
@@ -67,7 +67,7 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
                         {value ? (
                           <span
                             className={`block w-full break-words text-left text-sm leading-snug transition-colors ${
-                              revealed && isMe ? 'text-emerald-400' : 'text-zinc-300'
+                              revealed && isMe && !inactive ? 'text-emerald-400' : inactive ? 'text-zinc-500' : 'text-zinc-300'
                             } ${canReveal ? 'group-hover:text-[var(--accent)]' : ''}`}
                           >
                             <AttrValue attrKey={key} value={value} className="block" />

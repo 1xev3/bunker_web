@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Trophy, Shuffle, EyeOff, Eye, LayoutGrid, Table2 } from 'lucide-react';
+import { LogOut, CircleAlert, Info, Trophy, Shuffle, EyeOff, Eye, LayoutGrid, Table2, Users } from 'lucide-react';
 import type { RoomState, ClientMessage, Player } from '../../types/game';
 import BunkerInfo from '../bunker/BunkerInfo';
 import StatusTable from './StatusTable';
@@ -35,6 +35,7 @@ export default function GameRoom({
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
+  const activePlayerCount = roomState.players.filter(player => player.is_active).length;
 
   return (
     <div
@@ -72,8 +73,8 @@ export default function GameRoom({
         )}
 
         {votingResult && (
-          <div className={`card py-3 px-4 text-center animate-fade-in-up flex items-center justify-center gap-2 ${
-            votingResult.isTie ? '' : 'border-red-900/40 bg-red-950/20'
+          <div role="status" aria-live="polite" className={`card fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] items-center justify-center gap-2 px-4 py-3 text-center text-sm animate-fade-in-up ${
+            votingResult.isTie ? '' : 'border-red-900/60'
           }`}>
             {votingResult.isTie ? (
               <>
@@ -97,46 +98,29 @@ export default function GameRoom({
         )}
 
         {flashMessage && (
-          <div className={`rounded-xl border py-3 px-4 text-center text-sm animate-fade-in-up ${
+          <div role={flashMessage.kind === 'error' ? 'alert' : 'status'} aria-live="polite" className={`card fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] items-start gap-3 px-4 py-3 text-sm shadow-2xl animate-fade-in-up ${
             flashMessage.kind === 'error'
-              ? 'border-red-900/40 bg-red-950/20 text-red-300'
+              ? 'border-red-800/70 text-red-200'
               : 'flash-info'
           }`}>
-            {flashMessage.text}
+            {flashMessage.kind === 'error' ? <CircleAlert size={18} className="mt-0.5 shrink-0" /> : <Info size={18} className="mt-0.5 shrink-0" />}
+            <span className="leading-relaxed">{flashMessage.text}</span>
           </div>
         )}
 
         <div className="card relative z-[60] flex shrink-0 flex-wrap items-center gap-2 p-2">
-          <span className="px-1 text-sm font-semibold text-zinc-300"><span className="mr-2 text-amber-500">☢</span>Бункер</span>
-          <span className="font-mono text-xs tracking-widest text-zinc-500">{roomState.room_code}</span>
-          {roomState.round > 0 && <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-500">Раунд {roomState.round}</span>}
-          {roomState.bunker_capacity !== null && <span className={`rounded-full border px-2 py-0.5 text-xs ${roomState.players.filter(p => p.is_active).length <= roomState.bunker_capacity ? 'phase-banner-voting' : 'border-zinc-800 bg-zinc-900 text-zinc-400'}`}>{roomState.players.filter(p => p.is_active).length}/{roomState.bunker_capacity} в бункере</span>}
+          <Button variant="secondary" onClick={onLeave} className="h-10 w-10 p-0 text-zinc-300 hover:border-red-700 hover:bg-red-950/30 hover:text-red-400" aria-label="Выйти" title="Выйти"><LogOut className="h-6 w-6" strokeWidth={2.5} /></Button>
+          {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
+          {roomState.bunker_capacity !== null && <span className={`flex h-10 items-center gap-2 rounded-xl border border-zinc-700 px-4 text-xs ${activePlayerCount <= roomState.bunker_capacity ? 'text-[var(--accent)]' : 'text-zinc-300'}`}><Users size={15} /> {activePlayerCount}/{roomState.bunker_capacity} людей</span>}
           {isFinished && <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-500">Завершена</span>}
           {(roomState.spectator_count ?? 0) > 0 && <span className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400"><Eye size={10} /> {roomState.spectator_count}</span>}
-          {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
           {showBunkerLifeReady && <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />}
-          <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} send={send} />
-          <div className="ml-auto flex rounded-md border border-zinc-800 bg-zinc-950/70 p-0.5" role="group" aria-label="Вид списка персонажей">
-            <button
-              type="button"
-              onClick={() => setPlayerView('dossiers')}
-              className={`rounded px-2 py-1 transition-colors ${playerView === 'dossiers' ? 'status-avatar-me' : 'text-zinc-600 hover:text-zinc-300'}`}
-              aria-label="Досье"
-              title="Досье"
-            >
-              <LayoutGrid size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlayerView('table')}
-              className={`rounded px-2 py-1 transition-colors ${playerView === 'table' ? 'status-avatar-me' : 'text-zinc-600 hover:text-zinc-300'}`}
-              aria-label="Таблица"
-              title="Таблица"
-            >
-              <Table2 size={13} />
-            </button>
-          </div>
-          <Button variant="ghost" onClick={onLeave} className="px-3 py-1.5"><ArrowLeft size={14} /> Выйти</Button>
+          <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} bunkerLifeReady={showBunkerLifeReady} send={send}>
+            <div className="flex gap-2" role="group" aria-label="Вид списка персонажей">
+              <button type="button" onClick={() => setPlayerView('dossiers')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></button>
+              <button type="button" onClick={() => setPlayerView('table')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'table' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Таблица" title="Таблица"><Table2 size={13} /></button>
+            </div>
+          </AdminPanel>
         </div>
 
         {playerView === 'dossiers' ? (

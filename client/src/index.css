@@ -421,7 +421,6 @@ td, th {
 .flash-info {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: color-mix(in srgb, var(--accent) 95%, #fff);
-  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* Bunker map — SVG floor plan */
@@ -574,7 +573,6 @@ td, th {
 .dossier-card-me {
   border-color: color-mix(in srgb, var(--accent) 45%, #27272a);
   box-shadow:
-    inset 3px 0 0 color-mix(in srgb, var(--accent) 75%, transparent),
     0 12px 30px rgba(0, 0, 0, 0.24),
     0 0 20px rgba(var(--accent-rgb), 0.08);
 }

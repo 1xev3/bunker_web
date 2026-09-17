@@ -11,7 +11,7 @@ PROFESSION_ABILITIES:
   Целитель:
     groups: [medic, intellectual]
     title: Исцеляющий свет
-    description: Устанавливает здоровье выбранного игрока в «Здоров».
+    description: Полностью исцеляет выбранного персонажа, возвращая ему состояние «Здоров».
     targetType: other
     effect:
       type: set_attribute
@@ -22,7 +22,7 @@ PROFESSION_ABILITIES:
   Рунный кузнец:
     groups: [craftsman, magic]
     title: Порча руны
-    description: Заменяет инвентарь выбранного игрока на «Проклят».
+    description: Накладывает порчу на снаряжение выбранного персонажа, делая его проклятым.
     targetType: other
     effect:
       type: strip_attribute
@@ -33,7 +33,7 @@ PROFESSION_ABILITIES:
   Наставник:
     groups: [intellectual, social]
     title: Наставление
-    description: Случайно заменяет хобби выбранного игрока на другое.
+    description: Помогает выбранному персонажу освоить новое случайное увлечение взамен прежнего.
     targetType: other
     effect:
       type: randomize_attribute
@@ -46,7 +46,7 @@ PROFESSION_ABILITIES:
   Земледелец:
     groups: [farmer, provider, nature]
     title: Щедрый урожай
-    description: Повышает запас еды в бункере на одну ступень.
+    description: Собирает урожай и увеличивает запас еды в бункере на одну ступень.
     targetType: none
     effect:
       type: adjust_food
@@ -56,7 +56,7 @@ PROFESSION_ABILITIES:
   Провидец:
     groups: [magic, scout, intellectual]
     title: Видение
-    description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
+    description: Тайно узнаёт одну случайную скрытую характеристику выбранного персонажа.
     targetType: other
     effect:
       type: inspect_attribute
@@ -70,8 +70,8 @@ PROFESSION_ABILITIES:
 
   Маг:
     groups: [magic, intellectual]
-    title: Чародейский опыт
-    description: Случайно меняет здоровье выбранного игрока на другое значение.
+    title: Магическая трансмутация
+    description: С помощью рискованного заклинания случайным образом изменяет здоровье выбранного персонажа.
     targetType: other
     effect:
       type: randomize_attribute
@@ -81,7 +81,7 @@ PROFESSION_ABILITIES:
   Наездник грифона:
     groups: [military, scout, nature]
     title: Воздушная разведка
-    description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
+    description: С высоты замечает и раскрывает всем одну случайную скрытую характеристику выбранного персонажа.
     targetType: other
     effect:
       type: reveal_attribute
@@ -90,7 +90,7 @@ PROFESSION_ABILITIES:
   Грозовой маг:
     groups: [magic, fighter]
     title: Удар молнией
-    description: Заменяет инвентарь выбранного игрока на «Оплавлен».
+    description: Ударом молнии оплавляет снаряжение выбранного персонажа.
     targetType: other
     effect:
       type: strip_attribute
@@ -98,10 +98,10 @@ PROFESSION_ABILITIES:
       value: Оплавлен
     publicMessage: "{actor} поразил молнией игрока {target}."
 
-  Мастер водопроводов:
+  Мастер водоводов:
     groups: [craftsman, builder]
-    title: Порча водовода
-    description: Случайно меняет телосложение выбранного игрока.
+    title: Закалка водой
+    description: Устраивает выбранному персонажу суровую водную закалку, случайным образом меняющую его телосложение.
     targetType: other
     effect:
       type: randomize_attribute
@@ -111,7 +111,7 @@ PROFESSION_ABILITIES:
   Исповедник:
     groups: [social, spiritual, intellectual]
     title: Исповедь
-    description: Случайно заменяет фобию выбранного игрока на другую.
+    description: Помогает выбранному персонажу избавиться от прежнего страха, но взамен тот получает новую случайную фобию.
     targetType: other
     effect:
       type: randomize_attribute
@@ -121,7 +121,7 @@ PROFESSION_ABILITIES:
   Друид:
     groups: [magic, nature, spiritual]
     title: Зов природы
-    description: Случайно меняет расу выбранного игрока.
+    description: Призывает силы природы, случайным образом меняя расу выбранного персонажа.
     targetType: other
     effect:
       type: randomize_attribute
@@ -130,8 +130,8 @@ PROFESSION_ABILITIES:
 
   Алхимик:
     groups: [medic, magic, intellectual]
-    title: Эликсир или яд
-    description: Ухудшает здоровье выбранного игрока ядом.
+    title: Ядовитый эликсир
+    description: Отравляет выбранного персонажа и ухудшает его здоровье.
     targetType: other
     effect:
       type: set_attribute
@@ -139,10 +139,10 @@ PROFESSION_ABILITIES:
       value: worse
     publicMessage: "{actor} применил алхимический состав на игроке {target}."
 
-  Вор:
+  Артефактор:
     groups: [craftsman, magic]
     title: Разбор артефакта
-    description: "Забирает инвентарь выбранного игрока себе, тому ставит «Разряжен»."
+    description: Разбирает снаряжение выбранного персонажа, забирает полезные детали себе и оставляет разряженный предмет.
     targetType: other
     effect:
       type: steal_attribute
@@ -153,7 +153,7 @@ PROFESSION_ABILITIES:
   Бронник:
     groups: [craftsman, military]
     title: Перековка
-    description: Случайно меняет инвентарь выбранного игрока на другой предмет.
+    description: Перековывает снаряжение выбранного персонажа в другой случайный предмет.
     targetType: other
     effect:
       type: randomize_attribute
@@ -165,8 +165,8 @@ PROFESSION_ABILITIES:
 
   Ассасин:
     groups: [fighter, military]
-    title: Стирание следов
-    description: Заменяет инвентарь выбранного игрока на «Обобран».
+    title: Тихое ограбление
+    description: Незаметно лишает выбранного персонажа всего снаряжения.
     targetType: other
     effect:
       type: strip_attribute
@@ -177,7 +177,7 @@ PROFESSION_ABILITIES:
   Теневой лазутчик:
     groups: [scout, fighter]
     title: Тайная слежка
-    description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
+    description: Тайно узнаёт профессию выбранного персонажа.
     targetType: other
     effect:
       type: inspect_attribute
@@ -187,7 +187,7 @@ PROFESSION_ABILITIES:
   Купец:
     groups: [social, provider]
     title: Бартер
-    description: Меняет местами инвентарь двух выбранных игроков.
+    description: Устраивает сделку и меняет местами снаряжение двух выбранных персонажей.
     targetType: pair
     effect:
       type: swap_attribute
@@ -197,17 +197,17 @@ PROFESSION_ABILITIES:
   Казначей:
     groups: [social, provider]
     title: Звон монет
-    description: Случайно заменяет доп. факт выбранного игрока на другой.
+    description: Подкупом меняет дополнительный факт выбранного персонажа на случайный новый.
     targetType: other
     effect:
       type: randomize_attribute
       attribute: additional
     publicMessage: "{actor} подкупил игрока {target}."
 
-  Разведчик:
+  Зодчий:
     groups: [intellectual, builder]
     title: Чтение планов
-    description: Приватно узнаёт один случайный скрытый атрибут выбранного игрока.
+    description: Изучает чертежи и тайно узнаёт, какое снаряжение есть у выбранного персонажа.
     targetType: other
     effect:
       type: inspect_attribute
@@ -217,7 +217,7 @@ PROFESSION_ABILITIES:
   Инквизитор:
     groups: [military, social, intellectual]
     title: Дознание
-    description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
+    description: Проводит дознание и раскрывает всем профессию выбранного персонажа.
     targetType: other
     effect:
       type: reveal_attribute
@@ -227,7 +227,7 @@ PROFESSION_ABILITIES:
   Арбитр:
     groups: [social, intellectual]
     title: Приговор
-    description: Публично раскрывает один случайный скрытый атрибут выбранного игрока всем игрокам.
+    description: Оглашает приговор и раскрывает всем дополнительный факт выбранного персонажа.
     targetType: other
     effect:
       type: reveal_attribute
@@ -237,7 +237,7 @@ PROFESSION_ABILITIES:
   Разбойник:
     groups: [fighter]
     title: Налёт
-    description: "Забирает инвентарь выбранного игрока себе, тому ставит Табличка 'лох'."
+    description: Грабит выбранного персонажа, забирает его снаряжение и оставляет унизительную табличку.
     targetType: other
     effect:
       type: steal_attribute
@@ -248,17 +248,17 @@ PROFESSION_ABILITIES:
   Медовар:
     groups: [provider, social]
     title: Хмельной настой
-    description: Случайно заменяет доп. факт выбранного игрока на другой.
+    description: Угощает выбранного персонажа крепким настоем, случайным образом меняя его дополнительный факт.
     targetType: other
     effect:
       type: randomize_attribute
       attribute: additional
     publicMessage: "{actor} опоил игрока {target}."
 
-  Соблазнитель:
+  Обольститель:
     groups: [social]
     title: Чары
-    description: Случайно меняет пол выбранного игрока.
+    description: Накладывает чары, случайным образом меняющие пол выбранного персонажа.
     targetType: other
     effect:
       type: randomize_attribute
@@ -268,7 +268,7 @@ PROFESSION_ABILITIES:
   Шут:
     groups: [social]
     title: Едкая насмешка
-    description: Случайно заменяет фобию выбранного игрока на другую.
+    description: Едкой насмешкой избавляет выбранного персонажа от прежнего страха, но порождает новую случайную фобию.
     targetType: other
     effect:
       type: randomize_attribute
@@ -278,7 +278,7 @@ PROFESSION_ABILITIES:
   Иллюзионист:
     groups: [magic, social]
     title: Морок
-    description: Меняет местами хобби двух выбранных игроков.
+    description: Запутывает воспоминания и меняет местами увлечения двух выбранных персонажей.
     targetType: pair
     effect:
       type: swap_attribute

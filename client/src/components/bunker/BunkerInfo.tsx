@@ -14,9 +14,9 @@ export default function BunkerInfo({ bunker }: Props) {
   const themeImage = bunker.theme.image;
 
   return (
-    <div className="card relative h-10 shrink-0 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+    <div className="relative h-10 shrink-0 rounded-xl border border-zinc-700 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
       <button
-        className="flex h-full items-center justify-between px-3 hover:bg-zinc-800/40 transition-colors text-left group"
+        className="group flex h-full items-center justify-between rounded-xl px-3 text-left transition-colors hover:bg-zinc-800/40"
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2.5 min-w-0">

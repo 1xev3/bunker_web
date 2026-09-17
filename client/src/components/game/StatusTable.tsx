@@ -105,12 +105,12 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
             return [
               <tr
                 key={player.id}
-                className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40 ${inactive ? 'grayscale opacity-55 bg-zinc-950/50' : ''}`}
+                className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40 ${inactive ? 'grayscale bg-zinc-950/50 text-zinc-500' : ''}`}
               >
                 <td className="px-3 py-2 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
                 <td className="px-3 py-2 align-top">
                   <div>
-                      <span className="font-semibold break-words leading-snug text-sm text-zinc-100">
+                      <span className={`font-semibold break-words leading-snug text-sm ${inactive ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>
                         {player.full_name
                           ? <>{player.full_name} <span className="text-zinc-400 font-normal">({player.name})</span></>
                           : player.name}
@@ -126,7 +126,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                     return (
                       <td key={key} className="px-3 py-2 align-top">
                         {revealed ? (
-                          <AttrValue attrKey={key} value={val} className="text-emerald-400 text-sm leading-relaxed break-words" />
+                          <AttrValue attrKey={key} value={val} className={`${inactive ? 'text-zinc-500' : 'text-emerald-400'} text-sm leading-relaxed break-words`} />
                         ) : (
                           <span
                             className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer status-link transition-colors underline decoration-dotted underline-offset-2"

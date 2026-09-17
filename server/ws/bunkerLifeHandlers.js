@@ -458,7 +458,7 @@ function handleUpdateEventSelection(roomCode, playerId, msg) {
 
 function handleConfirmBunkerLife(roomCode, playerId) {
   const room = getRoomInStatus(roomCode, 'running');
-  if (!room || !isActivePlayer(room, playerId)) return;
+  if (!room || room.bunkerCapacity === null || room.getActivePlayers().length > room.bunkerCapacity || !isActivePlayer(room, playerId)) return;
 
   room.confirmedBunkerLife.add(playerId);
   confirmBotsForBunkerLife(room);

@@ -56,7 +56,6 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   const [gameWinner, setGameWinner] = useState<Player | null | undefined>(undefined);
   const [hasVoted, setHasVoted] = useState(false);
   const [flashMessage, setFlashMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
-  const [showReadyButton, setShowReadyButton] = useState(false);
   const [eventOutcome, setEventOutcome] = useState<EventOutcome | null>(null);
   const [monthlyNotice, setMonthlyNotice] = useState<MonthlyNotice | null>(null);
   const monthlyNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,10 +195,6 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       if (msg.type === 'vote_confirmed') setHasVoted(true);
       if (msg.type === 'profession_ability_used') showFlashMessage('info', msg.message);
 
-      if (msg.type === 'ready_for_bunker_life') {
-        setShowReadyButton(true);
-      }
-
       if (msg.type === 'event_resolved') {
         if (msg.ai_error) console.error('[ИИ] Ошибка расчёта события:', msg.ai_error);
         setEventOutcome({ outcome: msg.outcome, event_title: msg.event_title, event_description: msg.event_description, message: msg.message, ai_explanation: msg.ai_explanation, ai_outcome: msg.ai_outcome, ai_score: msg.ai_score, ai_error: msg.ai_error, selected_resources: msg.selected_resources, accepted_resources: msg.accepted_resources, rejected_resources: msg.rejected_resources, scheduled_events: msg.scheduled_events, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
@@ -212,7 +207,6 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'room_state' && msg.data.status === 'bunker_life') {
-        setShowReadyButton(false);
         setShowBunkerIntro(false);
       }
 
@@ -496,7 +490,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
         gameWinner={gameWinner}
         hasVoted={hasVoted}
         flashMessage={flashMessage}
-        showBunkerLifeReady={showReadyButton && !isSpectator}
+        showBunkerLifeReady={!isSpectator && roomState.bunker_capacity !== null && roomState.players.filter(player => player.is_active).length <= roomState.bunker_capacity}
         onLeave={handleLeave}
       />
       {showSecretGoal && mySecretGoal && (

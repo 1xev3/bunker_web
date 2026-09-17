@@ -14,7 +14,7 @@ const {
   handleUpdateRoomSettings,
   shufflePlayers,
 } = require('../server/ws/gameHandlers');
-const { botFoodSelection } = require('../server/ws/bunkerLifeHandlers');
+const { botFoodSelection, handleConfirmBunkerLife } = require('../server/ws/bunkerLifeHandlers');
 
 function socket() {
   return { readyState: 1, messages: [], send(raw) { this.messages.push(JSON.parse(raw)); }, close() {} };
@@ -24,6 +24,23 @@ function cleanRoom(room) {
   rooms.delete(room.roomCode);
   wsManager.dropRoom(room.roomCode);
 }
+
+test('bunker life confirmation opens only when the survivor count fits', () => {
+  const players = ['A', 'B'].map(name => new Player(name));
+  const room = new GameRoom(players[0].id);
+  room.players = players;
+  room.status = 'running';
+  room.bunkerCapacity = 1;
+  rooms.set(room.roomCode, room);
+
+  handleConfirmBunkerLife(room.roomCode, players[0].id);
+  assert.equal(room.confirmedBunkerLife.size, 0);
+
+  room.bunkerCapacity = 2;
+  handleConfirmBunkerLife(room.roomCode, players[0].id);
+  assert.deepEqual([...room.confirmedBunkerLife], [players[0].id]);
+  cleanRoom(room);
+});
 
 test('players are shuffled independently of the host role', () => {
   const players = ['Host', 'A', 'B', 'C'];
