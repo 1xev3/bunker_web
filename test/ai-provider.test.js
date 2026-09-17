@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { FakeAiProvider } = require('../server/ai/aiProvider');
 const { OpenAIProvider } = require('../server/ai/openAIProvider');
 const { adjudicateEvent } = require('../server/ai/eventAdjudicator');
-const { isAiAvailable } = require('../server/ai');
+const { isAiAvailable, providerOptions } = require('../server/ai');
 
 test('AI adjudication accepts a valid structured response', async () => {
   const provider = new FakeAiProvider({ chance_modifier: 12, explanation: 'Подходящий инструмент', result_seed: 'Работа спорилась.' });
@@ -43,4 +43,16 @@ test('timeout and malformed JSON use the gameplay fallback', async () => {
 test('AI capability requires both environment variables', () => {
   assert.equal(isAiAvailable({ OPENAI_API_KEY: 'key', OPENAI_MODEL: 'model' }), true);
   assert.equal(isAiAvailable({ OPENAI_API_KEY: 'key' }), false);
+});
+
+test('OpenAI-compatible base URL is forwarded to provider options', () => {
+  assert.deepEqual(providerOptions({
+    OPENAI_API_KEY: 'gpustack-key',
+    OPENAI_MODEL: 'qwen3',
+    OPENAI_BASE_URL: 'http://gpustack.local/v1',
+  }), {
+    apiKey: 'gpustack-key',
+    model: 'qwen3',
+    baseURL: 'http://gpustack.local/v1',
+  });
 });

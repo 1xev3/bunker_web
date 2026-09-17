@@ -1,3 +1,7 @@
+// Load optional local configuration before modules read process.env.
+// Existing environment variables keep priority over values from .env.
+require('./loadEnv').loadRootEnv();
+
 const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');

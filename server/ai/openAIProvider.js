@@ -2,11 +2,11 @@ const OpenAI = require('openai');
 const { AiProvider } = require('./aiProvider');
 
 class OpenAIProvider extends AiProvider {
-  constructor({ apiKey, model, timeoutMs = 10_000, client } = {}) {
+  constructor({ apiKey, baseURL, model, timeoutMs = 10_000, client } = {}) {
     super();
     if (!client && !apiKey) throw new Error('OPENAI_API_KEY is required');
     if (!model) throw new Error('OPENAI_MODEL is required');
-    this.client = client ?? new OpenAI({ apiKey, timeout: timeoutMs });
+    this.client = client ?? new OpenAI({ apiKey, baseURL, timeout: timeoutMs });
     this.model = model;
     this.timeoutMs = timeoutMs;
   }

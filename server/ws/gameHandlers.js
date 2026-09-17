@@ -192,7 +192,11 @@ function handleUpdateRoomSettings(roomCode, playerId, msg) {
   if (!next || typeof next !== 'object') return;
   const valid = typeof next.fill_with_bots === 'boolean'
     && typeof next.ai_enabled === 'boolean'
-    && Number.isInteger(next.month_duration_ms) && next.month_duration_ms >= 10_000 && next.month_duration_ms <= 900_000
+    // Pack configurations may intentionally use short month durations (for
+    // example 750 ms in the Fantasy pack). Settings updates send the complete
+    // settings object, so validate the current value without rejecting every
+    // unrelated setting change.
+    && Number.isInteger(next.month_duration_ms) && next.month_duration_ms >= 1 && next.month_duration_ms <= 900_000
     && typeof next.event_frequency === 'number' && next.event_frequency >= 0 && next.event_frequency <= 1
     && ['auto', 'manual'].includes(next.capacity_mode)
     && Number.isInteger(next.manual_capacity) && next.manual_capacity >= 1 && next.manual_capacity <= 12;

@@ -79,7 +79,9 @@ test('only the lobby admin can update validated room settings', () => {
   room.addPlayer(admin);
   room.addPlayer(guest);
   rooms.set(room.roomCode, room);
-  const settings = { fill_with_bots: false, ai_enabled: false, month_duration_ms: 60_000, event_frequency: 0.35, capacity_mode: 'manual', manual_capacity: 3 };
+  // Preserve the pack's month duration to verify that unrelated setting
+  // changes work even when the pack uses a value below the old 10-second floor.
+  const settings = { ...room.settings, fill_with_bots: false, ai_enabled: false, event_frequency: 0.35, capacity_mode: 'manual', manual_capacity: 3 };
   handleUpdateRoomSettings(room.roomCode, guest.id, { settings });
   assert.notEqual(room.settings.event_frequency, 0.35);
   handleUpdateRoomSettings(room.roomCode, admin.id, { settings });
