@@ -6,7 +6,6 @@ import StatusTable from './StatusTable';
 import CharacterDossiers from './CharacterDossiers';
 import AdminPanel from '../admin/AdminPanel';
 import Button from '../ui/Button';
-import BunkerLifeReadyButton from './BunkerLifeReadyButton';
 
 interface Props {
   roomState: RoomState;
@@ -36,6 +35,20 @@ export default function GameRoom({
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
   const activePlayerCount = roomState.players.filter(player => player.is_active).length;
+  const notice = votingResult
+    ? {
+        kind: votingResult.isTie ? 'info' : 'error',
+        text: votingResult.isTie
+          ? 'Ничья, никто не исключён. Голосование повторяется.'
+          : `Исключён: ${votingResult.eliminated?.name ?? ''}`,
+        icon: votingResult.isTie ? <Shuffle size={18} /> : <CircleAlert size={18} />,
+      }
+    : flashMessage
+      ? {
+          ...flashMessage,
+          icon: flashMessage.kind === 'error' ? <CircleAlert size={18} /> : <Info size={18} />,
+        }
+      : null;
 
   return (
     <div
@@ -72,24 +85,6 @@ export default function GameRoom({
           </div>
         )}
 
-        {votingResult && (
-          <div role="status" aria-live="polite" className={`card fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] items-center justify-center gap-2 px-4 py-3 text-center text-sm animate-fade-in-up ${
-            votingResult.isTie ? '' : 'border-red-900/60'
-          }`}>
-            {votingResult.isTie ? (
-              <>
-                <Shuffle size={14} className="text-zinc-400 shrink-0" />
-                <span className="text-zinc-400 text-sm">Ничья, никто не исключён. Голосование повторяется.</span>
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-zinc-400">Исключён:</span>
-                <span className="text-red-300 font-semibold text-sm">{votingResult.eliminated?.name}</span>
-              </>
-            )}
-          </div>
-        )}
-
         {amEliminated && (
           <div className="card py-2.5 px-4 text-center flex items-center justify-center gap-2">
             <EyeOff size={13} className="text-zinc-500" />
@@ -97,24 +92,23 @@ export default function GameRoom({
           </div>
         )}
 
-        {flashMessage && (
-          <div role={flashMessage.kind === 'error' ? 'alert' : 'status'} aria-live="polite" className={`card fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] items-start gap-3 px-4 py-3 text-sm shadow-2xl animate-fade-in-up ${
-            flashMessage.kind === 'error'
+        {notice && (
+          <div role={notice.kind === 'error' ? 'alert' : 'status'} aria-live="polite" className={`card fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] items-start gap-3 px-4 py-3 text-sm shadow-2xl animate-fade-in-up ${
+            notice.kind === 'error'
               ? 'border-red-800/70 text-red-200'
               : 'flash-info'
           }`}>
-            {flashMessage.kind === 'error' ? <CircleAlert size={18} className="mt-0.5 shrink-0" /> : <Info size={18} className="mt-0.5 shrink-0" />}
-            <span className="leading-relaxed">{flashMessage.text}</span>
+            <span className="mt-0.5 shrink-0">{notice.icon}</span>
+            <span className="leading-relaxed">{notice.text}</span>
           </div>
         )}
 
         <div className="card relative z-[60] flex shrink-0 flex-wrap items-center gap-2 p-2">
-          <Button variant="secondary" onClick={onLeave} className="h-10 w-10 p-0 text-zinc-300 hover:border-red-700 hover:bg-red-950/30 hover:text-red-400" aria-label="Выйти" title="Выйти"><LogOut className="h-6 w-6" strokeWidth={2.5} /></Button>
+          <Button variant="secondary" onClick={onLeave} className="h-10 w-10 p-0 text-zinc-300 hover:border-red-700 hover:bg-red-950/30 hover:text-red-400" aria-label="Выйти" title="Выйти"><LogOut size={15} className="shrink-0" strokeWidth={2} /></Button>
           {roomState.bunker && <BunkerInfo bunker={roomState.bunker} />}
           {roomState.bunker_capacity !== null && <span className={`flex h-10 items-center gap-2 rounded-xl border border-zinc-700 px-4 text-xs ${activePlayerCount <= roomState.bunker_capacity ? 'text-[var(--accent)]' : 'text-zinc-300'}`}><Users size={15} /> {activePlayerCount}/{roomState.bunker_capacity} людей</span>}
           {isFinished && <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-500">Завершена</span>}
           {(roomState.spectator_count ?? 0) > 0 && <span className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400"><Eye size={10} /> {roomState.spectator_count}</span>}
-          {showBunkerLifeReady && <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />}
           <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} bunkerLifeReady={showBunkerLifeReady} send={send}>
             <div className="flex gap-2" role="group" aria-label="Вид списка персонажей">
               <button type="button" onClick={() => setPlayerView('dossiers')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></button>

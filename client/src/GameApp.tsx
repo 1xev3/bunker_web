@@ -311,7 +311,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a fresh event supersedes any lingering outcome modal
     if (roomState?.active_event) setEventOutcome(null);
-  }, [roomState?.active_event?.id]);
+  }, [roomState?.active_event]);
 
   useEffect(() => {
     const token = localStorage.getItem('bunker_token');

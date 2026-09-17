@@ -5,6 +5,7 @@ import KickPlayerModal from './KickPlayerModal';
 import RevealPlayerAttributeModal from './RevealPlayerAttributeModal';
 import UseAbilityModal from './UseAbilityModal';
 import VotingModal from '../game/VotingModal';
+import BunkerLifeReadyButton from '../game/BunkerLifeReadyButton';
 import Button from '../ui/Button';
 
 interface Props { roomState: RoomState; myPlayerId: string; hasVoted: boolean; bunkerLifeReady: boolean; send: (msg: ClientMessage) => void; children?: ReactNode; }
@@ -24,7 +25,7 @@ export default function AdminPanel({ roomState, myPlayerId, hasVoted, bunkerLife
   const canReveal = roomState.status === 'running' || roomState.status === 'bunker_life';
   const activeTargets = useMemo(() => roomState.players.filter(p => p.is_active && (ability?.allowSelf || p.id !== myPlayerId)), [ability?.allowSelf, roomState.players, myPlayerId]);
 
-  if (!ability && !me?.secret_goal && !showVoting && !isAdmin && !children) return null;
+  if (!ability && !me?.secret_goal && !showVoting && !bunkerLifeReady && !isAdmin && !children) return null;
 
   return <>
     <div className="relative flex min-w-0 flex-1 items-center gap-2">
@@ -51,7 +52,9 @@ export default function AdminPanel({ roomState, myPlayerId, hasVoted, bunkerLife
             <Group title="Игроки"><Action danger disabled={!kickablePlayers.length} onClick={() => setAdminModal('kick')}><UserX size={13} /> Исключить</Action></Group>
           </div>
         </details>}
-        {showVoting && <VotingModal players={roomState.players} myPlayerId={myPlayerId} isAdmin={isAdmin} hasVoted={hasVoted} voting={roomState.voting} send={send} />}
+        {bunkerLifeReady
+          ? <BunkerLifeReadyButton activePlayers={roomState.players.filter(p => p.is_active)} confirmedIds={roomState.confirmed_bunker_life} myPlayerId={myPlayerId} send={send} />
+          : showVoting && <VotingModal players={roomState.players} myPlayerId={myPlayerId} isAdmin={isAdmin} hasVoted={hasVoted} voting={roomState.voting} send={send} />}
       </div>
     </div>
     {adminModal === 'kick' && <KickPlayerModal players={kickablePlayers} onClose={() => setAdminModal(null)} onConfirm={id => { send({ type: 'kick_player', player_id: id }); setAdminModal(null); }} />}

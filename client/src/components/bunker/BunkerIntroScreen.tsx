@@ -41,7 +41,7 @@ function useTypewriter(text: string, speedMs: number, active: boolean, skip: boo
       if (i >= total) { clearInterval(id); setDone(true); }
     }, speedMs);
     return () => clearInterval(id);
-  }, [active, skip]);
+  }, [active, skip, speedMs, text, total]);
 
   return { displayed: renderHighlightSegments(segments, count), done };
 }
@@ -77,12 +77,12 @@ export default function BunkerIntroScreen({ bunker, players, bunkerCapacity, onC
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
     if (title.done && stage === S.TITLE) setStage(bunker.disaster_info ? S.DISASTER : S.BUNKER);
-  }, [title.done, stage]);
+  }, [title.done, stage, bunker.disaster_info]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
     if (disaster.done && stage === S.DISASTER) setStage(bunker.bunker_info ? S.BUNKER : S.STATS);
-  }, [disaster.done, stage]);
+  }, [disaster.done, stage, bunker.bunker_info]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intro animation state machine advances on typewriter completion
