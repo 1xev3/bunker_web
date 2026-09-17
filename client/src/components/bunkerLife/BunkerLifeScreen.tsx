@@ -158,10 +158,13 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           eventSelection={roomState.active_event_selection}
           choiceVotes={roomState.choice_votes}
           choicePendingSelection={roomState.choice_pending_selection ?? null}
+          aiEnabled={roomState.settings.ai_enabled}
+          aiResolving={roomState.ai_resolution_pending}
           resolveConfirmations={roomState.resolve_confirmations ?? []}
           myPlayerId={myPlayerId}
           send={send}
-          disabled={isConnectionLost || isEliminated}
+          disabled={isConnectionLost}
+          readOnly={isEliminated}
         />
       )}
 
@@ -172,7 +175,8 @@ export default function BunkerLifeScreen({ roomState, myPlayerId, send, onLeave,
           myPlayerId={myPlayerId}
           outcomeConfirmations={outcomeConfirmations}
           send={send}
-          disabled={isConnectionLost || isEliminated}
+          disabled={isConnectionLost}
+          readOnly={isEliminated}
         />
       )}
 

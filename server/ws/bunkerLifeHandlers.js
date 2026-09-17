@@ -7,7 +7,7 @@
 const { rooms, wsManager } = require('../state');
 const { getSelectKinds } = require('../game/config/yamlEvents');
 const { getAiProvider } = require('../ai');
-const { adjudicateEvent } = require('../ai/eventAdjudicator');
+const { adjudicateEvent, adjudicateFood } = require('../ai/eventAdjudicator');
 const {
   parseDurationMonths,
   pickRandomEvent,
@@ -74,15 +74,18 @@ function resetEventSelection(room) {
   room.pendingOutcomeReport = null;
 }
 
-function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null) {
+function broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message = null, aiExplanation = null, event = null) {
   // The outcome modal is gated on per-player confirmation, so its payload must
   // survive a reconnect: mirror it in room state (serialized as `pending_outcome`)
   // in addition to the one-shot broadcast. Without this, a player who is offline
   // when this fires reconnects with no modal to confirm and soft-locks the gate.
   const report = {
     event_id: eventId,
+    event_title: event?.title ?? null,
+    event_description: event?.description ?? null,
     outcome,
     message,
+    ai_explanation: aiExplanation,
     health_changes: effectResult.healthChanges ?? [],
     sanity_changes: effectResult.sanityChanges ?? [],
     status_changes: effectResult.statusChanges ?? [],
@@ -119,14 +122,14 @@ function isEmptyOutcome(effectResult, message) {
 // Surfaces an event's result. An empty result has nothing to confirm, so it
 // skips the modal and advances straight to the pending action; otherwise it
 // broadcasts the result and waits for everyone to acknowledge it.
-function settleOutcome(roomCode, room, eventId, outcome, effectResult, action, message = null) {
+function settleOutcome(roomCode, room, eventId, outcome, effectResult, action, message = null, aiExplanation = null, event = null) {
   if (isEmptyOutcome(effectResult, message)) {
     wsManager.broadcastState(roomCode, room);
     if (checkGameOver(roomCode, room)) return;
     if (action === 'next_month') scheduleNextMonth(roomCode, room);
     return;
   }
-  broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message);
+  broadcastEventResolved(roomCode, room, eventId, outcome, effectResult, message, aiExplanation, event);
   if (checkGameOver(roomCode, room)) return;
   waitForOutcomeConfirmations(roomCode, action);
 }
@@ -283,7 +286,8 @@ function continueAfterMonthTick(roomCode) {
 
   if (picked) {
     room.activeEvent = picked;
-    wsManager.broadcastState(roomCode, room);
+    if (picked.event_type === 'flavor') resolveFlavorEvent(roomCode);
+    else wsManager.broadcastState(roomCode, room);
   } else {
     room.activeEvent = null;
     wsManager.broadcastState(roomCode, room);
@@ -303,34 +307,70 @@ function resolveFlavorEvent(roomCode) {
   room.activeEvent = null;
   resetEventSelection(room);
 
-  settleOutcome(roomCode, room, event.id, 'resolved', effectResult, 'next_month');
+  settleOutcome(roomCode, room, event.id, 'resolved', effectResult, 'next_month', null, null, event);
 }
 
-function resolveFoodReplenishEvent(roomCode, msg) {
+function selectedItemLabels(room, entries) {
+  return entries.map(entry => {
+    if (entry.source === 'bunker') return room.bunker.items.find(item => item.id === entry.item_id)?.label ?? entry.item_id;
+    const owner = room.getPlayer(entry.player_id);
+    return (entry.source === 'inventory' ? owner?.inventory : owner?.backpack.find(item => item.id === entry.item_id))?.label ?? entry.item_id;
+  });
+}
+
+function selectedProfessionLabels(room, ids) {
+  return ids.map(id => {
+    const player = room.getPlayer(id);
+    return player ? {
+      profession: room.config.PROFESSION_ABILITIES[player.profession?.id]?.label ?? player.profession?.id,
+      level: room.config.SKILL_LEVELS.find(entry => entry.value.id === player.profession?.levelId)?.value.label,
+    } : null;
+  }).filter(Boolean);
+}
+
+async function resolveFoodReplenishEvent(roomCode, msg) {
   const room = getRoomInStatus(roomCode);
-  if (!room) return;
+  if (!room || room.aiResolutionPending) return;
 
   const { selectedProfessions, selectedItems } = normalizeEventSelection(msg);
   const resourceCount = selectedProfessions.length + selectedItems.length;
 
-  room.activeEvent = null;
-  resetEventSelection(room);
-
   if (resourceCount === 0) {
+    room.activeEvent = null;
+    resetEventSelection(room);
     const effectResult = { ...emptyEffectOutput(), statusChanges: applyHungerDebuff(room), foodChange: 0 };
     broadcastEventResolved(roomCode, room, 'food_replenish', 'failure', effectResult);
     waitForOutcomeConfirmations(roomCode, 'next_month');
     return;
   }
 
-  for (const entry of selectedItems) consumeSelectedItem(room, entry);
-
   const replenishPerResource = room.config.packSettings.events.food_replenish.food_per_resource;
-  const replenish = replenishPerResource * room.getActivePlayers().length * resourceCount;
-  const foodDisplay = updateFood(room, replenish);
-  const effectResult = { ...emptyEffectOutput(), statusChanges: clearHungerDebuff(room), foodChange: foodDisplay };
+  const fallbackFood = replenishPerResource * room.getActivePlayers().length * resourceCount;
+  let adjudication = { effectiveness: null, explanation: '' };
+  if (room.settings.ai_enabled) {
+    room.aiResolutionPending = true;
+    wsManager.broadcastState(roomCode, room);
+    adjudication = await adjudicateFood(getAiProvider(), {
+      survivors: room.getActivePlayers().length,
+      selected_items: selectedItemLabels(room, selectedItems),
+      selected_professions: selectedProfessionLabels(room, selectedProfessions),
+      resources: resourceCount,
+    });
+  }
 
-  broadcastEventResolved(roomCode, room, 'food_replenish', 'success', effectResult);
+  for (const entry of selectedItems) consumeSelectedItem(room, entry);
+  const replenish = Math.round(fallbackFood * (adjudication.effectiveness ?? 100) / 100);
+  const foodDisplay = updateFood(room, replenish);
+  const effectResult = {
+    ...emptyEffectOutput(),
+    statusChanges: foodDisplay > 0 ? clearHungerDebuff(room) : applyHungerDebuff(room),
+    foodChange: foodDisplay,
+  };
+
+  room.activeEvent = null;
+  resetEventSelection(room);
+  room.aiResolutionPending = false;
+  broadcastEventResolved(roomCode, room, 'food_replenish', foodDisplay > 0 ? 'success' : 'failure', effectResult, null, adjudication.explanation || null);
   waitForOutcomeConfirmations(roomCode, 'next_month');
 }
 
@@ -367,7 +407,7 @@ function tryStartBunkerLife(roomCode, room) {
 
 function handleUpdateEventSelection(roomCode, playerId, msg) {
   const room = getRoomInStatus(roomCode);
-  if (!room || !room.activeEvent || !isActivePlayer(room, playerId)) return;
+  if (!room || !room.activeEvent || room.aiResolutionPending || !isActivePlayer(room, playerId)) return;
   if (room.activeEvent.event_type === 'flavor') return;
 
   const { selectedPlayerId, selectedProfessions, selectedItems } = normalizeEventSelection(msg);
@@ -404,6 +444,7 @@ async function resolveChoiceEvent(roomCode, optionId) {
   const room = getRoomInStatus(roomCode);
   if (!room || !room.activeEvent || room.aiResolutionPending) return;
   room.aiResolutionPending = true;
+  wsManager.broadcastState(roomCode, room);
   try {
   const event = room.activeEvent;
   const options = Array.isArray(event.__source?.options) ? event.__source.options : [];
@@ -429,26 +470,18 @@ async function resolveChoiceEvent(roomCode, optionId) {
     (resourceKinds.includes('item') ? itemCount : 0) +
     (resourceKinds.includes('profession') ? professionSelectionStrength(room, room.activeEventSelection.selected_professions) : 0);
   const diverse = resourceKinds.every(k => (k === 'item' ? itemCount > 0 : profCount > 0));
-  let adjudication = { chance_modifier: 0, explanation: '', result_seed: '' };
+  let adjudication = { outcome: null, explanation: '' };
   if (room.settings.ai_enabled && option.outcomes_by_selection) {
-    const selectedItems = room.activeEventSelection.selected_items.map(entry => entry.item_id);
-    const selectedProfessions = room.activeEventSelection.selected_professions.map(id => {
-      const player = room.getPlayer(id);
-      return player ? {
-        profession: room.config.PROFESSION_ABILITIES[player.profession?.id]?.label ?? player.profession?.id,
-        level: room.config.SKILL_LEVELS.find(entry => entry.value.id === player.profession?.levelId)?.value.label,
-      } : null;
-    }).filter(Boolean);
+    const selectedItems = selectedItemLabels(room, room.activeEventSelection.selected_items);
+    const selectedProfessions = selectedProfessionLabels(room, room.activeEventSelection.selected_professions);
     adjudication = await adjudicateEvent(getAiProvider(), {
       situation: event.description,
       option: option.description ?? option.label,
-      base_chance: Math.min(100, Math.round(strength * 40)),
       selected_items: selectedItems,
       selected_professions: selectedProfessions,
-      modifier_range: [-20, 20],
     });
   }
-  const selection = { count: strength, diverse, chanceModifier: adjudication.chance_modifier };
+  const selection = { count: strength, diverse, aiOutcome: adjudication.outcome };
 
   if (option.consume_items) {
     for (const entry of room.activeEventSelection.selected_items) consumeSelectedItem(room, entry);
@@ -457,13 +490,12 @@ async function resolveChoiceEvent(roomCode, optionId) {
   const { effects, message } = buildOptionEffects(event, option, room, selectedPlayerId, selection);
   const context = eventContextOf(event);
   const effectResult = applyEffectsArray(room, effects, context);
-  const narrative = adjudication.result_seed || adjudication.explanation;
-  const finalMessage = [injectItemPlaceholders(message, effectResult.itemChanges), narrative].filter(Boolean).join(' ');
+  const finalMessage = injectItemPlaceholders(message, effectResult.itemChanges);
 
   room.activeEvent = null;
   resetEventSelection(room);
 
-  settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage);
+  settleOutcome(roomCode, room, event.id, option.id, effectResult, 'next_month', finalMessage, adjudication.explanation || null);
   } finally {
     room.aiResolutionPending = false;
   }
@@ -471,7 +503,7 @@ async function resolveChoiceEvent(roomCode, optionId) {
 
 function handleCastChoiceVote(roomCode, playerId, msg) {
   const room = getRoomInStatus(roomCode);
-  if (!room || !room.activeEvent || !isActivePlayer(room, playerId)) return;
+  if (!room || !room.activeEvent || room.aiResolutionPending || !isActivePlayer(room, playerId)) return;
   const event = room.activeEvent;
   if (event.event_type !== 'choice' || !Array.isArray(event.options)) return;
   // Once the council's pick is locked in (pickers shown, awaiting confirm), a

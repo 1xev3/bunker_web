@@ -188,15 +188,15 @@ function filterTone(list, pred) {
   return Array.isArray(list) ? list.filter(o => pred(outcomeTone(o))) : [];
 }
 
-function pickSelectionScaledOutcome(buckets, { count = 0, diverse = false, chanceModifier = 0 }) {
+function pickSelectionScaledOutcome(buckets, { count = 0, diverse = false, aiOutcome = null }) {
   if (count <= 0) {
     const none = buckets.none ?? buckets.some ?? buckets.all;
     return Array.isArray(none) && none.length ? pickOutcome(none) : { effects: [] };
   }
-  const success = selectionSuccessChance(count, diverse, chanceModifier);
+  const success = selectionSuccessChance(count, diverse);
   const goodSource = (diverse ? buckets.all : buckets.some) ?? buckets.all ?? buckets.some;
   const badSource = buckets.none ?? buckets.some ?? buckets.all;
-  const won = Math.random() * 100 < success;
+  const won = aiOutcome ? aiOutcome === 'success' : Math.random() * 100 < success;
   const goods = filterTone(goodSource, t => t !== 'bad');
   const bads = filterTone(badSource, t => t === 'bad');
   const pool = won ? (goods.length ? goods : goodSource) : (bads.length ? bads : badSource);

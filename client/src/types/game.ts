@@ -286,6 +286,7 @@ export interface RoomState {
   active_event: GameEvent | null;
   choice_votes: Record<string, string>;
   choice_pending_selection: string | null;
+  ai_resolution_pending: boolean;
   active_event_selection: EventSelection;
   scheduled_events: ScheduledEvent[];
   month_start_time: number | null;
@@ -349,7 +350,7 @@ export type ServerMessage =
   | { type: 'admin_changed'; new_admin_id: string }
   | { type: 'profession_ability_used'; message: string }
   | { type: 'ready_for_bunker_life'; capacity: number; active_count: number }
-  | { type: 'event_resolved'; event_id: string; outcome: string; message?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: PlayerRef[]; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
+  | { type: 'event_resolved'; event_id: string; event_title?: string | null; event_description?: string | null; outcome: string; message?: string | null; ai_explanation?: string | null; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; food_change?: number; players_killed?: PlayerRef[]; room_changed?: boolean; players_added?: Player[]; item_changes?: ItemChange[] }
   | { type: 'monthly_report'; health_changes?: VitalChange[]; sanity_changes?: VitalChange[]; status_changes?: StatusChange[]; players_killed?: PlayerRef[] };
 
 /** Minimal player reference used in event/report payloads ({ id, name }). */
@@ -384,7 +385,10 @@ export interface ItemChange {
  *  `event_resolved` server message, without the discriminant). */
 export interface EventOutcome {
   outcome: string;
+  event_title?: string | null;
+  event_description?: string | null;
   message?: string | null;
+  ai_explanation?: string | null;
   health_changes?: VitalChange[];
   sanity_changes?: VitalChange[];
   status_changes?: StatusChange[];

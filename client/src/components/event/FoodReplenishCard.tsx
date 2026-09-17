@@ -16,9 +16,12 @@ interface Props {
   packSettings: PackSettings;
   eventSelection: EventSelection;
   resolveConfirmations: string[];
+  aiEnabled: boolean;
+  aiResolving: boolean;
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
+  readOnly?: boolean;
 }
 
 function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; activePlayers: Player[] }) {
@@ -45,7 +48,7 @@ function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; a
   );
 }
 
-export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, resolveConfirmations, myPlayerId, send, disabled = false }: Props) {
+export default function FoodReplenishCard({ event, activePlayers, bunker, packSettings, eventSelection, resolveConfirmations, aiEnabled, aiResolving, myPlayerId, send, disabled = false, readOnly = false }: Props) {
   const selectedProfessions = eventSelection.selected_professions;
   const selectedItems = eventSelection.selected_items;
   const playerItems = getPlayerItemOptions(activePlayers);
@@ -115,7 +118,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
                     primary={p.attributes.profession.display}
                     secondary={p.name}
                     ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}
-                    disabled={disabled}
+                    disabled={disabled || readOnly}
                   />
                 );
               })}
@@ -124,7 +127,7 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
 
           <div>
             <p className="text-zinc-500 text-xs uppercase tracking-widest mb-2">Предметы</p>
-            <SelectableItemList items={[...playerItems, ...bunkerItems]} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
+            <SelectableItemList items={[...playerItems, ...bunkerItems]} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled || readOnly} />
           </div>
         </div>
 
@@ -152,19 +155,26 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
               Без ресурсов все получат дебаф «Голод» и будут терять хп и рассудок каждый месяц
             </p>
           )}
-          {resourceCount > 0 && (
+          {resourceCount > 0 && !aiEnabled && (
             <p className="text-green-400/70 text-xs text-center">
               {resourceCount} {resourceCount === 1 ? 'ресурс' : resourceCount < 5 ? 'ресурса' : 'ресурсов'} — восполним ~{projectedFoodGain} еды, это около {projectedMonths} мес.
             </p>
+          )}
+          {resourceCount > 0 && aiEnabled && (
+            <p className="text-amber-300/80 text-xs text-center">Объём запасов определит ИИ.</p>
           )}
           <ConfirmationDots confirmed={resolveConfirmations} activePlayers={activePlayers} />
           <button
             className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleSend}
-            disabled={disabled || myConfirmed || allConfirmed}
+            disabled={disabled || readOnly || aiResolving || myConfirmed || allConfirmed}
           >
-            {disabled
+            {aiResolving
+              ? 'ИИ оценивает запасы...'
+              : disabled
               ? 'Переподключение...'
+              : readOnly
+              ? 'Вы наблюдаете'
               : myConfirmed
               ? <><CheckCheck size={14} /> Подтверждено</>
               : <><Send size={14} /> {resourceCount === 0 ? 'Нечем помочь' : 'Пополнить запасы'}</>}
@@ -172,6 +182,8 @@ export default function FoodReplenishCard({ event, activePlayers, bunker, packSe
           <p className="text-center text-xs text-zinc-500">
             {disabled
               ? 'Соединение восстанавливается.'
+              : readOnly
+              ? 'Ожидаем решения выживших.'
               : allConfirmed
               ? 'Все готовы, переходим...'
               : `Ждём ${activePlayers.length - resolveConfirmations.length} из ${activePlayers.length}`}

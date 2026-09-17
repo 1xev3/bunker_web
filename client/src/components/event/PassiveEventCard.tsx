@@ -9,6 +9,7 @@ interface Props {
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
+  readOnly?: boolean;
 }
 
 function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; activePlayers: Player[] }) {
@@ -35,7 +36,7 @@ function ConfirmationDots({ confirmed, activePlayers }: { confirmed: string[]; a
   );
 }
 
-export default function PassiveEventCard({ event, activePlayers, resolveConfirmations, myPlayerId, send, disabled = false }: Props) {
+export default function PassiveEventCard({ event, activePlayers, resolveConfirmations, myPlayerId, send, disabled = false, readOnly = false }: Props) {
   const myConfirmed = resolveConfirmations.includes(myPlayerId);
   const allConfirmed = activePlayers.length > 0 && activePlayers.every(p => resolveConfirmations.includes(p.id));
 
@@ -68,10 +69,12 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
           <button
             className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={handleNext}
-            disabled={disabled || myConfirmed || allConfirmed}
+            disabled={disabled || readOnly || myConfirmed || allConfirmed}
           >
             {disabled
               ? 'Переподключение...'
+              : readOnly
+              ? 'Вы наблюдаете'
               : myConfirmed
               ? <><CheckCheck size={14} /> Подтверждено</>
               : <><Send size={14} /> Готов</>}
@@ -79,6 +82,8 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
           <p className="text-center text-xs text-zinc-500">
             {disabled
               ? 'Соединение восстанавливается.'
+              : readOnly
+              ? 'Ожидаем решения выживших.'
               : allConfirmed
               ? 'Все готовы, переходим...'
               : `Ждём ${activePlayers.length - resolveConfirmations.length} из ${activePlayers.length}`}

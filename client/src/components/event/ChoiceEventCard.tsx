@@ -18,9 +18,12 @@ interface Props {
   eventSelection: EventSelection;
   choiceVotes: Record<string, string>;
   choicePendingSelection: string | null;
+  aiEnabled: boolean;
+  aiResolving: boolean;
   myPlayerId: string;
   send: (msg: ClientMessage) => void;
   disabled?: boolean;
+  readOnly?: boolean;
 }
 
 function VoterDots({ voters, activePlayers }: { voters: Player[]; activePlayers: Player[] }) {
@@ -137,7 +140,7 @@ function OutcomesBreakdown({ odds }: { odds: OutcomeOdds[] }) {
   );
 }
 
-export default function ChoiceEventCard({ event, activePlayers, bunker, eventSelection, choiceVotes, choicePendingSelection, myPlayerId, send, disabled = false }: Props) {
+export default function ChoiceEventCard({ event, activePlayers, bunker, eventSelection, choiceVotes, choicePendingSelection, aiEnabled, aiResolving, myPlayerId, send, disabled = false, readOnly = false }: Props) {
   const [showHelp, toggleHelp] = usePersistentToggle('event-help-open', true);
   const options = event.options ?? [];
   const myVote = choiceVotes[myPlayerId] ?? null;
@@ -275,7 +278,7 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                   key={option.id}
                   type="button"
                   onClick={() => castVote(option.id)}
-                  disabled={disabled || pending}
+                  disabled={disabled || readOnly || pending}
                   className={`rounded-xl border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed ${
                     pending && !won ? 'opacity-40' : 'disabled:opacity-60'
                   } ${
@@ -287,13 +290,13 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                     <VoterDots voters={voters} activePlayers={activePlayers} />
                   </div>
                   {option.description && <p className="mt-1 text-xs leading-relaxed text-zinc-500">{option.description}</p>}
-                  {option.odds && option.odds.length >= 1 && (
+                  {!aiEnabled && option.odds && option.odds.length >= 1 && (
                     <>
                       <OddsBar odds={option.odds} />
                       <OutcomesBreakdown odds={option.odds} />
                     </>
                   )}
-                  {s && (
+                  {s && !aiEnabled && (
                     scaledActive
                       ? <OutcomesBreakdown odds={scaledOddsFor(option)} />
                       : (
@@ -326,7 +329,7 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                       key={p.id}
                       type="button"
                       onClick={() => selectPlayer(p.id)}
-                      disabled={disabled}
+                      disabled={disabled || readOnly}
                       className={`rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                         selected ? 'border-amber-500/70 bg-amber-950/30 text-amber-100' : 'border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700'
                       }`}
@@ -357,7 +360,7 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                       primary={p.attributes.profession.display}
                       secondary={p.name}
                       ariaLabel={`Выбрать профессию ${p.attributes.profession.display}`}
-                      disabled={disabled}
+                      disabled={disabled || readOnly}
                     />
                   );
                 })}
@@ -368,20 +371,22 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
           {showItem && (
             <div className="border-t border-zinc-800 pt-4">
               <p className="mb-2 text-xs uppercase tracking-widest text-zinc-500">{event.select?.prompt_item || event.select?.prompt || 'Посмотрите, что есть на складе'}</p>
-              <SelectableItemList items={[...getPlayerItemOptions(activePlayers), ...getBunkerItemOptions(bunker)]} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled} />
+              <SelectableItemList items={[...getPlayerItemOptions(activePlayers), ...getBunkerItemOptions(bunker)]} isItemSelected={isItemSelected} toggleItem={toggleItem} disabled={disabled || readOnly} />
             </div>
           )}
         </div>
 
         <div className="border-t border-zinc-800 p-5">
-          {pending ? (
+          {aiResolving ? (
+            <p className="text-center text-sm font-semibold text-amber-300 animate-pulse" role="status">ИИ оценивает выбранные предметы и профессии…</p>
+          ) : pending ? (
             <div className="flex flex-col items-center gap-3">
-              <SuccessFailureBar success={activeSuccessChance} />
+              {!aiEnabled && <SuccessFailureBar success={activeSuccessChance} />}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => send({ type: 'cancel_choice_selection' })}
-                  disabled={disabled}
+                  disabled={disabled || readOnly}
                   className="rounded-xl border border-zinc-700 px-5 py-2 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Отменить решение
@@ -389,7 +394,7 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
                 <button
                   type="button"
                   onClick={() => send({ type: 'confirm_choice_selection' })}
-                  disabled={disabled}
+                  disabled={disabled || readOnly}
                   className="rounded-xl px-5 py-2 text-sm font-semibold text-white btn-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Подтвердить
@@ -400,6 +405,8 @@ export default function ChoiceEventCard({ event, activePlayers, bunker, eventSel
             <p className="text-center text-xs text-zinc-500">
               {disabled
                 ? 'Соединение восстанавливается. Голосование временно заблокировано.'
+                : readOnly
+                ? 'Вы наблюдаете. Решение примут выжившие.'
                 : `Проголосовало ${totalVoted} из ${activePlayers.length}. Решение примут, когда выскажутся все.`}
             </p>
           )}

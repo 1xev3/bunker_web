@@ -38,6 +38,7 @@ function serializeRoom(room, viewerId = null) {
     active_event: publicEvent,
     choice_votes: { ...room.choiceVotes },
     choice_pending_selection: room.choicePendingSelection ?? null,
+    ai_resolution_pending: Boolean(room.aiResolutionPending),
     active_event_selection: {
       selected_player_id: room.activeEventSelection.selected_player_id ?? null,
       selected_professions: [...room.activeEventSelection.selected_professions],

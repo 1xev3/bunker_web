@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const { getPlayerAttributeLabel, getPlayerTags } = require('./playerAttributes');
+const { getPlayerAttributeLabel } = require('./playerAttributes');
 
 const EVENT_TYPES = new Set(['flavor', 'choice']);
 const TARGET_KEYWORDS = new Set(['all', 'others', 'random']);
@@ -182,8 +182,6 @@ function validateParticipants(participants, scope, errors) {
     if (crit.gender !== undefined && typeof crit.gender !== 'string') errors.push(`${scope}.${role}.gender: ожидается строка-метка пола`);
     if (crit.profession !== undefined && typeof crit.profession !== 'string') errors.push(`${scope}.${role}.profession: ожидается строка-метка профессии`);
     if (crit.no_status !== undefined && typeof crit.no_status !== 'string') errors.push(`${scope}.${role}.no_status: ожидается id статуса`);
-    if (crit.tag !== undefined && typeof crit.tag !== 'string') errors.push(`${scope}.${role}.tag: ожидается строка-тег`);
-    if (crit.tag_not !== undefined && typeof crit.tag_not !== 'string') errors.push(`${scope}.${role}.tag_not: ожидается строка-тег`);
   }
 }
 
@@ -333,9 +331,6 @@ function matchesCriteria(player, crit) {
   if (crit.gender && getPlayerAttributeLabel(player, 'gender') !== crit.gender) return false;
   if (crit.profession && getPlayerAttributeLabel(player, 'profession') !== crit.profession) return false;
   if (crit.no_status && player.vital_status?.statuses?.some(s => s.id === crit.no_status)) return false;
-  const tags = getPlayerTags(player);
-  if (crit.tag && !tags.has(crit.tag)) return false;
-  if (crit.tag_not && tags.has(crit.tag_not)) return false;
   return true;
 }
 

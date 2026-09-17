@@ -18,7 +18,7 @@ events:
   - id: old_song
     type: flavor
     weight: 3
-    participants: { singer: { tag_not: mental_risk } }
+    participants: { singer: {} }
     title: Старая песня
     text: "{singer} тихо затянул старую песню. Постепенно к мелодии присоединился весь бункер."
     effects: [{ on: all, sanity: 4 }]

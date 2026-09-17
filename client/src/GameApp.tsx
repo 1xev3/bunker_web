@@ -200,7 +200,7 @@ export default function GameApp({ onOpenPackEditor }: Props) {
       }
 
       if (msg.type === 'event_resolved') {
-        setEventOutcome({ outcome: msg.outcome, message: msg.message, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
+        setEventOutcome({ outcome: msg.outcome, event_title: msg.event_title, event_description: msg.event_description, message: msg.message, ai_explanation: msg.ai_explanation, health_changes: msg.health_changes, sanity_changes: msg.sanity_changes, status_changes: msg.status_changes, food_change: msg.food_change, event_id: msg.event_id, players_killed: msg.players_killed, room_changed: msg.room_changed, players_added: msg.players_added, item_changes: msg.item_changes });
       }
 
       if (msg.type === 'monthly_report') {

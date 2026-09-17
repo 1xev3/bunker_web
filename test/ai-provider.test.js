@@ -3,19 +3,25 @@ const assert = require('node:assert/strict');
 
 const { FakeAiProvider } = require('../server/ai/aiProvider');
 const { OpenAIProvider } = require('../server/ai/openAIProvider');
-const { adjudicateEvent } = require('../server/ai/eventAdjudicator');
+const { adjudicateEvent, adjudicateFood } = require('../server/ai/eventAdjudicator');
 const { isAiAvailable, providerOptions } = require('../server/ai');
 
 test('AI adjudication accepts a valid structured response', async () => {
-  const provider = new FakeAiProvider({ chance_modifier: 12, explanation: 'Подходящий инструмент', result_seed: 'Работа спорилась.' });
+  const provider = new FakeAiProvider({ outcome: 'success', explanation: 'Инструмент подошёл' });
   const result = await adjudicateEvent(provider, { situation: 'Обвал' });
-  assert.equal(result.chance_modifier, 12);
+  assert.equal(result.outcome, 'success');
   assert.equal(provider.requests.length, 1);
 });
 
-test('AI adjudication clamps modifiers and falls back on an invalid schema', async () => {
-  assert.equal((await adjudicateEvent(new FakeAiProvider({ chance_modifier: 99, explanation: 'x', result_seed: 'y' }), {})).chance_modifier, 20);
-  assert.deepEqual(await adjudicateEvent(new FakeAiProvider({ chance_modifier: 5 }), {}), { chance_modifier: 0, explanation: '', result_seed: '' });
+test('AI adjudication falls back on an invalid schema', async () => {
+  assert.deepEqual(await adjudicateEvent(new FakeAiProvider({ outcome: 'maybe', explanation: 'x' }), {}), { outcome: null, explanation: '' });
+});
+
+test('AI determines replenished food', async () => {
+  assert.deepEqual(
+    await adjudicateFood(new FakeAiProvider({ effectiveness: 75, explanation: 'Охотник добыл провизию' }), {}),
+    { effectiveness: 75, explanation: 'Охотник добыл провизию' },
+  );
 });
 
 test('OpenAI provider sends stateless structured request and parses output_text', async () => {
@@ -35,9 +41,9 @@ test('timeout and malformed JSON use the gameplay fallback', async () => {
     signal.addEventListener('abort', () => reject(new Error('aborted')));
   }) } };
   const timeoutProvider = new OpenAIProvider({ model: 'test-model', client: timeoutClient, timeoutMs: 5 });
-  assert.deepEqual(await adjudicateEvent(timeoutProvider, {}), { chance_modifier: 0, explanation: '', result_seed: '' });
+  assert.deepEqual(await adjudicateEvent(timeoutProvider, {}), { outcome: null, explanation: '' });
   const malformed = new OpenAIProvider({ model: 'test-model', client: { responses: { create: async () => ({ status: 'completed', output_text: 'nope' }) } } });
-  assert.deepEqual(await adjudicateEvent(malformed, {}), { chance_modifier: 0, explanation: '', result_seed: '' });
+  assert.deepEqual(await adjudicateEvent(malformed, {}), { outcome: null, explanation: '' });
 });
 
 test('AI capability requires both environment variables', () => {

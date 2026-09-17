@@ -1,34 +1,57 @@
 const CHANCE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['chance_modifier', 'explanation', 'result_seed'],
+  required: ['outcome', 'explanation'],
   properties: {
-    chance_modifier: { type: 'integer', minimum: -20, maximum: 20 },
+    outcome: { type: 'string', enum: ['success', 'failure'] },
     explanation: { type: 'string', maxLength: 240 },
-    result_seed: { type: 'string', maxLength: 240 },
   },
 };
 
-function clampModifier(value) {
-  return Math.max(-20, Math.min(20, Math.round(Number(value) || 0)));
-}
+const FOOD_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['effectiveness', 'explanation'],
+  properties: {
+    effectiveness: { type: 'integer', minimum: 0, maximum: 100 },
+    explanation: { type: 'string', maxLength: 240 },
+  },
+};
 
 async function adjudicateEvent(provider, context) {
-  const fallback = { chance_modifier: 0, explanation: '', result_seed: '' };
+  const fallback = { outcome: null, explanation: '' };
   if (!provider) return fallback;
   try {
     const result = await provider.generateStructured({
       schemaName: 'bunker_event_adjudication',
       schema: CHANCE_SCHEMA,
       maxOutputTokens: 220,
-      instructions: 'Оцени только уместность выбранных ресурсов. Не придумывай эффекты и не изменяй состояние игры.',
+      instructions: 'Реши, помогли ли выбранные предметы и профессии в этой ситуации. В explanation кратко объясни, как именно. Не придумывай новые игровые эффекты.',
       input: JSON.stringify(context),
     });
-    if (!result || typeof result.explanation !== 'string' || typeof result.result_seed !== 'string') return fallback;
-    return { ...result, chance_modifier: clampModifier(result.chance_modifier) };
+    if (!result || !['success', 'failure'].includes(result.outcome) || typeof result.explanation !== 'string') return fallback;
+    return { outcome: result.outcome, explanation: result.explanation };
   } catch {
     return fallback;
   }
 }
 
-module.exports = { CHANCE_SCHEMA, clampModifier, adjudicateEvent };
+async function adjudicateFood(provider, context) {
+  const fallback = { effectiveness: null, explanation: '' };
+  if (!provider) return fallback;
+  try {
+    const result = await provider.generateStructured({
+      schemaName: 'bunker_food_replenishment',
+      schema: FOOD_SCHEMA,
+      maxOutputTokens: 220,
+      instructions: 'Оцени полезность выбранных предметов и профессий для добычи еды от 0 до 100. Не вычисляй еду в игровых единицах: это сделает игра. В explanation кратко объясни оценку.',
+      input: JSON.stringify(context),
+    });
+    if (!result || !Number.isInteger(result.effectiveness) || result.effectiveness < 0 || result.effectiveness > 100 || typeof result.explanation !== 'string') return fallback;
+    return { effectiveness: result.effectiveness, explanation: result.explanation };
+  } catch {
+    return fallback;
+  }
+}
+
+module.exports = { CHANCE_SCHEMA, FOOD_SCHEMA, adjudicateEvent, adjudicateFood };
