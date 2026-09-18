@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Brain, CheckCheck, HeartPulse, Skull, Utensils, Baby, DoorOpen, Sparkles, Send, Package, ShieldAlert, Clock } from 'lucide-react';
 import type { ClientMessage, EventOutcome, Player } from '../../types/game';
 import { renderEventText } from '../event/eventUtils';
+import Button from '../ui/Button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/Dialog';
 
 function OutcomeRow({ icon, label, value, valueColor }: { icon: ReactNode; label: string; value?: string; valueColor?: string }) {
   return (
@@ -71,11 +73,11 @@ export default function EventOutcomeModal({ outcome, activePlayers, myPlayerId, 
     rows.push(<OutcomeRow key={`scheduled-${i}-${scheduled.title}`} icon={<Clock size={14} className="text-violet-400" />} label={`Отложено: ${scheduled.title}`} value={`через ${scheduled.in_months} мес.`} />));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/75 py-6 backdrop-blur-sm animate-fade-in-up">
-      <div className="mx-4 flex w-full max-w-lg flex-col rounded-2xl border border-zinc-700/40 bg-zinc-900 shadow-2xl">
+    <Dialog open>
+      <DialogContent showCloseButton={false} onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()} className="max-w-lg p-0">
         <div className="border-b border-zinc-800 p-5">
-          <h2 className="text-lg font-bold text-zinc-100">{outcome.event_title ? renderEventText(outcome.event_title) : outcome.ai_explanation ? 'Решение ИИ' : 'Итог события'}</h2>
-          {outcome.event_description && <p className="mt-1 text-sm leading-relaxed text-zinc-400">{renderEventText(outcome.event_description)}</p>}
+          <DialogTitle>{outcome.event_title ? renderEventText(outcome.event_title) : outcome.ai_explanation ? 'Решение ИИ' : 'Итог события'}</DialogTitle>
+          {outcome.event_description && <DialogDescription className="mt-1 leading-relaxed">{renderEventText(outcome.event_description)}</DialogDescription>}
         </div>
         {outcome.ai_explanation && (
           <div className="border-b border-zinc-800 p-5">
@@ -113,19 +115,19 @@ export default function EventOutcomeModal({ outcome, activePlayers, myPlayerId, 
         )}
 
         <div className="p-5 flex flex-col gap-3">
-          <button
+          <Button
             type="button"
             onClick={() => { if (!myConfirmed && !disabled && !readOnly) send({ type: 'confirm_outcome' }); }}
             disabled={disabled || readOnly || myConfirmed || allConfirmed}
-            className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-between gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+            variant="primary" className="w-full justify-between"
           >
             <span className="flex items-center gap-2">
               {disabled ? 'Переподключение...' : readOnly ? 'Вы наблюдаете' : myConfirmed ? <><CheckCheck size={14} /> Подтверждено</> : <><Send size={14} /> Готов</>}
             </span>
             <ConfirmationDots confirmed={confirmed} activePlayers={activePlayers} />
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

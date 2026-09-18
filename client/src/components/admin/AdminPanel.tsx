@@ -1,5 +1,5 @@
 import { useId, useMemo, useState, type ReactNode } from 'react';
-import { Check, ChevronDown, Crown, Eye, Flag, Menu, Target, UserX, Users, WandSparkles, X } from 'lucide-react';
+import { ChevronDown, Crown, Eye, Flag, Menu, Target, UserX, Users, WandSparkles } from 'lucide-react';
 import type { ClientMessage, RoomState } from '../../types/game';
 import KickPlayerModal from './KickPlayerModal';
 import RevealPlayerAttributeModal from './RevealPlayerAttributeModal';
@@ -7,12 +7,15 @@ import UseAbilityModal from './UseAbilityModal';
 import VotingModal from '../game/VotingModal';
 import BunkerLifeReadyButton from '../game/BunkerLifeReadyButton';
 import Button from '../ui/Button';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../ui/Sheet';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogTitle } from '../ui/AlertDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/DropdownMenu';
 
 interface Props { roomState: RoomState; myPlayerId: string; hasVoted: boolean; bunkerLifeReady: boolean; send: (msg: ClientMessage) => void; children?: ReactNode; }
 type AdminModal = 'ability' | 'kick' | 'reveal' | null;
 
 export default function AdminPanel({ roomState, myPlayerId, hasVoted, bunkerLifeReady, send, children }: Props) {
-  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmation, setConfirmation] = useState<'start-voting' | 'end-game' | null>(null);
   const [adminModal, setAdminModal] = useState<AdminModal>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const abilityTooltipId = useId();
@@ -47,14 +50,14 @@ export default function AdminPanel({ roomState, myPlayerId, hasVoted, bunkerLife
       </div>}
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden items-center gap-2 md:flex">{children}</div>
-        {isAdmin && roomState.status !== 'finished' && <details className="relative shrink-0">
-          <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-zinc-700 px-4 text-xs text-zinc-300 transition-all hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"><Crown size={14} /> Управление <ChevronDown size={12} /></summary>
-          <div className="card fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[80] grid max-h-[65dvh] gap-2 overflow-auto p-3 shadow-2xl md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-[calc(100%+8px)] md:w-[min(720px,calc(100vw-24px))] md:grid-cols-3">
-            <Group title="Игра"><Action disabled={roomState.status !== 'running' || roomState.is_voting || bunkerLifeReady} onClick={() => window.confirm('Начать голосование без общего согласия?') && send({ type: 'force_start_voting' })}><Flag size={13} /> Начать голосование</Action>{!confirmEnd ? <Action onClick={() => setConfirmEnd(true)}><Flag size={13} /> Завершить</Action> : <div className="flex items-center gap-1 text-xs text-zinc-500">Точно?<Action onClick={() => { send({ type: 'end_game' }); setConfirmEnd(false); }}><Check size={13} /> Да</Action><button onClick={() => setConfirmEnd(false)}><X size={13} /></button></div>}<Action disabled={roomState.status !== 'running' || roomState.is_voting} onClick={() => send({ type: 'force_start_bunker_life' })}><Crown size={13} /> К выживанию</Action></Group>
+        {isAdmin && roomState.status !== 'finished' && <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button className="text-xs"><Crown size={14} /> Управление <ChevronDown size={12} /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="grid w-[min(720px,calc(100vw-24px))] max-h-[65dvh] gap-2 overflow-auto p-3 md:grid-cols-3">
+            <Group title="Игра"><Action disabled={roomState.status !== 'running' || roomState.is_voting || bunkerLifeReady} onClick={() => setConfirmation('start-voting')}><Flag size={13} /> Начать голосование</Action><Action onClick={() => setConfirmation('end-game')}><Flag size={13} /> Завершить</Action><Action disabled={roomState.status !== 'running' || roomState.is_voting} onClick={() => send({ type: 'force_start_bunker_life' })}><Crown size={13} /> К выживанию</Action></Group>
             <Group title="Раскрытие"><Action disabled={!canReveal} onClick={() => setAdminModal('reveal')}><Eye size={13} /> Характеристика</Action><Action disabled={!canReveal} onClick={() => send({ type: 'admin_reveal_all_players' })}><Users size={13} /> Всё у всех</Action></Group>
             <Group title="Игроки"><Action danger disabled={!kickablePlayers.length} onClick={() => setAdminModal('kick')}><UserX size={13} /> Исключить</Action></Group>
-          </div>
-        </details>}
+          </DropdownMenuContent>
+        </DropdownMenu>}
         <div className="hidden md:block">{votingControl}</div>
       </div>
   </>;
@@ -63,29 +66,30 @@ export default function AdminPanel({ roomState, myPlayerId, hasVoted, bunkerLife
     <div className="relative hidden min-w-0 flex-1 items-center gap-2 md:flex">
       {controls}
     </div>
-    <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-zinc-700 bg-zinc-950/95 px-2 pt-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(0,0,0,.55)] backdrop-blur-xl md:hidden">
-      {mobileOpen && <button type="button" aria-label="Закрыть меню" className="fixed inset-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] bg-black/55" onClick={() => setMobileOpen(false)} />}
-      {mobileOpen && (
-        <div className="card absolute inset-x-2 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 max-h-[min(70dvh,38rem)] overflow-y-auto p-3 shadow-2xl animate-fade-in-up">
-          <div className="mb-3 flex items-center justify-between border-b border-zinc-800 pb-2">
-            <span className="term-label">// ДЕЙСТВИЯ</span>
-            <button type="button" className="flex h-9 w-9 items-center justify-center text-zinc-400" onClick={() => setMobileOpen(false)} aria-label="Закрыть"><X size={18} /></button>
-          </div>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+      <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-zinc-700 bg-zinc-950/95 px-2 pt-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(0,0,0,.55)] backdrop-blur-xl md:hidden">
+        <SheetContent side="bottom" className="max-h-[min(70dvh,38rem)] overflow-y-auto p-3">
+          <SheetTitle className="mb-3 border-b border-zinc-800 pb-3 text-left text-sm font-semibold text-zinc-100">Действия</SheetTitle>
           <div className="flex flex-col gap-2 [&>div]:w-full [&>div:last-child]:ml-0 [&>div:last-child]:flex-col [&>div:last-child]:items-stretch [&_button]:min-h-11 [&_button]:w-full [&_button]:justify-start [&_details]:w-full [&_summary]:w-full">
             {controls}
           </div>
-        </div>
-      )}
+        </SheetContent>
       <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(7.5rem,auto)] items-center gap-2">
         <div className="flex shrink-0 gap-1 [&_button]:h-12 [&_button]:w-11">{children}</div>
         <div className="flex min-w-0 justify-center overflow-visible [&>div]:min-w-0 [&_button]:h-12 [&_button]:max-w-full [&_button]:px-2 [&_button]:text-[10px]">
           {votingControl}
         </div>
-        <button type="button" onClick={() => setMobileOpen(open => !open)} aria-expanded={mobileOpen} className="flex h-12 min-w-[7.5rem] items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 text-sm font-semibold text-zinc-100">
-          {mobileOpen ? <X size={18} /> : <Menu size={18} />} {mobileOpen ? 'Закрыть' : 'Действия'}
-        </button>
+        <SheetTrigger asChild><Button className="h-12 min-w-[7.5rem]"><Menu size={18} /> Действия</Button></SheetTrigger>
       </div>
-    </div>
+      </div>
+    </Sheet>
+    <AlertDialog open={confirmation !== null} onOpenChange={open => !open && setConfirmation(null)}>
+      <AlertDialogContent>
+        <AlertDialogTitle>{confirmation === 'end-game' ? 'Завершить игру?' : 'Начать голосование?'}</AlertDialogTitle>
+        <AlertDialogDescription>{confirmation === 'end-game' ? 'Игра завершится для всех участников. Это действие нельзя отменить.' : 'Голосование начнётся немедленно, без общего согласия игроков.'}</AlertDialogDescription>
+        <AlertDialogFooter><AlertDialogCancel>Отмена</AlertDialogCancel><AlertDialogAction onClick={() => { send({ type: confirmation === 'end-game' ? 'end_game' : 'force_start_voting' }); setConfirmation(null); }}>Продолжить</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     {adminModal === 'kick' && <KickPlayerModal players={kickablePlayers} onClose={() => setAdminModal(null)} onConfirm={id => { send({ type: 'kick_player', player_id: id }); setAdminModal(null); }} />}
     {adminModal === 'reveal' && <RevealPlayerAttributeModal players={roomState.players} onClose={() => setAdminModal(null)} onConfirm={(id, attributes) => { send({ type: 'admin_reveal_player_attributes', player_id: id, attributes }); setAdminModal(null); }} />}
     {adminModal === 'ability' && ability && <UseAbilityModal ability={ability} activeTargets={activeTargets} myPlayerId={myPlayerId} onClose={() => setAdminModal(null)} onConfirm={payload => { send({ type: 'use_profession_ability', ...payload }); setAdminModal(null); }} />}

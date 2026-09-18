@@ -1,5 +1,6 @@
 import type { Player, ClientMessage, AttributeKey } from '../../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
+import Button from '../ui/Button';
 
 interface Props {
   player: Player;
@@ -27,12 +28,11 @@ export default function CharacterCard({ player, send }: Props) {
               <span className="text-gray-500 text-sm w-24 shrink-0">{ATTRIBUTE_LABELS[key]}:</span>
               <span className="text-gray-200 text-sm flex-1">{value?.display ?? '?'}</span>
               {!revealed && (
-                <button
-                  className="text-xs text-blue-400 hover:text-blue-300 shrink-0 transition-colors"
+                <Button variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-blue-400 hover:text-blue-300"
                   onClick={() => send({ type: 'reveal_attribute', attribute: key as AttributeKey })}
                 >
                   Открыть
-                </button>
+                </Button>
               )}
               {revealed && (
                 <span className="text-xs text-green-500 shrink-0">✓</span>
@@ -43,12 +43,11 @@ export default function CharacterCard({ player, send }: Props) {
       </div>
 
       {!allRevealed && (
-        <button
-          className="w-full bg-red-900/40 hover:bg-red-900/60 border border-red-800 text-red-300 text-sm py-2 rounded-lg transition-colors"
+        <Button variant="danger" className="w-full"
           onClick={() => send({ type: 'reveal_all' })}
         >
           Открыть всё сразу
-        </button>
+        </Button>
       )}
     </div>
   );

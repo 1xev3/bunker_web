@@ -1,6 +1,8 @@
 import { CheckCheck, Send, Sparkles, Users } from 'lucide-react';
 import type { GameEvent, Player, ClientMessage } from '../../types/game';
 import { renderEventText } from './eventUtils';
+import Button from '../ui/Button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog';
 
 interface Props {
   event: GameEvent;
@@ -47,13 +49,12 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in-up">
-      <div className="bg-zinc-900 border border-zinc-700/40 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 flex flex-col gap-4">
+    <Dialog open>
+      <DialogContent showCloseButton={false} onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()} className="max-w-sm p-6">
         <div className="flex items-start gap-3">
           <Sparkles size={20} className="text-zinc-400 shrink-0 mt-0.5" />
           <div>
-            <h2 className="font-bold text-lg text-zinc-200">{renderEventText(event.title)}</h2>
-            <p className="text-zinc-400 text-sm mt-1 leading-relaxed">{renderEventText(event.description)}</p>
+            <DialogHeader className="mb-0 pr-0"><DialogTitle>{renderEventText(event.title)}</DialogTitle><DialogDescription className="mt-1 leading-relaxed">{renderEventText(event.description)}</DialogDescription></DialogHeader>
           </div>
         </div>
 
@@ -66,8 +67,7 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
 
         <div className="flex flex-col gap-2">
           <ConfirmationDots confirmed={resolveConfirmations} activePlayers={activePlayers} />
-          <button
-            className="w-full py-2.5 rounded-xl text-sm font-semibold btn-primary text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          <Button variant="primary" className="w-full"
             onClick={handleNext}
             disabled={disabled || readOnly || myConfirmed || allConfirmed}
           >
@@ -78,7 +78,7 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
               : myConfirmed
               ? <><CheckCheck size={14} /> Подтверждено</>
               : <><Send size={14} /> Готов</>}
-          </button>
+          </Button>
           <p className="text-center text-xs text-zinc-500">
             {disabled
               ? 'Соединение восстанавливается.'
@@ -89,7 +89,7 @@ export default function PassiveEventCard({ event, activePlayers, resolveConfirma
               : `Ждём ${activePlayers.length - resolveConfirmations.length} из ${activePlayers.length}`}
           </p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

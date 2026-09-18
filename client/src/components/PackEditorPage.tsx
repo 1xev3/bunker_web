@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeft, Boxes, FileJson, FolderKanban, Package, ShieldAlert } from 'lucide-react';
 import type { PackListing, PackStats, PackStatsSection } from '../types/game';
+import Button from './ui/Button';
 
 interface Props {
   packId: string;
@@ -84,14 +85,14 @@ export default function PackEditorPage({ packId, onBack, onOpenPack }: Props) {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 lg:flex-row">
         <aside className="w-full shrink-0 lg:w-72">
           <div className="card glow-card p-4">
-            <button
+            <Button
               type="button"
               onClick={onBack}
-              className="mb-4 flex w-full items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+              variant="secondary" className="mb-4 w-full justify-start"
             >
               <ArrowLeft size={16} />
               Назад к игре
-            </button>
+            </Button>
 
             <div className="mb-4">
               <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Редактор паков</p>
@@ -101,11 +102,11 @@ export default function PackEditorPage({ packId, onBack, onOpenPack }: Props) {
 
             <div className="space-y-2">
               {packs.map((pack) => (
-                <button
+                <Button
                   key={pack.id}
                   type="button"
                   onClick={() => onOpenPack(pack.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                  variant="secondary" className={`w-full justify-start ${
                     pack.id === packId
                       ? 'border-accent bg-zinc-800/80 text-zinc-100'
                       : 'border-zinc-800 bg-zinc-900/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
@@ -113,7 +114,7 @@ export default function PackEditorPage({ packId, onBack, onOpenPack }: Props) {
                 >
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: pack.meta.color }} />
                   <span className="min-w-0 flex-1 truncate font-medium">{pack.meta.name}</span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>

@@ -3,7 +3,7 @@ import { Copy, Link, Users, Crown, ArrowLeft, Rocket, Clock, Check, Package, Shi
 import type { RoomState, ClientMessage } from '../../types/game';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import Select from '../ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select';
 import ToggleSwitch from '../ui/ToggleSwitch';
 
 interface Props {
@@ -146,9 +146,9 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
           <div className="mb-4 grid grid-cols-2 rounded-xl border border-zinc-800 bg-zinc-950/75 p-1 shadow-lg shadow-black/20">
             {(['lobby', 'settings'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === tab ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'}`}>
+              <Button key={tab} variant="ghost" onClick={() => setActiveTab(tab)} className={`rounded-lg ${activeTab === tab ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200'}`}>
                 {tab === 'lobby' ? <><Users size={14} className="mr-2 inline" />Лобби</> : <><Settings size={14} className="mr-2 inline" />Настройки</>}
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -180,7 +180,8 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => copy('code')}
                     className={`flex-1 py-2 rounded-xl text-sm border transition-all flex items-center justify-center gap-1.5 ${
                       copied === 'code'
@@ -189,8 +190,9 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                     }`}
                   >
                     {copied === 'code' ? <Check size={13} /> : <Copy size={13} />} {copied === 'code' ? 'Скопировано' : 'Код'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => copy('link')}
                     className={`flex-1 py-2 rounded-xl text-sm border transition-all flex items-center justify-center gap-1.5 ${
                       copied === 'link'
@@ -199,7 +201,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                     }`}
                   >
                     {copied === 'link' ? <Check size={13} /> : <Link size={13} />} {copied === 'link' ? 'Скопировано' : 'Ссылка'}
-                  </button>
+                  </Button>
                 </div>
                 <p className="text-zinc-600 text-xs text-center mt-4 leading-relaxed">
                   Поделитесь кодом или ссылкой с друзьями, чтобы&nbsp;они присоединились к&nbsp;игре.
@@ -208,10 +210,8 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
 
               {/* Start / wait */}
               {isAdmin ? (
-                <button
-                  className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                    canStart && !isStarting ? 'btn-primary text-white' : 'bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed'
-                  }`}
+                <Button
+                  variant="primary" size="lg" className="w-full"
                   disabled={!canStart || isStarting}
                   onClick={event => { event.currentTarget.disabled = true; send({ type: 'start_game' }); }}
                 >
@@ -222,7 +222,7 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                   ) : (
                     <><Clock size={15} /> Укажите тему бункера</>
                   )}
-                </button>
+                </Button>
               ) : (
                 <div className="card p-4 text-center">
                   <p className="text-zinc-400 text-sm flex items-center justify-center gap-2">
@@ -286,9 +286,9 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                         </div>
                       </div>
                       {isAdmin && !isMe ? (
-                        <button title={`Исключить ${p.name}`} aria-label={`Исключить ${p.name}`} onClick={() => send({ type: 'kick_player', player_id: p.id })} className="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-red-950/50 hover:text-red-400">
+                        <Button variant="ghost" size="icon" title={`Исключить ${p.name}`} aria-label={`Исключить ${p.name}`} onClick={() => send({ type: 'kick_player', player_id: p.id })} className="size-8 text-zinc-600 hover:bg-red-950/50 hover:text-red-400">
                           <UserX size={15} />
-                        </button>
+                        </Button>
                       ) : <span className="text-zinc-700 text-xs shrink-0 font-mono">#{i + 1}</span>}
                     </div>
                   );
@@ -319,7 +319,10 @@ export default function GameLobby({ roomState, myPlayerId, send, onLeave }: Prop
                 <label className="flex items-center justify-between gap-4 py-4 text-sm text-zinc-200">
                   <span><span className="flex items-center gap-2 font-medium"><Warehouse size={15} className="text-zinc-500" />Вместимость</span><span className="mt-1 block text-xs text-zinc-500">Число выживших, которое примет бункер.</span></span>
                   <span className="flex gap-2">
-                    <Select aria-label="Режим вместимости" value={roomState.settings.capacity_mode} disabled={!isAdmin} onChange={event => updateSetting('capacity_mode', event.target.value as 'auto' | 'manual')}><option value="auto">Авто</option><option value="manual">Вручную</option></Select>
+                    <Select value={roomState.settings.capacity_mode} disabled={!isAdmin} onValueChange={value => updateSetting('capacity_mode', value as 'auto' | 'manual')}>
+                      <SelectTrigger aria-label="Режим вместимости"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="auto">Авто</SelectItem><SelectItem value="manual">Вручную</SelectItem></SelectContent>
+                    </Select>
                     {roomState.settings.capacity_mode === 'manual' && <Input aria-label="Количество мест" className="w-16" type="number" min="1" max="12" value={roomState.settings.manual_capacity} disabled={!isAdmin} onChange={event => updateSetting('manual_capacity', Number(event.target.value))} />}
                   </span>
                 </label>

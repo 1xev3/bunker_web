@@ -32,6 +32,7 @@ class GameRoom {
       roundKind: 'first', // first | runoff
     };
     this.round = 0;
+    this.actionHistory = [];
     this.bunkerCapacity = null;
     this.currentMonth = 0;
     this.totalMonths = 0;
@@ -68,6 +69,16 @@ class GameRoom {
 
   touch() {
     this.lastActivity = Date.now();
+  }
+
+  addAction(message, kind = 'info') {
+    this.actionHistory.push({
+      id: randomUUID(),
+      message,
+      kind,
+      timestamp: Date.now(),
+    });
+    if (this.actionHistory.length > 100) this.actionHistory.shift();
   }
 
   addPlayer(player) {

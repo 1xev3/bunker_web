@@ -31,6 +31,7 @@ function serializeRoom(room, viewerId = null) {
       round_kind: room.voting.roundKind,
     },
     round: room.round,
+    action_history: room.actionHistory.map(entry => ({ ...entry })),
     bunker_capacity: room.bunkerCapacity,
     current_month: room.currentMonth,
     total_months: room.totalMonths,

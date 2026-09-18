@@ -90,7 +90,7 @@ export function AttrValue({ attrKey, value, className, animate = false }: { attr
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
   return (
-    <div className="card min-h-0 overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+    <div className="card min-h-0 flex-1 overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
       <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
@@ -102,7 +102,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
         </colgroup>
 
         <thead>
-          <tr className="bg-zinc-900/80 border-b border-zinc-800">
+          <tr className="bg-zinc-900/55 border-b border-zinc-800">
             <th className="px-3 py-2 text-left text-zinc-600 font-medium text-sm">#</th>
             <th className="px-3 py-2 text-left text-zinc-400 font-semibold text-sm uppercase tracking-widest">Игрок</th>
             {ATTRIBUTE_KEYS.map(k => {
@@ -127,7 +127,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
             return [
               <tr
                 key={player.id}
-                className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/40 ${inactive ? 'grayscale bg-zinc-950/50 text-zinc-500' : ''}`}
+                className={`border-b border-zinc-800/40 transition-colors hover:bg-zinc-900/35 ${inactive ? 'grayscale bg-zinc-950/30 text-zinc-500' : ''}`}
               >
                 <td className="px-3 py-2 text-zinc-700 text-sm align-top font-mono">{i + 1}</td>
                 <td className="px-3 py-2 align-top">
@@ -151,7 +151,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                           <AttrValue attrKey={key} value={val} animate className={`${inactive ? 'text-zinc-500' : 'text-emerald-400'} text-sm leading-relaxed break-words`} />
                         ) : (
                           <span
-                            className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer status-link transition-colors underline decoration-dotted underline-offset-2"
+                            className={`${inactive ? 'text-zinc-500' : 'text-zinc-400'} text-sm leading-relaxed break-words cursor-pointer status-link transition-colors underline decoration-dotted underline-offset-2`}
                             title="Нажми, чтобы открыть"
                             onClick={() => send({ type: 'reveal_attribute', attribute: key as AttributeKey })}
                           >
@@ -165,7 +165,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   return (
                     <td key={key} className="px-3 py-2 align-top">
                       {val
-                        ? <AttrValue attrKey={key} value={val} animate={revealed} className="text-zinc-300 text-sm leading-relaxed break-words" />
+                        ? <AttrValue attrKey={key} value={val} animate={revealed} className={`${inactive ? 'text-zinc-500' : 'text-zinc-300'} text-sm leading-relaxed break-words`} />
                         : <span className="text-zinc-700">—</span>
                       }
                     </td>

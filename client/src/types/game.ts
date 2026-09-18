@@ -279,6 +279,7 @@ export interface RoomState {
     round_kind: 'first' | 'runoff';
   };
   round: number;
+  action_history: ActionHistoryEntry[];
   bunker_capacity: number | null;
   current_month: number;
   total_months: number;
@@ -300,6 +301,13 @@ export interface RoomState {
   bunker: BunkerInfo | null;
   votes: Record<string, string>;
   voted_players: string[];
+}
+
+export interface ActionHistoryEntry {
+  id: string;
+  message: string;
+  kind: 'info' | 'system' | 'reveal' | 'vote' | 'ability' | 'danger';
+  timestamp: number;
 }
 
 export interface RoomSettings {

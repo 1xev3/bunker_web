@@ -1,6 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { User, Hash, Plus, LogIn, Users, Clock, Gamepad2, Package, Ticket, X, Eye, Loader2 } from 'lucide-react';
 import type { ClientMessage, RoomListing, PackListing } from '../../types/game';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 
 interface Props {
   onConnect: (msg: ClientMessage) => void;
@@ -170,21 +172,21 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                 </p>
                 <p className="text-zinc-500 text-xs mt-0.5">Введите никнейм и нажмите «Войти».</p>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={dismissInvite}
                 aria-label="Отменить приглашение"
-                className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors p-1 -m-1 rounded-md hover:bg-zinc-800/60"
+                variant="ghost" size="icon" className="-m-1 size-7 shrink-0"
               >
                 <X size={15} />
-              </button>
+              </Button>
             </div>
           )}
           <div>
             <label className="block text-zinc-500 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
               <User size={12} className="text-zinc-500" /> Никнейм
             </label>
-            <input
+            <Input
               ref={nicknameRef}
               className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none transition-all accent-input"
               placeholder="Введи никнейм"
@@ -213,11 +215,11 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                 </label>
                 <div className="space-y-1.5">
                   {packs.map(pack => (
-                    <button
+                    <Button
                       key={pack.id}
                       type="button"
                       onClick={() => setSelectedPack(pack.id)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-sm transition-all text-left ${
+                      variant="secondary" className={`w-full justify-start ${
                         selectedPack === pack.id
                           ? 'border-accent bg-zinc-800/80 text-zinc-100'
                           : 'border-zinc-700 bg-zinc-800/40 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
@@ -232,28 +234,27 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                       {pack.meta.author && (
                         <span className="text-zinc-600 text-xs ml-auto">{pack.meta.author}</span>
                       )}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
-              <button
-                className="btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"
+              <Button variant="primary" className="w-full"
                 onClick={handleCreate}
               >
                 <Plus size={15} /> Создать комнату
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                variant="secondary" className="w-full"
                 onClick={() => selectedPack && onOpenPackEditor(selectedPack)}
                 disabled={!selectedPack}
               >
                 Редактировать выбранный пак
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="space-y-2">
-              <input
+              <Input
                 className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none transition-all accent-input uppercase tracking-[0.2em] font-mono text-center"
                 placeholder="ABCD12"
                 value={roomCode}
@@ -261,19 +262,18 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                 maxLength={6}
                 onKeyDown={e => e.key === 'Enter' && handleJoin(roomCode)}
               />
-              <button
-                className="btn-primary w-full text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"
+              <Button variant="primary" className="w-full"
                 onClick={() => handleJoin(roomCode)}
               >
                 <LogIn size={15} /> Войти в комнату
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-3.5 py-2.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 flex items-center justify-center gap-2"
+                variant="secondary" className="w-full"
                 onClick={() => handleWatch(roomCode)}
               >
                 <Eye size={15} /> Смотреть как зритель
-              </button>
+              </Button>
             </div>
           )}
 
@@ -295,9 +295,9 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                 key={room.room_code}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-800/60 hover:border-zinc-600 px-4 py-3 flex items-center justify-between transition-all group gap-2"
               >
-                <button
+                <Button
                   type="button"
-                  className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                  variant="ghost" className="min-w-0 flex-1 justify-start px-0"
                   onClick={() => { setRoomCode(room.room_code); setTab('join'); }}
                 >
                   <span className="font-mono font-bold text-zinc-200 tracking-widest group-hover:text-accent transition-colors room-code-hover">{room.room_code}</span>
@@ -309,7 +309,7 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                       <Eye size={11} className="text-zinc-500" /> {room.spectator_count}
                     </span>
                   )}
-                </button>
+                </Button>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium flex items-center gap-1 ${
                     room.status === 'waiting'
@@ -321,15 +321,15 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
                       : <><Gamepad2 size={10} /> в игре</>
                     }
                   </span>
-                  <button
+                  <Button
                     type="button"
                     title="Смотреть как зритель"
                     aria-label="Смотреть как зритель"
-                    className="shrink-0 rounded-lg border border-zinc-700 p-1.5 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-100"
+                    variant="secondary" size="icon" className="size-8 shrink-0"
                     onClick={() => handleWatch(room.room_code)}
                   >
                     <Eye size={14} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -342,13 +342,13 @@ export default function WelcomeScreen({ onConnect, onOpenPackEditor, serverError
 
 function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <button
+    <Button
       className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
         active ? 'tab-active' : 'text-zinc-500 hover:text-zinc-300'
       }`}
       onClick={onClick}
     >
       {icon} {children}
-    </button>
+    </Button>
   );
 }

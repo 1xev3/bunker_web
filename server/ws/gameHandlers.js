@@ -8,6 +8,12 @@ const { confirmBotsForBunkerLife, tryStartBunkerLife } = require('./bunkerLifeHa
 const { isAiAvailable, getAiProvider } = require('../ai');
 const { generateBunkerTheme } = require('../ai/bunkerThemeGenerator');
 
+const ATTRIBUTE_LABELS = {
+  gender: 'Пол', race: 'Раса', body: 'Телосложение', trait: 'Черта',
+  profession: 'Профессия', health: 'Здоровье', hobby: 'Хобби', phobia: 'Фобия',
+  inventory: 'Инвентарь', backpack: 'Рюкзак', additional: 'Доп. информация',
+};
+
 // Сообщение о раскрытии атрибута. Когда раскрывается пол, прикладываем ФИО,
 // иначе у других игроков оно не появится (точечный патч не несёт full_name).
 function attributeRevealedMsg(player, attr, config) {
@@ -199,6 +205,7 @@ async function handleStartGame(roomCode, playerId) {
     player.generateCharacter(room.config);
   }
   room.assignSecretGoals();
+  room.addAction('Игра началась. Системы бункера активированы.', 'system');
 
   wsManager.broadcastState(roomCode, room);
 }
@@ -210,7 +217,9 @@ function handleRevealAttr(roomCode, playerId, msg) {
   if (!player) return;
   const attr = msg.attribute;
   if (player.revealAttribute(attr)) {
+    room.addAction(`${player.name} раскрыл характеристику «${ATTRIBUTE_LABELS[attr] ?? attr}».`, 'reveal');
     wsManager.broadcast(roomCode, attributeRevealedMsg(player, attr, room.config));
+    wsManager.broadcastState(roomCode, room);
   }
 }
 
@@ -220,9 +229,11 @@ function handleRevealAll(roomCode, playerId) {
   const player = room.getPlayer(playerId);
   if (!player) return;
   const revealed = player.revealAll();
+  if (revealed.length > 0) room.addAction(`${player.name} раскрыл все характеристики.`, 'reveal');
   for (const attr of revealed) {
     wsManager.broadcast(roomCode, attributeRevealedMsg(player, attr, room.config));
   }
+  if (revealed.length > 0) wsManager.broadcastState(roomCode, room);
 }
 
 function connectedElectorate(room) {
@@ -275,6 +286,7 @@ function beginBallot(roomCode, room, candidateIds = null, roundKind = 'first') {
   room.voting.electorateIds = electorate.map(player => player.id);
   room.voting.candidateIds = candidateIds ?? room.getActivePlayers().map(player => player.id);
   room.voting.roundKind = roundKind;
+  room.addAction(roundKind === 'runoff' ? 'Началось повторное голосование.' : 'Началось голосование.', 'vote');
   for (const player of electorate) {
     if (!player.is_bot) continue;
     const targetId = room.voting.candidateIds.includes(player.id)
@@ -351,6 +363,7 @@ function finalizeVoting(roomCode) {
   const isTie = candidates.length > 1;
 
   if (isTie && room.voting.roundKind === 'first') {
+    room.addAction('Голоса разделились поровну. Назначен второй тур.', 'vote');
     wsManager.broadcast(roomCode, { type: 'voting_result', eliminated: null, votes: counts, is_tie: true, runoff: true });
     beginBallot(roomCode, room, candidates, 'runoff');
     return;
@@ -362,6 +375,9 @@ function finalizeVoting(roomCode) {
     room.setParticipationStatus(id, 'eliminated');
     eliminated = room.getPlayer(id).toDict();
     room.round++;
+    room.addAction(`${eliminated.name} исключён из бункера по итогам голосования.`, 'danger');
+  } else {
+    room.addAction('Голосование завершилось ничьей. Никто не исключён.', 'vote');
   }
 
   room.resetVoting();
@@ -538,6 +554,8 @@ function handleUseProfessionAbility(roomCode, playerId, msg) {
     wsManager.send(roomCode, playerId, { type: 'error', message: result.error });
     return;
   }
+
+  room.addAction(result.publicMessage || `${actor.name} использовал способность.`, 'ability');
 
   wsManager.broadcastState(roomCode, room);
 

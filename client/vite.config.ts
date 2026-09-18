@@ -1,9 +1,9 @@
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vitest/config'
 
 function git(cmd: string, fallback: string): string {
   try {
@@ -37,5 +37,11 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
       '/ws': { target: 'ws://localhost:3001', ws: true },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/vitest.setup.ts',
+    css: true,
+    globals: true,
   },
 })

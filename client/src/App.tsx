@@ -3,23 +3,7 @@ import GameApp from './GameApp';
 import PackEditorPage from './components/PackEditorPage';
 import VersionBadge from './components/VersionBadge';
 import './index.css';
-
-type AppRoute =
-  | { type: 'game' }
-  | { type: 'pack-editor'; packId: string };
-
-function parseRoute(pathname: string): AppRoute {
-  const match = pathname.match(/^\/packs\/([^/]+)\/edit\/?$/);
-  if (match) {
-    return { type: 'pack-editor', packId: decodeURIComponent(match[1]) };
-  }
-  return { type: 'game' };
-}
-
-function navigate(pathname: string) {
-  window.history.pushState({}, '', pathname);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-}
+import { navigate, parseRoute, type AppRoute } from './lib/navigation';
 
 export default function App() {
   const [route, setRoute] = useState<AppRoute>(() => parseRoute(window.location.pathname));

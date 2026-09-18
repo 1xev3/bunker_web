@@ -2,6 +2,7 @@ import { LockKeyhole, Skull, UserRound } from 'lucide-react';
 import type { AttributeKey, ClientMessage, Player } from '../../types/game';
 import { ATTRIBUTE_KEYS, ATTRIBUTE_LABELS } from '../../types/game';
 import { ATTRIBUTE_ICONS, AttrValue } from './StatusTable';
+import Button from '../ui/Button';
 
 interface Props {
   players: Player[];
@@ -51,12 +52,14 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
                   const canReveal = isMe && value && !revealed;
 
                   return (
-                    <button
+                    <Button
                       key={key}
                       type="button"
-                      disabled={!canReveal}
+                      aria-disabled={!canReveal}
+                      tabIndex={canReveal ? 0 : -1}
                       onClick={() => canReveal && send({ type: 'reveal_attribute', attribute: key as AttributeKey })}
-                      className={`group flex min-w-0 items-center gap-2 text-left ${canReveal ? 'cursor-pointer' : 'cursor-default'}`}
+                      variant="ghost"
+                      className={`group h-auto min-w-0 justify-start p-0 text-left font-normal tracking-normal hover:bg-transparent active:translate-y-0 ${canReveal ? 'cursor-pointer' : 'cursor-default'}`}
                       title={canReveal ? 'Нажми, чтобы открыть' : undefined}
                     >
                       <Icon size={17} className="shrink-0 text-zinc-600" />
@@ -79,7 +82,7 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
                           </span>
                         )}
                       </span>
-                    </button>
+                    </Button>
                   );
                 })}
                 </div>)}

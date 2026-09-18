@@ -1,10 +1,13 @@
 import { Check, ChevronDown, Vote } from 'lucide-react';
+import { useState } from 'react';
 import type { ClientMessage, Player, RoomState } from '../../types/game';
 import Button from '../ui/Button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogTitle } from '../ui/AlertDialog';
 
 interface Props { players: Player[]; myPlayerId: string; isAdmin: boolean; hasVoted: boolean; voting: RoomState['voting']; send: (msg: ClientMessage) => void; }
 
 export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, voting, send }: Props) {
+  const [confirmForceCancel, setConfirmForceCancel] = useState(false);
   const idle = voting.phase === 'idle' || voting.phase === 'proposing';
   const proposed = voting.start_approvals.includes(myPlayerId);
   const cancelling = voting.cancel_approvals.includes(myPlayerId);
@@ -28,8 +31,15 @@ export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, vo
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button className={`px-3 py-2 text-xs ${cancelling ? 'border-amber-700 text-amber-200' : ''}`} onClick={() => send({ type: 'toggle_voting_cancellation' })}>{cancelling ? 'Отмена поддержана' : 'Предложить отмену'} · {voting.cancel_approvals.length}/{voting.electorate_ids.length}</Button>
-        {isAdmin && <Button variant="danger" className="px-3 py-2 text-xs" onClick={() => window.confirm('Отменить без общего согласия?') && send({ type: 'force_cancel_voting' })}>Отменить сразу</Button>}
+        {isAdmin && <Button variant="danger" className="px-3 py-2 text-xs" onClick={() => setConfirmForceCancel(true)}>Отменить сразу</Button>}
       </div>
+      <AlertDialog open={confirmForceCancel} onOpenChange={setConfirmForceCancel}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Отменить голосование?</AlertDialogTitle>
+          <AlertDialogDescription>Голосование будет отменено немедленно, без общего согласия игроков.</AlertDialogDescription>
+          <AlertDialogFooter><AlertDialogCancel>Назад</AlertDialogCancel><AlertDialogAction onClick={() => send({ type: 'force_cancel_voting' })}>Отменить голосование</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   </details>;
 }

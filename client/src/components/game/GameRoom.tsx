@@ -6,6 +6,7 @@ import StatusTable from './StatusTable';
 import CharacterDossiers from './CharacterDossiers';
 import AdminPanel from '../admin/AdminPanel';
 import Button from '../ui/Button';
+import ActionHistoryTerminal from './ActionHistoryTerminal';
 
 type PlayerView = 'dossiers' | 'table';
 
@@ -122,16 +123,22 @@ export default function GameRoom({
           {(roomState.spectator_count ?? 0) > 0 && <span className="hidden items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400 sm:flex"><Eye size={10} /> {roomState.spectator_count}</span>}
           <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} bunkerLifeReady={showBunkerLifeReady} send={send}>
             <div className="flex gap-2" role="group" aria-label="Вид списка персонажей">
-              <button type="button" onClick={() => selectPlayerView('dossiers')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></button>
-              <button type="button" onClick={() => selectPlayerView('table')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'table' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Таблица" title="Таблица"><Table2 size={13} /></button>
+              <Button variant="secondary" size="icon" onClick={() => selectPlayerView('dossiers')} className={playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500'} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></Button>
+              <Button variant="secondary" size="icon" onClick={() => selectPlayerView('table')} className={playerView === 'table' ? 'text-[var(--accent)]' : 'text-zinc-500'} aria-label="Таблица" title="Таблица"><Table2 size={13} /></Button>
             </div>
           </AdminPanel>
         </div>
 
         {playerView === 'dossiers' ? (
-          <CharacterDossiers players={roomState.players} myPlayerId={myPlayerId} send={send} />
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
+            <CharacterDossiers players={roomState.players} myPlayerId={myPlayerId} send={send} />
+            <ActionHistoryTerminal entries={roomState.action_history ?? []} />
+          </div>
         ) : (
-          <StatusTable players={roomState.players} myPlayerId={myPlayerId} send={send} />
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
+            <StatusTable players={roomState.players} myPlayerId={myPlayerId} send={send} />
+            <ActionHistoryTerminal entries={roomState.action_history ?? []} />
+          </div>
         )}
 
       </div>
