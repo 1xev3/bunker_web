@@ -21,7 +21,7 @@ export default function BunkerLifeReadyButton({ activePlayers, confirmedIds, myP
       onClick={() => send({ type: 'confirm_bunker_life' })}
     >
       {confirmed ? <Check size={14} /> : <Shield size={14} />}
-      {confirmed ? 'Готов, ждём остальных' : 'Готов к жизни в бункере'} · {confirmedIds.length}/{activePlayers.length}
+      <span className="hidden sm:inline">{confirmed ? 'Готов, ждём остальных' : 'Готов к жизни в бункере'} ·</span> {confirmedIds.length}/{activePlayers.length}
     </Button>
   );
 }

@@ -49,6 +49,28 @@ body {
   min-height: 100vh;
 }
 
+.game-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  body {
+    font-size: 15px;
+    overscroll-behavior: none;
+  }
+
+  button,
+  summary {
+    touch-action: manipulation;
+  }
+}
+
 /* --- Bunker atmosphere ----------------------------------------------------
    Two non-interactive full-viewport layers unify every screen:
    ::before  — faint concrete/noise grain, painted BEHIND content (z-index -1)
@@ -108,6 +130,11 @@ td, th {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes typewriter-cursor {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
 @keyframes panel-breathe {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01), 0 0 0 rgba(var(--accent-rgb), 0); }
   50% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 0 22px rgba(var(--accent-rgb), 0.08); }
@@ -129,6 +156,15 @@ td, th {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.3s ease-out forwards;
+}
+
+.attribute-typewriter::after {
+  content: "▌";
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--accent);
+  text-shadow: 0 0 7px rgba(var(--accent-rgb), 0.75);
+  animation: typewriter-cursor 0.55s steps(1, end) infinite;
 }
 
 .bunker-status-panel {
@@ -468,15 +504,19 @@ td, th {
 
 .toggle-switch-input {
   position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  margin: -1px;
+  inset: 0;
+  z-index: 1;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
   padding: 0;
   border: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-switch-input:disabled {
+  cursor: not-allowed;
 }
 
 .toggle-switch-box {

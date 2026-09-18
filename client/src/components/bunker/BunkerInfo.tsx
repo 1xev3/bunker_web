@@ -14,7 +14,7 @@ export default function BunkerInfo({ bunker }: Props) {
   const themeImage = bunker.theme.image;
 
   return (
-    <div className="relative h-10 shrink-0 rounded-xl border border-zinc-700 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+    <div className="relative h-10 min-w-0 flex-1 rounded-xl border border-zinc-700 shadow-[0_10px_30px_rgba(0,0,0,0.18)] sm:flex-none">
       <button
         className="group flex h-full items-center justify-between rounded-xl px-3 text-left transition-colors hover:bg-zinc-800/40"
         onClick={() => setOpen(o => !o)}
@@ -30,7 +30,7 @@ export default function BunkerInfo({ bunker }: Props) {
       </button>
 
       {open && (
-        <div className="card absolute left-0 top-[calc(100%+8px)] z-50 max-h-[70vh] w-[min(900px,calc(100vw-24px))] overflow-auto px-4 py-4 animate-fade-in-up shadow-2xl">
+        <div className="card fixed inset-x-2 top-16 z-[80] max-h-[calc(100dvh-9rem)] overflow-auto px-3 py-3 animate-fade-in-up shadow-2xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-[calc(100%+8px)] sm:max-h-[70vh] sm:w-[min(900px,calc(100vw-24px))] sm:px-4 sm:py-4">
           {(() => {
             const hasMap = (bunker.layout?.rooms?.length ?? 0) > 0;
             return (
@@ -59,7 +59,7 @@ export default function BunkerInfo({ bunker }: Props) {
                     <Section icon={<Building2 size={11} />} title="Бункер" text={bunker.bunker_info} />
                   )}
                   <div className="space-y-3 pt-3 border-t border-zinc-800/60">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <Stat icon={<Ruler size={11} />} label="Размер"           value={renderEventText(bunker.size.label)} />
                       <Stat icon={<Timer size={11} />} label="Время проживания" value={bunker.duration.label} />
                       <Stat icon={<Wheat size={11} />} label="Еда"              value={`${bunker.food.label} (${bunker.food.amount} на человека)`} />

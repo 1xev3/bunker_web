@@ -66,11 +66,12 @@ export default function CharacterDossiers({ players, myPlayerId, send }: Props) 
                         </span>
                         {value ? (
                           <span
+                            key={`${key}-${revealed ? 'revealed' : 'hidden'}`}
                             className={`block w-full break-words text-left text-sm leading-snug transition-colors ${
                               revealed && isMe && !inactive ? 'text-emerald-400' : inactive ? 'text-zinc-500' : 'text-zinc-300'
                             } ${canReveal ? 'group-hover:text-[var(--accent)]' : ''}`}
                           >
-                            <AttrValue attrKey={key} value={value} className="block" />
+                            <AttrValue attrKey={key} value={value} animate={revealed} className="block" />
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded bg-zinc-900/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-600">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Globe, Dumbbell, Sparkles, Briefcase, Heart, Gamepad2, AlertTriangle, Package, Backpack, Plus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { AttributeValue, Player, ClientMessage, AttributeKey } from '../../types/game';
@@ -29,14 +29,36 @@ interface Props {
 
 const INLINE_ICON_STYLE: React.CSSProperties = { display: 'inline', verticalAlign: '-3px', marginRight: '4px', opacity: 0.75 };
 
-export function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey; value: AttributeValue; className: string }) {
+export function AttrValue({ attrKey, value, className, animate = false }: { attrKey: AttributeKey; value: AttributeValue; className: string; animate?: boolean }) {
+  const shouldAnimate = animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [visibleLength, setVisibleLength] = useState(shouldAnimate ? 0 : value.display.length);
+
+  useEffect(() => {
+    if (!shouldAnimate) return;
+
+    const interval = window.setInterval(() => {
+      setVisibleLength(length => {
+        if (length >= value.display.length) {
+          window.clearInterval(interval);
+          return length;
+        }
+        return length + 1;
+      });
+    }, 32);
+
+    return () => window.clearInterval(interval);
+  }, [shouldAnimate, value.display]);
+
+  const text = value.display.slice(0, visibleLength);
+  const typingClass = shouldAnimate && visibleLength < value.display.length ? ' attribute-typewriter' : '';
+
   if (attrKey === 'profession') {
     const Icon = getProfessionIcon(value.value);
     return (
-      <span className={className}>
+      <span className={`${className}${typingClass}`}>
         {/* eslint-disable-next-line react-hooks/static-components -- Icon is an existing lucide component selected by value, not defined here */}
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
-        {value.display}
+        {text}
       </span>
     );
   }
@@ -44,10 +66,10 @@ export function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey
   if (attrKey === 'gender') {
     const { genderIcon: GIcon, affixIcon: AIcon } = getGenderIcons(value.value);
     return (
-      <span className={className}>
+      <span className={`${className}${typingClass}`}>
         {GIcon && <GIcon size={15} style={INLINE_ICON_STYLE} />}
         {AIcon && <AIcon size={15} style={{ ...INLINE_ICON_STYLE, marginRight: '4px' }} />}
-        {value.display}
+        {text}
       </span>
     );
   }
@@ -55,15 +77,15 @@ export function AttrValue({ attrKey, value, className }: { attrKey: AttributeKey
   if (attrKey === 'race') {
     const Icon = getRaceIcon(value.value);
     return (
-      <span className={className}>
+      <span className={`${className}${typingClass}`}>
         {/* eslint-disable-next-line react-hooks/static-components -- Icon is an existing lucide component selected by value, not defined here */}
         {Icon && <Icon size={15} style={INLINE_ICON_STYLE} />}
-        {value.display}
+        {text}
       </span>
     );
   }
 
-  return <span className={className}>{value.display}</span>;
+  return <span className={`${className}${typingClass}`}>{text}</span>;
 }
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
@@ -126,7 +148,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                     return (
                       <td key={key} className="px-3 py-2 align-top">
                         {revealed ? (
-                          <AttrValue attrKey={key} value={val} className={`${inactive ? 'text-zinc-500' : 'text-emerald-400'} text-sm leading-relaxed break-words`} />
+                          <AttrValue attrKey={key} value={val} animate className={`${inactive ? 'text-zinc-500' : 'text-emerald-400'} text-sm leading-relaxed break-words`} />
                         ) : (
                           <span
                             className="text-zinc-400 text-sm leading-relaxed break-words cursor-pointer status-link transition-colors underline decoration-dotted underline-offset-2"
@@ -143,7 +165,7 @@ export default function StatusTable({ players, myPlayerId, send }: Props) {
                   return (
                     <td key={key} className="px-3 py-2 align-top">
                       {val
-                        ? <AttrValue attrKey={key} value={val} className="text-zinc-300 text-sm leading-relaxed break-words" />
+                        ? <AttrValue attrKey={key} value={val} animate={revealed} className="text-zinc-300 text-sm leading-relaxed break-words" />
                         : <span className="text-zinc-700">—</span>
                       }
                     </td>

@@ -13,16 +13,16 @@ export default function VotingModal({ players, myPlayerId, isAdmin, hasVoted, vo
 
   if (idle) return <div className="shrink-0">
     <Button variant={proposed ? 'secondary' : 'primary'} className={`h-10 px-4 text-xs font-semibold ${proposed ? 'border-[var(--accent)] text-[var(--accent)]' : ''}`} aria-label={`Поддержали: ${voting.start_approvals.length} из ${connected}`} onClick={() => send({ type: 'toggle_voting_proposal' })}>
-      <Vote size={14} /> Предложить голосование [{voting.start_approvals.length}/{connected}]
+      <Vote size={14} /> <span className="hidden sm:inline">Предложить голосование</span><span>[{voting.start_approvals.length}/{connected}]</span>
     </Button>
   </div>;
 
   return <details className="relative min-w-0 flex-1" open>
     <summary className="flex h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-amber-800/60 bg-amber-950/20 px-3 text-xs text-amber-200">
-      <span className="flex items-center gap-2"><Vote size={14} /> {voting.round_kind === 'runoff' ? 'Второй тур' : 'Голосование'}{hasVoted && <Check size={13} className="text-emerald-400" />}</span>
+      <span className="flex items-center gap-2"><Vote size={14} /><span className="hidden sm:inline">{voting.round_kind === 'runoff' ? 'Второй тур' : 'Голосование'}</span>{hasVoted && <Check size={13} className="text-emerald-400" />}</span>
       <span className="flex items-center gap-2 font-mono text-zinc-400">{voting.voted_player_ids.length}/{voting.electorate_ids.length}<ChevronDown size={12} /></span>
     </summary>
-    <div className="card absolute right-0 top-[calc(100%+8px)] z-50 w-[min(680px,calc(100vw-24px))] p-3 shadow-2xl">
+    <div className="card fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[90] max-h-[65dvh] overflow-auto p-3 shadow-2xl md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-[calc(100%+8px)] md:w-[min(680px,calc(100vw-24px))]">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {candidates.map(player => <Button key={player.id} variant={voting.my_vote === player.id ? 'primary' : 'secondary'} className="justify-start px-3 py-2 text-left" onClick={() => send({ type: 'cast_elimination_vote', target_id: player.id })}>{player.name}{voting.my_vote === player.id && <Check size={13} className="ml-auto" />}</Button>)}
       </div>
