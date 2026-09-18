@@ -7,6 +7,10 @@ import CharacterDossiers from './CharacterDossiers';
 import AdminPanel from '../admin/AdminPanel';
 import Button from '../ui/Button';
 
+type PlayerView = 'dossiers' | 'table';
+
+const PLAYER_VIEW_STORAGE_KEY = 'bunker-player-view';
+
 interface Props {
   roomState: RoomState;
   myPlayerId: string;
@@ -30,7 +34,14 @@ export default function GameRoom({
   showBunkerLifeReady,
   onLeave,
 }: Props) {
-  const [playerView, setPlayerView] = useState<'dossiers' | 'table'>('dossiers');
+  const [playerView, setPlayerView] = useState<PlayerView>(() => {
+    const savedView = localStorage.getItem(PLAYER_VIEW_STORAGE_KEY);
+    return savedView === 'table' || savedView === 'dossiers' ? savedView : 'dossiers';
+  });
+  const selectPlayerView = (view: PlayerView) => {
+    localStorage.setItem(PLAYER_VIEW_STORAGE_KEY, view);
+    setPlayerView(view);
+  };
   const myPlayer = roomState.players.find(player => player.id === myPlayerId);
   const isFinished = roomState.status === 'finished';
   const amEliminated = myPlayer ? !myPlayer.is_active : false;
@@ -111,8 +122,8 @@ export default function GameRoom({
           {(roomState.spectator_count ?? 0) > 0 && <span className="hidden items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400 sm:flex"><Eye size={10} /> {roomState.spectator_count}</span>}
           <AdminPanel roomState={roomState} myPlayerId={myPlayerId} hasVoted={hasVoted} bunkerLifeReady={showBunkerLifeReady} send={send}>
             <div className="flex gap-2" role="group" aria-label="Вид списка персонажей">
-              <button type="button" onClick={() => setPlayerView('dossiers')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></button>
-              <button type="button" onClick={() => setPlayerView('table')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'table' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Таблица" title="Таблица"><Table2 size={13} /></button>
+              <button type="button" onClick={() => selectPlayerView('dossiers')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'dossiers' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Досье" title="Досье"><LayoutGrid size={13} /></button>
+              <button type="button" onClick={() => selectPlayerView('table')} className={`flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 transition-colors ${playerView === 'table' ? 'text-[var(--accent)]' : 'text-zinc-500 hover:border-zinc-500 hover:text-zinc-200'}`} aria-label="Таблица" title="Таблица"><Table2 size={13} /></button>
             </div>
           </AdminPanel>
         </div>

@@ -90,8 +90,8 @@ export function AttrValue({ attrKey, value, className, animate = false }: { attr
 
 export default function StatusTable({ players, myPlayerId, send }: Props) {
   return (
-    <div className="card min-h-0 flex-1 overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
-      <table className="h-full w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
+    <div className="card min-h-0 overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+      <table className="w-full" style={{ tableLayout: 'fixed', minWidth: '1240px' }}>
         <colgroup>
           <col style={{ width: '30px' }} />
           <col style={{ width: '105px' }} />
